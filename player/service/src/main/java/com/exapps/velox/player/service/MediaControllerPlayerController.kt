@@ -184,8 +184,9 @@ class MediaControllerPlayerController @Inject constructor(
             .setLabel(label)
             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
             .build()
+        val existing = current.localConfiguration?.subtitleConfigurations.orEmpty()
         val withSubtitle = current.buildUpon()
-            .setSubtitleConfigurations(current.subtitleConfigurations + configuration)
+            .setSubtitleConfigurations(existing + configuration)
             .build()
         c.replaceMediaItem(index, withSubtitle)
         // An earlier "subtitles off" selection would hide the side-loaded track.
@@ -294,7 +295,7 @@ class MediaControllerPlayerController @Inject constructor(
                     language = format.language,
                     isSelected = group.isTrackSelected(i),
                 )
-                refs[id] = group.getTrackGroup() to i
+                refs[id] = group.mediaTrackGroup to i
             }
         }
         _tracks.value = result
