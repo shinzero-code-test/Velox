@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -80,6 +81,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -186,7 +188,7 @@ fun VideoPlayerScreen(
         val window = activity?.window
         if (window != null) {
             val controller = WindowCompat.getInsetsController(window, view)
-            controller.systemBarsBehavior = WindowCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             if (controlsVisible) {
                 controller.show(WindowInsetsCompat.Type.systemBars())
             } else {
@@ -274,8 +276,8 @@ fun VideoPlayerScreen(
                                 volumeDragAnchor = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()
                                 // Full-width horizontal drag ≈ the whole duration, clamped
                                 // so short and very long videos both stay controllable.
-                                msPerPx = viewModel.state.value.durationMs.coerceAtLeast(1L)
-                                    .toFloat() / size.width
+                                msPerPx = (viewModel.state.value.durationMs.coerceAtLeast(1L)
+                                        .toFloat() / size.width)
                                     .coerceIn(60f, 1_500f)
                             },
                             onDrag = { change, dragAmount ->
@@ -349,7 +351,7 @@ fun VideoPlayerScreen(
                             var slopped = false
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (event.changes.any { abs(it.positionChange().getDistance()) > viewConfiguration.pointerSlop * 2 }) {
+                                if (event.changes.any { abs(it.positionChange().getDistance()) > viewConfiguration.touchSlop * 2 }) {
                                     slopped = true
                                 }
                                 val pressed = event.changes.any { it.pressed }
@@ -630,6 +632,7 @@ private fun SpeedChipButton(speed: Float, onClick: () -> Unit, modifier: Modifie
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SpeedPickerSheet(
     current: Float,
@@ -674,6 +677,7 @@ private fun SpeedPickerSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TracksSheet(
     tracks: List<PlayerTrack>,

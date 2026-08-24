@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -262,6 +263,7 @@ fun NowPlayingScreen(
 }
 
 /** SCREEN_NOW_PLAYING.md §9 — current item highlighted, remove per row, clear all. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QueueSheet(
     state: com.exapps.velox.core.domain.player.PlaybackState,
@@ -344,6 +346,7 @@ private fun QueueSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SleepTimerSheet(
     current: SleepTimerOption,

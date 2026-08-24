@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import com.exapps.velox.core.ui.theme.VeloxColors
 import com.exapps.velox.core.ui.theme.VeloxShapes
 import com.exapps.velox.core.ui.theme.accentColor
