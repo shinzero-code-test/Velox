@@ -37,6 +37,18 @@ sealed interface VeloxRoute {
     @Serializable
     data class PlaylistDetail(val playlistId: Long) : VeloxRoute
 
+    /** Detail screens for the Library's grouping tabs — reachable by tapping an
+     * album/artist/folder card (previously these cards had no-op click handlers).
+     * `title` rides along so the header doesn't need a repository lookup. */
+    @Serializable
+    data class AlbumDetail(val albumId: Long, val title: String) : VeloxRoute
+
+    @Serializable
+    data class ArtistDetail(val artistId: Long, val title: String) : VeloxRoute
+
+    @Serializable
+    data class FolderDetail(val folderPath: String, val title: String) : VeloxRoute
+
     @Serializable
     data object Equalizer : VeloxRoute
 }

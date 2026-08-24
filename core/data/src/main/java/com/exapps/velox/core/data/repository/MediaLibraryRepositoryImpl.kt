@@ -111,9 +111,22 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun rescanLibrary() = withContext(ioDispatcher) {
+        // Snapshot user-owned columns first: upsertAll is REPLACE, so without this
+        // every rescan (including the one at each app launch) would reset favourites
+        // and play statistics for every still-existing track.
+        val favoriteIds = mediaItemDao.getFavoriteIds()
+        val playStats = mediaItemDao.getUserPlayStatistics()
+
         val result = scanner.scan()
         mediaItemDao.upsertAll(result.mediaItems)
         mediaItemDao.deleteMissing(result.mediaItems.map { it.id })
+
+        // Re-apply — UPDATEs against deleted ids simply affect zero rows.
+        mediaItemDao.restoreFavorites(favoriteIds)
+        playStats.forEach { stat ->
+            mediaItemDao.restorePlayStatistics(stat.id, stat.playCount, stat.lastPlayedEpochSeconds)
+        }
+
         albumDao.upsertAll(result.albums)
         albumDao.deleteMissing(result.albums.map { it.id })
         artistDao.upsertAll(result.artists)

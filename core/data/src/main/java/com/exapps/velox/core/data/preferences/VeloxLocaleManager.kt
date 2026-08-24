@@ -29,6 +29,16 @@ class VeloxLocaleManager @Inject constructor(
         current = preferences.settings.first().language
     }
 
+    /**
+     * Publishes a just-chosen language immediately, so the Settings screen's
+     * activity recreate() picks it up in attachBaseContext without waiting for
+     * the DataStore round-trip (or a full process restart) — SCREEN_SETTINGS.md
+     * §7 "Immediate apply".
+     */
+    fun applyNow(language: AppLanguage) {
+        current = language
+    }
+
     fun applyTo(context: Context): Context {
         val locale = when (current) {
             AppLanguage.SYSTEM -> return context

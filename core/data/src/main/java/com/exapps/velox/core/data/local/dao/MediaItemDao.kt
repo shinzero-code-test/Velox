@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.exapps.velox.core.data.local.entity.MediaItemEntity
+import com.exapps.velox.core.data.local.entity.PlayStatisticsProjection
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -62,6 +63,25 @@ interface MediaItemDao {
     /** Removes library rows for files the scanner no longer finds (deleted/moved). */
     @Query("DELETE FROM media_items WHERE id NOT IN (:currentIds)")
     suspend fun deleteMissing(currentIds: List<Long>)
+
+    // --- rescan user-data preservation -------------------------------------------------
+    // upsertAll uses OnConflictStrategy.REPLACE, which rewrites the whole row from the
+    // freshly scanned entity and would silently wipe isFavorite / playCount /
+    // lastPlayedEpochSeconds on every rescan (one runs at every app launch — see
+    // LibraryViewModel.onMediaPermissionResult). These four let the repository
+    // snapshot the user-owned columns before the upsert and re-apply them after.
+
+    @Query("SELECT id FROM media_items WHERE isFavorite = 1")
+    suspend fun getFavoriteIds(): List<Long>
+
+    @Query("SELECT id, playCount, lastPlayedEpochSeconds FROM media_items WHERE playCount > 0 OR lastPlayedEpochSeconds IS NOT NULL")
+    suspend fun getUserPlayStatistics(): List<PlayStatisticsProjection>
+
+    @Query("UPDATE media_items SET isFavorite = 1 WHERE id IN (:ids)")
+    suspend fun restoreFavorites(ids: List<Long>)
+
+    @Query("UPDATE media_items SET playCount = :playCount, lastPlayedEpochSeconds = :lastPlayedEpochSeconds WHERE id = :id")
+    suspend fun restorePlayStatistics(id: Long, playCount: Int, lastPlayedEpochSeconds: Long?)
 
     @Query("UPDATE media_items SET isFavorite = :favorite WHERE id = :id")
     suspend fun setFavorite(id: Long, favorite: Boolean)

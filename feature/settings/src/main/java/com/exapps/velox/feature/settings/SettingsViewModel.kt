@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.data.preferences.AppLanguage
 import com.exapps.velox.core.data.preferences.UserSettings
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
+import com.exapps.velox.core.data.preferences.VeloxLocaleManager
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val preferences: UserSettingsPreferences,
+    private val localeManager: VeloxLocaleManager,
     private val libraryRepository: MediaLibraryRepository,
 ) : ViewModel() {
 
@@ -41,7 +43,13 @@ class SettingsViewModel @Inject constructor(
 
     fun setAmoled(amoled: Boolean) = viewModelScope.launch { preferences.setAmoled(amoled) }
     fun setAccentIndex(index: Int) = viewModelScope.launch { preferences.setAccentIndex(index) }
-    fun setLanguage(language: AppLanguage) = viewModelScope.launch { preferences.setLanguage(language) }
+    fun setLanguage(language: AppLanguage) {
+        // Update the in-memory locale BEFORE persisting so the recreate() triggered by
+        // onLanguageChanged attaches the new locale synchronously (SCREEN_SETTINGS.md
+        // §7 "Immediate apply") instead of only after a full process restart.
+        localeManager.applyNow(language)
+        viewModelScope.launch { preferences.setLanguage(language) }
+    }
     fun setSeekIncrementSeconds(seconds: Int) = viewModelScope.launch { preferences.setSeekIncrementSeconds(seconds) }
     fun setAutoPip(enabled: Boolean) = viewModelScope.launch { preferences.setAutoPipOnLeave(enabled) }
     fun setResumePlayback(enabled: Boolean) = viewModelScope.launch { preferences.setResumePlayback(enabled) }

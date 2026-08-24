@@ -3,6 +3,7 @@ package com.exapps.velox.core.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -50,20 +51,26 @@ fun VeloxTheme(
     accent: Color = VeloxColors.Accent,
     content: @Composable () -> Unit,
 ) {
-    val backgroundColor = if (amoled) VeloxColors.AmoledBackground else VeloxColors.Background
+    val backgroundColor = VeloxColors.background
+    val surfaceColor = VeloxColors.surface
+
+    // Publish the mode for the palette helpers and every VeloxColors.surface /
+    // .background reader across the app (see the flag's doc on why this must be
+    // snapshot state). SideEffect = write after successful composition, no loop.
+    SideEffect { VeloxColors.amoledMode = amoled }
 
     val colorScheme = darkColorScheme(
         primary = accent,
-        onPrimary = VeloxColors.Background,
+        onPrimary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.background,
         primaryContainer = accent.copy(alpha = VeloxColors.AccentContainerAlpha),
         onPrimaryContainer = accent,
         secondary = accent,
-        onSecondary = VeloxColors.Background,
+        onSecondary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.background,
         background = backgroundColor,
         onBackground = VeloxColors.OnBackground,
-        surface = VeloxColors.Surface,
+        surface = surfaceColor,
         onSurface = VeloxColors.OnSurface,
-        surfaceVariant = VeloxColors.Surface,
+        surfaceVariant = surfaceColor,
         onSurfaceVariant = VeloxColors.OnSurfaceVariant,
         outline = glassOutlineColor(),
         outlineVariant = glassOutlineColor(strong = true),

@@ -59,7 +59,7 @@ fun LibraryTabChip(label: String, selected: Boolean, onClick: () -> Unit, modifi
         Text(
             text = label,
             style = VeloxTheme.typography.labelLarge,
-            color = if (selected) VeloxColors.Background else VeloxColors.OnSurface,
+            color = if (selected) VeloxColors.background else VeloxColors.OnSurface,
         )
     }
 }
@@ -69,14 +69,17 @@ fun LibraryContentView(
     content: LibraryContent,
     onTrackClick: (MediaItem, List<MediaItem>) -> Unit,
     onToggleFavorite: (MediaItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    onArtistClick: (Artist) -> Unit,
+    onFolderClick: (Folder) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (content) {
         is LibraryContent.Tracks -> TrackList(content.items, onTrackClick, onToggleFavorite, modifier)
         is LibraryContent.Videos -> TrackList(content.items, onTrackClick, onToggleFavorite, modifier)
-        is LibraryContent.Albums -> AlbumGrid(content.items, modifier)
-        is LibraryContent.Artists -> ArtistList(content.items, modifier)
-        is LibraryContent.Folders -> FolderList(content.items, modifier)
+        is LibraryContent.Albums -> AlbumGrid(content.items, onAlbumClick, modifier)
+        is LibraryContent.Artists -> ArtistList(content.items, onArtistClick, modifier)
+        is LibraryContent.Folders -> FolderList(content.items, onFolderClick, modifier)
     }
 }
 
@@ -158,7 +161,7 @@ private fun TrackRow(
 }
 
 @Composable
-private fun AlbumGrid(albums: List<Album>, modifier: Modifier = Modifier) {
+private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifier: Modifier = Modifier) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
@@ -167,7 +170,7 @@ private fun AlbumGrid(albums: List<Album>, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
     ) {
         items(albums, key = { it.id }) { album ->
-            Column {
+            Column(modifier = Modifier.clickable(onClick = { onAlbumClick(album) })) {
                 AsyncImage(
                     model = album.artworkUri,
                     contentDescription = null,
@@ -200,14 +203,14 @@ private fun AlbumGrid(albums: List<Album>, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ArtistList(artists: List<Artist>, modifier: Modifier = Modifier) {
+private fun ArtistList(artists: List<Artist>, onArtistClick: (Artist) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
     ) {
         items(artists, key = { it.id }) { artist ->
-            ClickableGlassCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
+            ClickableGlassCard(onClick = { onArtistClick(artist) }, modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
                     Icon(Icons.Filled.Person, contentDescription = null, tint = accentColor())
                     Column {
@@ -221,14 +224,14 @@ private fun ArtistList(artists: List<Artist>, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FolderList(folders: List<Folder>, modifier: Modifier = Modifier) {
+private fun FolderList(folders: List<Folder>, onFolderClick: (Folder) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
     ) {
         items(folders, key = { it.path }) { folder ->
-            ClickableGlassCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
+            ClickableGlassCard(onClick = { onFolderClick(folder) }, modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
                     Icon(Icons.Filled.Folder, contentDescription = null, tint = accentColor())
                     Text(folder.displayName, style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)

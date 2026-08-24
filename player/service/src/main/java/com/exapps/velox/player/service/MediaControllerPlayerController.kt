@@ -9,7 +9,6 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.exapps.velox.core.common.di.ApplicationScope
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.player.PlaybackState
 import com.exapps.velox.core.domain.player.PlaybackStatus
@@ -21,6 +20,8 @@ import com.exapps.velox.player.engine.Media3PlayerAccessor
 import com.exapps.velox.player.engine.toMedia3MediaItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,8 +52,18 @@ import androidx.media3.common.Tracks as Media3Tracks
 @Singleton
 class MediaControllerPlayerController @Inject constructor(
     @ApplicationContext private val context: Context,
-    @ApplicationScope private val scope: CoroutineScope,
+
 ) : PlayerController, Media3PlayerAccessor {
+
+    /**
+     * Media3 throws IllegalStateException when a MediaController (or Player) method
+     * is touched off the looper it was built on — and the injected application scope runs
+     * on Dispatchers.Default (position polling, callers from ViewModels, etc.), which
+     * is exactly how the crash happened. Every controller interaction therefore runs
+     * on this main-confined scope; commands are fire-and-forget because the
+     * observable result surfaces through [state]/[tracks] StateFlows either way.
+     */
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val _state = MutableStateFlow(PlaybackState())
     override val state: StateFlow<PlaybackState> = _state.asStateFlow()
@@ -84,118 +95,133 @@ class MediaControllerPlayerController @Inject constructor(
     }
 
     override fun play(queue: List<MediaItem>, startIndex: Int) {
-        queueById = queue.associateBy { it.id.toString() }
-        val media3Items = queue.map(MediaItem::toMedia3MediaItem)
-        controller?.apply {
-            setMediaItems(media3Items, startIndex.coerceIn(media3Items.indices), 0L)
-            prepare()
-            play()
+        mainScope.launch {
+            queueById = queue.associateBy { it.id.toString() }
+            val media3Items = queue.map(MediaItem::toMedia3MediaItem)
+            controller?.apply {
+                setMediaItems(media3Items, startIndex.coerceIn(media3Items.indices), 0L)
+                prepare()
+                play()
+            }
         }
     }
 
     override fun playPause() {
-        val c = controller ?: return
-        if (c.isPlaying) c.pause() else c.play()
+        mainScope.launch {
+            val c = controller ?: return@launch
+            if (c.isPlaying) c.pause() else c.play()
+        }
     }
 
-    override fun pause() { controller?.pause() }
-    override fun resume() { controller?.play() }
-    override fun seekTo(positionMs: Long) { controller?.seekTo(positionMs) }
-    override fun skipNext() { controller?.seekToNextMediaItem() }
-    override fun skipPrevious() { controller?.seekToPreviousMediaItem() }
+    override fun pause() { mainScope.launch { controller?.pause() } }
+    override fun resume() { mainScope.launch { controller?.play() } }
+    override fun seekTo(positionMs: Long) { mainScope.launch { controller?.seekTo(positionMs) } }
+    override fun skipNext() { mainScope.launch { controller?.seekToNextMediaItem() } }
+    override fun skipPrevious() { mainScope.launch { controller?.seekToPreviousMediaItem() } }
 
     override fun setShuffleEnabled(enabled: Boolean) {
-        controller?.shuffleModeEnabled = enabled
         _state.update { it.copy(shuffleEnabled = enabled) }
+        mainScope.launch { controller?.shuffleModeEnabled = enabled }
     }
 
     override fun setRepeatMode(mode: RepeatMode) {
-        controller?.repeatMode = when (mode) {
-            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
-            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
-            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
-        }
         _state.update { it.copy(repeatMode = mode) }
+        mainScope.launch {
+            controller?.repeatMode = when (mode) {
+                RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+                RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+                RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+            }
+        }
     }
 
     override fun setPlaybackSpeed(speed: Float) {
-        controller?.setPlaybackSpeed(speed)
         _state.update { it.copy(playbackSpeed = speed) }
+        mainScope.launch { controller?.setPlaybackSpeed(speed) }
     }
 
     override fun setFavorite(mediaItemId: Long, favorite: Boolean) {
         // Favorite status is persisted via MediaLibraryRepository (see
         // ToggleFavoriteUseCase); mirrored here only so an already-open Now Playing
         // screen reflects the change immediately without waiting on a Flow re-query.
+        // StateFlow.update is thread-safe, so no main hop needed.
         _state.update {
             if (it.currentItem?.id == mediaItemId) it.copy(isFavorite = favorite) else it
         }
     }
 
     override fun playQueueItem(index: Int) {
-        val c = controller ?: return
-        if (index !in 0 until c.mediaItemCount) return
-        c.seekTo(index, 0L)
-        c.play()
+        mainScope.launch {
+            val c = controller ?: return@launch
+            if (index !in 0 until c.mediaItemCount) return@launch
+            c.seekTo(index, 0L)
+            c.play()
+        }
     }
 
     override fun addToQueue(item: MediaItem) {
         queueById = queueById + (item.id.toString() to item)
-        controller?.addMediaItem(item.toMedia3MediaItem())
+        mainScope.launch { controller?.addMediaItem(item.toMedia3MediaItem()) }
     }
 
     override fun playNext(item: MediaItem) {
-        val c = controller ?: return
         queueById = queueById + (item.id.toString() to item)
-        val insertAt = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
-        c.addMediaItem(insertAt, item.toMedia3MediaItem())
+        mainScope.launch {
+            val c = controller ?: return@launch
+            val insertAt = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
+            c.addMediaItem(insertAt, item.toMedia3MediaItem())
+        }
     }
 
-    override fun removeFromQueue(index: Int) { controller?.removeMediaItem(index) }
-    override fun moveQueueItem(fromIndex: Int, toIndex: Int) { controller?.moveMediaItem(fromIndex, toIndex) }
-    override fun clearQueue() { controller?.clearMediaItems() }
+    override fun removeFromQueue(index: Int) { mainScope.launch { controller?.removeMediaItem(index) } }
+    override fun moveQueueItem(fromIndex: Int, toIndex: Int) { mainScope.launch { controller?.moveMediaItem(fromIndex, toIndex) } }
+    override fun clearQueue() { mainScope.launch { controller?.clearMediaItems() } }
 
     override fun selectTrack(type: TrackType, trackId: String?) {
-        val c = controller ?: return
-        val media3Type = when (type) {
-            TrackType.AUDIO -> C.TRACK_TYPE_AUDIO
-            TrackType.TEXT -> C.TRACK_TYPE_TEXT
-            TrackType.VIDEO -> C.TRACK_TYPE_VIDEO
-        }
-        c.trackSelectionParameters = c.trackSelectionParameters.buildUpon().apply {
-            clearOverridesOfType(media3Type)
-            if (trackId == null) {
-                setTrackTypeDisabled(media3Type, true)
-            } else {
-                setTrackTypeDisabled(media3Type, false)
-                trackSelectionRefs[trackId]?.let { (group, index) ->
-                    setOverrideForType(androidx.media3.common.TrackSelectionOverride(group, index))
-                }
+        mainScope.launch {
+            val c = controller ?: return@launch
+            val media3Type = when (type) {
+                TrackType.AUDIO -> C.TRACK_TYPE_AUDIO
+                TrackType.TEXT -> C.TRACK_TYPE_TEXT
+                TrackType.VIDEO -> C.TRACK_TYPE_VIDEO
             }
-        }.build()
+            c.trackSelectionParameters = c.trackSelectionParameters.buildUpon().apply {
+                clearOverridesOfType(media3Type)
+                if (trackId == null) {
+                    setTrackTypeDisabled(media3Type, true)
+                } else {
+                    setTrackTypeDisabled(media3Type, false)
+                    trackSelectionRefs[trackId]?.let { (group, index) ->
+                        setOverrideForType(androidx.media3.common.TrackSelectionOverride(group, index))
+                    }
+                }
+            }.build()
+        }
     }
 
     override fun addExternalSubtitle(uri: String, mimeType: String, label: String) {
-        val c = controller ?: return
-        val index = c.currentMediaItemIndex
-        val current = c.getMediaItemAt(index)
-        val configuration = Media3MediaItem.SubtitleConfiguration.Builder(Uri.parse(uri))
-            .setMimeType(mimeType)
-            .setLabel(label)
-            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-            .build()
-        val existing = current.localConfiguration?.subtitleConfigurations.orEmpty()
-        val withSubtitle = current.buildUpon()
-            .setSubtitleConfigurations(existing + configuration)
-            .build()
-        c.replaceMediaItem(index, withSubtitle)
-        // An earlier "subtitles off" selection would hide the side-loaded track.
-        c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-            .build()
+        mainScope.launch {
+            val c = controller ?: return@launch
+            val index = c.currentMediaItemIndex
+            val current = c.getMediaItemAt(index)
+            val configuration = Media3MediaItem.SubtitleConfiguration.Builder(Uri.parse(uri))
+                .setMimeType(mimeType)
+                .setLabel(label)
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build()
+            val existing = current.localConfiguration?.subtitleConfigurations.orEmpty()
+            val withSubtitle = current.buildUpon()
+                .setSubtitleConfigurations(existing + configuration)
+                .build()
+            c.replaceMediaItem(index, withSubtitle)
+            // An earlier "subtitles off" selection would hide the side-loaded track.
+            c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .build()
+        }
     }
 
-    override fun stop() { controller?.stop() }
+    override fun stop() { mainScope.launch { controller?.stop() } }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -259,7 +285,9 @@ class MediaControllerPlayerController @Inject constructor(
     private fun managePositionPolling(isPlaying: Boolean) {
         positionPollingJob?.cancel()
         if (!isPlaying) return
-        positionPollingJob = scope.launch {
+        // Main-confined: reading currentPosition/bufferedPosition off the
+        // controller's application looper throws (see [mainScope] doc).
+        positionPollingJob = mainScope.launch {
             while (isActive) {
                 val c = controller
                 if (c != null) {

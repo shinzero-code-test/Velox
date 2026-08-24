@@ -126,7 +126,7 @@ fun PlaylistsScreen(
         FloatingActionButton(
             onClick = { showCreateDialog = true },
             containerColor = accentColor(),
-            contentColor = VeloxColors.Background,
+            contentColor = VeloxColors.background,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(VeloxSpacing.lg),
@@ -157,7 +157,7 @@ fun PlaylistsScreen(
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
-            containerColor = VeloxColors.Surface,
+            containerColor = VeloxColors.surface,
             titleContentColor = VeloxColors.OnBackground,
         )
     }

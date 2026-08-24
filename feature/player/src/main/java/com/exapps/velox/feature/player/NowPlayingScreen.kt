@@ -272,7 +272,7 @@ private fun QueueSheet(
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.surface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -353,7 +353,7 @@ private fun SleepTimerSheet(
     onSelect: (SleepTimerOption) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.surface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Text(
                 text = stringResource(R.string.sleep_timer_title),

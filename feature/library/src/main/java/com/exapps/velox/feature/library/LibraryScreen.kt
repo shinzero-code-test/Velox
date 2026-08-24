@@ -36,6 +36,9 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.exapps.velox.core.common.util.ScreenState
+import com.exapps.velox.core.domain.model.Album
+import com.exapps.velox.core.domain.model.Artist
+import com.exapps.velox.core.domain.model.Folder
 import com.exapps.velox.core.domain.model.LibraryGroup
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.SortOrder
@@ -58,6 +61,9 @@ import com.exapps.velox.core.ui.theme.accentColor
 fun LibraryScreen(
     onMediaItemClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
+    onAlbumClick: (Album) -> Unit = {},
+    onArtistClick: (Artist) -> Unit = {},
+    onFolderClick: (Folder) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val content by viewModel.content.collectAsStateWithLifecycle()
@@ -142,6 +148,9 @@ fun LibraryScreen(
                     onMediaItemClick(track)
                 },
                 onToggleFavorite = viewModel::onToggleFavorite,
+                onAlbumClick = onAlbumClick,
+                onArtistClick = onArtistClick,
+                onFolderClick = onFolderClick,
             )
         }
     }

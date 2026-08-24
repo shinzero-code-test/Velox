@@ -51,3 +51,11 @@ data class ArtistEntity(
     val albumCount: Int,
     val artworkUri: String?,
 )
+
+/** Read-only projection for snapshotting user-owned playback columns before a
+ * rescan's REPLACE-upsert overwrites them (see MediaItemDao.getUserPlayStatistics). */
+data class PlayStatisticsProjection(
+    val id: Long,
+    val playCount: Int,
+    val lastPlayedEpochSeconds: Long?,
+)

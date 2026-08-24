@@ -1,5 +1,8 @@
 package com.exapps.velox.core.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -47,6 +50,21 @@ object VeloxColors {
 
     // AMOLED option (Settings → Appearance → Theme)
     val AmoledBackground = Color(0xFF000000)
+    val AmoledSurface = Color(0xFF070707)
+
+    /**
+     * Runtime theme-mode switch published by [VeloxTheme]. Backed by Compose
+     * snapshot state so every reader — composables, draw scopes, non-compose
+     * palette helpers — recomposes/redraws the moment Settings toggles AMOLED,
+     * instead of silently keeping the standard-dark grays (which is exactly why
+     * the toggle previously appeared to do nothing outside the root background).
+     */
+    var amoledMode: Boolean by mutableStateOf(false)
+        internal set
+
+    /** Mode-aware tokens — prefer these over [Surface]/[Background] in UI code. */
+    val surface: Color get() = if (amoledMode) AmoledSurface else Surface
+    val background: Color get() = if (amoledMode) AmoledBackground else Background
 
     /** User-selectable accents (BRANDING.md / DESIGN_SYSTEM.md §2.2). Teal ships as default in v1;
      * the picker itself is a later Settings feature — these are just the swatch values. */

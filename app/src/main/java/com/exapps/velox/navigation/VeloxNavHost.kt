@@ -16,6 +16,7 @@ import com.exapps.velox.AppViewModel
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.feature.equalizer.EqualizerScreen
+import com.exapps.velox.feature.library.CollectionDetailScreen
 import com.exapps.velox.feature.library.LibraryScreen
 import com.exapps.velox.feature.library.SearchScreen
 import com.exapps.velox.feature.player.NowPlayingScreen
@@ -31,7 +32,7 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val appViewModel: AppViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
-    val activity = LocalContext.current as? ComponentActivity
+    val activity = LocalContext.current.findActivity()
 
     fun openMediaItem(item: MediaItem) {
         // SCREEN_VIDEO_PLAYER.md §11: videos open the fullscreen video chrome;
@@ -64,7 +65,12 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
             ) {
-                LibraryScreen(onMediaItemClick = ::openMediaItem)
+                LibraryScreen(
+                    onMediaItemClick = ::openMediaItem,
+                    onAlbumClick = { navController.navigate(VeloxRoute.AlbumDetail(it.id, it.title)) },
+                    onArtistClick = { navController.navigate(VeloxRoute.ArtistDetail(it.id, it.name)) },
+                    onFolderClick = { navController.navigate(VeloxRoute.FolderDetail(it.path, it.displayName)) },
+                )
             }
         }
 
@@ -125,6 +131,19 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
             )
         }
 
+        // Library grouping tabs' detail screens (album / artist / folder).
+        composable<VeloxRoute.AlbumDetail> {
+            CollectionDetailScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<VeloxRoute.ArtistDetail> {
+            CollectionDetailScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<VeloxRoute.FolderDetail> {
+            CollectionDetailScreen(onBack = { navController.popBackStack() })
+        }
+
         composable<VeloxRoute.Equalizer> {
             EqualizerScreen(onBack = { navController.popBackStack() })
         }
@@ -140,4 +159,13 @@ private fun NavController.navigateToTab(route: VeloxRoute) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/** LocalContext is frequently a ContextThemeWrapper (or deeper) rather than the
+ * Activity itself — unwrap the base-context chain to reach it. Used for the
+ * language-change recreate() hook, which must not silently no-op on a cast. */
+private tailrec fun android.content.Context.findActivity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

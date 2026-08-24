@@ -24,6 +24,17 @@
     <string name="library_sort_size">الحجم</string>
     <string name="library_sort_path">المجلد</string>
 
+    <string name="collection_back">رجوع</string>
+    <string name="collection_empty_body">لا يوجد شيء هنا بعد.</string>
+    <plurals name="collection_track_count">
+        <item quantity="zero">لا أغاني</item>
+        <item quantity="one">أغنية واحدة</item>
+        <item quantity="two">أغنيتان</item>
+        <item quantity="few">%1$d أغنيات</item>
+        <item quantity="many">%1$d أغنية</item>
+        <item quantity="other">%1$d من الأغاني</item>
+    </plurals>
+
     <string name="search_title">البحث</string>
     <string name="search_hint">ابحث عن أغاني، ألبومات، فنانين…</string>
     <string name="search_empty_title">لا توجد نتائج</string>

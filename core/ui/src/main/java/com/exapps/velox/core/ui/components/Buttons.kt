@@ -40,7 +40,7 @@ fun VeloxPrimaryButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = VeloxSpacing.xl, vertical = VeloxSpacing.sm),
     ) {
-        CompositionLocalProvider(LocalContentColor provides VeloxColors.Background) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.background) {
             Text(text = text, style = VeloxTheme.typography.labelLarge)
         }
     }
@@ -110,7 +110,7 @@ fun VeloxDestructiveButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = VeloxSpacing.xl, vertical = VeloxSpacing.sm),
     ) {
-        CompositionLocalProvider(LocalContentColor provides VeloxColors.Background) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.background) {
             Text(text = text, style = VeloxTheme.typography.labelLarge)
         }
     }
