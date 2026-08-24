@@ -11,7 +11,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.findStartDestination
 import androidx.navigation.toRoute
 import com.exapps.velox.AppViewModel
 import com.exapps.velox.core.domain.model.MediaItem
@@ -137,7 +136,7 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
  * of piling up a deep back stack across Library → Playlists → Search → Settings. */
 private fun NavController.navigateToTab(route: VeloxRoute) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
+        popUpTo(graph.startDestinationId) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
