@@ -19,7 +19,7 @@ activityCompose = "1.11.0"
 navigationCompose = "2.9.5"
 datastore = "1.1.7"
 workManager = "2.11.0"
-splashscreen = "1.1.0"
+splashscreen = "1.2.0"
 
 # Compose
 composeBom = "2026.08.00"
