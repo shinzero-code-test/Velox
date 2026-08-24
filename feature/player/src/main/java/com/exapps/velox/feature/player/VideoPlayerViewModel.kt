@@ -69,6 +69,8 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun onPlayPause() = playerController.playPause()
+
+    fun onPause() = playerController.pause()
     fun onSeekTo(positionMs: Long) = playerController.seekTo(positionMs)
     fun onSeekBy(deltaMs: Long) {
         val current = state.value

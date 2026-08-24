@@ -203,6 +203,13 @@ fun VideoPlayerScreen(
                 WindowCompat.getInsetsController(window, view)
                     .show(WindowInsetsCompat.Type.systemBars())
             }
+            // Leaving the fullscreen player stops the video's audio too — a video
+            // never becomes background audio (SCREEN_VIDEO_PLAYER.md §2). Rotation /
+            // recreation and PiP hand-offs keep playing: isChangingConfigurations is
+            // true across the former, and the composition survives the latter.
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.onPause()
+            }
         }
     }
 

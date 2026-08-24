@@ -62,6 +62,7 @@ fun PlaylistDetailScreen(
     playlistId: Long,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onMediaItemClick: (com.exapps.velox.core.domain.model.MediaItem) -> Unit = {},
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
@@ -129,12 +130,18 @@ fun PlaylistDetailScreen(
         ) {
             VeloxPrimaryButton(
                 text = stringResource(R.string.playlist_play_all),
-                onClick = { viewModel.onPlayAll(shuffle = false) },
+                onClick = {
+                    viewModel.onPlayAll(shuffle = false)
+                    current.tracks.firstOrNull()?.let(onMediaItemClick)
+                },
                 modifier = Modifier.weight(1f),
             )
             VeloxSecondaryButton(
                 text = stringResource(R.string.playlist_shuffle),
-                onClick = { viewModel.onPlayAll(shuffle = true) },
+                onClick = {
+                    viewModel.onPlayAll(shuffle = true)
+                    current.tracks.firstOrNull()?.let(onMediaItemClick)
+                },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -164,7 +171,10 @@ fun PlaylistDetailScreen(
                 items(current.tracks, key = { it.id }) { track ->
                     PlaylistTrackRow(
                         track = track,
-                        onClick = { viewModel.onTrackClick(track) },
+                        onClick = {
+                            viewModel.onTrackClick(track)
+                            onMediaItemClick(track)
+                        },
                         onRemove = if (viewModel.isSystemPlaylist) null else ({ viewModel.onRemoveTrack(track.id) }),
                     )
                 }

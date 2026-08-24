@@ -14,6 +14,8 @@ import com.exapps.velox.core.data.local.dao.PlaylistDao
 import com.exapps.velox.core.data.repository.MediaLibraryRepositoryImpl
 import com.exapps.velox.core.data.repository.PlaylistRepositoryImpl
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
+import com.exapps.velox.core.data.preferences.PlaybackPositionStoreImpl
+import com.exapps.velox.core.domain.player.PlaybackPositionStore
 import com.exapps.velox.core.domain.repository.PlaylistRepository
 import dagger.Binds
 import dagger.Module
@@ -71,4 +73,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaybackPositionStore(impl: PlaybackPositionStoreImpl): PlaybackPositionStore
 }

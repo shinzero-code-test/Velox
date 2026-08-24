@@ -49,6 +49,7 @@ import com.exapps.velox.core.ui.theme.accentColor
 fun CollectionDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onMediaItemClick: (MediaItem) -> Unit = {},
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
@@ -97,7 +98,12 @@ fun CollectionDetailScreen(
                 items(tracks, key = { it.id }) { track ->
                     CollectionTrackRow(
                         track = track,
-                        onClick = { viewModel.onTrackClick(track) },
+                        onClick = {
+                            viewModel.onTrackClick(track)
+                            // Same contract as the Library list: audio expands the
+                            // Now Playing sheet, video opens the fullscreen player.
+                            onMediaItemClick(track)
+                        },
                         onFavoriteClick = { viewModel.onToggleFavorite(track) },
                     )
                 }

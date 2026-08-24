@@ -22,6 +22,7 @@ android {
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:domain"))
+    implementation(project(":core:data"))
     implementation(project(":player:engine"))
 
     implementation(libs.androidx.core.ktx)

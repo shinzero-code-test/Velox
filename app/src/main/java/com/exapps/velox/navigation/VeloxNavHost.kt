@@ -128,20 +128,30 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
             PlaylistDetailScreen(
                 playlistId = it.toRoute<VeloxRoute.PlaylistDetail>().playlistId,
                 onBack = { navController.popBackStack() },
+                onMediaItemClick = ::openMediaItem,
             )
         }
 
         // Library grouping tabs' detail screens (album / artist / folder).
         composable<VeloxRoute.AlbumDetail> {
-            CollectionDetailScreen(onBack = { navController.popBackStack() })
+            CollectionDetailScreen(
+                onBack = { navController.popBackStack() },
+                onMediaItemClick = ::openMediaItem,
+            )
         }
 
         composable<VeloxRoute.ArtistDetail> {
-            CollectionDetailScreen(onBack = { navController.popBackStack() })
+            CollectionDetailScreen(
+                onBack = { navController.popBackStack() },
+                onMediaItemClick = ::openMediaItem,
+            )
         }
 
         composable<VeloxRoute.FolderDetail> {
-            CollectionDetailScreen(onBack = { navController.popBackStack() })
+            CollectionDetailScreen(
+                onBack = { navController.popBackStack() },
+                onMediaItemClick = ::openMediaItem,
+            )
         }
 
         composable<VeloxRoute.Equalizer> {

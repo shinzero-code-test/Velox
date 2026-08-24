@@ -1,7 +1,9 @@
 package com.exapps.velox.feature.player
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -49,6 +52,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -216,9 +221,26 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(VeloxSpacing.xl))
 
-            // Secondary actions (§7): sleep timer, EQ, queue, favorite
+            // Secondary actions (§7): speed, sleep timer, EQ, queue, favorite
             GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    // Playback speed for songs (videos have their own picker in the
+                    // player chrome). Cycles 1x → 1.25x → 1.5x → 2x → 1x.
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = viewModel::onCycleSpeed),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val speedLabel = stringResource(R.string.cd_playback_speed)
+                        Text(
+                            text = formatPlaybackSpeed(state.playbackSpeed),
+                            style = VeloxTheme.typography.labelLarge,
+                            color = if (state.playbackSpeed != 1f) accentColor() else VeloxColors.OnSurface,
+                            modifier = Modifier.semantics { contentDescription = speedLabel },
+                        )
+                    }
                     VeloxGlassIconButton(
                         icon = Icons.Filled.Timer,
                         contentDescription = stringResource(R.string.cd_sleep_timer),
@@ -396,3 +418,8 @@ private fun sleepTimerLabel(option: SleepTimerOption): String = stringResource(
         SleepTimerOption.MINUTES_60 -> R.string.sleep_timer_60
     },
 )
+
+
+/** "1x" / "1.25x" — same rendering rule as the video player's speed chip. */
+private fun formatPlaybackSpeed(speed: Float): String =
+    if (speed == speed.toInt().toFloat()) "${speed.toInt()}x" else "${speed}x"

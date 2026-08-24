@@ -5,6 +5,7 @@
     <string name="cd_more_options">مزيد من الخيارات</string>
     <string name="cd_shuffle">تشغيل عشوائي</string>
     <string name="cd_repeat">تكرار</string>
+    <string name="cd_playback_speed">سرعة التشغيل</string>
     <string name="cd_previous">السابق</string>
     <string name="cd_next">التالي</string>
     <string name="cd_play">تشغيل</string>

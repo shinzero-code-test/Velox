@@ -5,6 +5,7 @@
     <string name="cd_more_options">More options</string>
     <string name="cd_shuffle">Shuffle</string>
     <string name="cd_repeat">Repeat</string>
+    <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_previous">Previous</string>
     <string name="cd_next">Next</string>
     <string name="cd_play">Play</string>

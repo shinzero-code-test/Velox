@@ -65,12 +65,26 @@ class LibraryViewModel @Inject constructor(
     private fun observeContentFor(tab: LibraryGroup, sortOrder: SortOrder) = when (tab) {
         LibraryGroup.TRACKS -> repository.observeTracks(sortOrder).map { LibraryContent.Tracks(it).asScreenState() }
         LibraryGroup.VIDEOS -> repository.observeVideos(sortOrder).map { LibraryContent.Videos(it).asScreenState() }
-        LibraryGroup.ALBUMS -> repository.observeAlbums().map { LibraryContent.Albums(it).asScreenState() }
-        LibraryGroup.ARTISTS -> repository.observeArtists().map { LibraryContent.Artists(it).asScreenState() }
-        LibraryGroup.FOLDERS -> repository.observeFolders().map { LibraryContent.Folders(it).asScreenState() }
+        LibraryGroup.ALBUMS -> repository.observeAlbums().map {
+            // Groupings have no date-added/size of their own; those sort options
+            // degrade to title order rather than doing nothing (bug: "sort only
+            // works on Songs").
+            LibraryContent.Albums(it.sortedFor(sortOrder) { album -> album.title }).asScreenState()
+        }
+        LibraryGroup.ARTISTS -> repository.observeArtists().map {
+            LibraryContent.Artists(it.sortedFor(sortOrder) { artist -> artist.name }).asScreenState()
+        }
+        LibraryGroup.FOLDERS -> repository.observeFolders().map {
+            LibraryContent.Folders(it.sortedFor(sortOrder) { folder -> folder.displayName }).asScreenState()
+        }
         LibraryGroup.RECENT -> repository.observeRecentlyPlayed().map { LibraryContent.Tracks(it).asScreenState() }
         LibraryGroup.GENRES -> repository.observeTracks().map { LibraryContent.Tracks(it).asScreenState() } // TODO(Phase 2)
     }
+
+    /** Case-insensitive title sort for the grouping tabs; PATH maps to the same
+     * natural key, and the options without a grouping analogue fall back to it. */
+    private fun <T> List<T>.sortedFor(sortOrder: SortOrder, key: (T) -> String): List<T> =
+        sortedWith(compareBy({ item -> key(item).lowercase() }))
 
     private fun LibraryContent.asScreenState(): ScreenState<LibraryContent> =
         if (isEmpty) ScreenState.Empty else ScreenState.Content(this)

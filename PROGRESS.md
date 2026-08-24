@@ -177,3 +177,27 @@ Open in Android Studio, sync, and fix whatever the first build surfaces (likely
 zero-to-few items). Then the highest-value follow-ups are: subtitle styling
 application (Deferred #2), video thumbnails in lists (#7), playlist drag-reorder
 (#5), and the gapless/crossfade architecture decision (#1).
+
+---
+
+## v0.3.0 — second device-feedback pass (10 bugs)
+
+Everything below came out of the first real device run of v0.2.1. All fixes are
+in this tree; none have been re-verified on hardware yet — treat this section
+the same way the original Phase 1 notes were written: designed-in until a
+device proves otherwise.
+
+| # | Report | Root cause | Fix |
+|---|--------|-----------|-----|
+| 1 | Equalizer completely broken | Effects only exist once an audio session attaches; the restore lived in the EQ ViewModel, so pre-playback edits were lost or clobbered by a stale one-shot restore, and detached `setBandLevel` calls were dropped on the floor | `AndroidAudioEffectsController` now caches every desired value (incl. band levels), applies them at attach, rehydrates from DataStore on attach when the process has no fresher edits — and flushes those edits instead when it does. VM's one-shot restore removed |
+| 2 | Progress bar always 100% | `durationMs` was only synced on item *transition* events; first track after `play()` never fires one, so duration stayed 0 and the slider clamped position to its coerced max | State sync now also runs on `STATE_READY` and `onTimelineChanged` |
+| 3 | Elapsed/total time always 0 | Same missing-sync root cause as #2 (position ticked but duration stayed 0) | Same fix |
+| 4 | No Now Playing from album/artist/folder/playlists | Those screens started playback without any navigation callback (library rows had one; the newer screens didn't) | `onMediaItemClick` threaded through `CollectionDetailScreen` + `PlaylistDetailScreen` (rows *and* play-all/shuffle) into `openMediaItem` |
+| 5 | Sort worked on Songs only | Sort pipeline existed only in `observeTracks`/`observeVideos`; grouping tabs ignored it entirely | Albums/artists/folders now sort case-insensitively by their title key for every option (date/size/duration degrade to title — groupings carry no such fields) |
+| 6 | Video audio kept playing after exiting the player | Nothing stopped playback on leave; the session player is built for background audio | Fullscreen player pauses on dispose unless the exit is a configuration change (rotation/recreate); PiP hand-offs don't dispose, so auto-PiP keeps playing |
+| 7 | AMOLED still not applied | Screens paint over the XML theme's static `windowBackground`; Compose-side token swaps never reached the visible surface | Composition root in `MainActivity` now paints `VeloxColors.currentBackground` under everything |
+| 8 | Video speed bled into songs; no song speed control | One shared player, speed set globally, never reset per media type; Now Playing had no speed UI | `play()` resets speed to 1x for non-video queues; Now Playing gains a cycling speed chip (1x→1.25x→1.5x→2x) |
+| 9 | Subtitles / track selection not working | Two compounding causes: commands issued before the async `MediaController` connect were silently dropped (`controller ?: return`), and the wrong-thread crashes from the v0.2.0 report killed follow-up commands | Commands now wait up to 2.5 s for connect via `awaitController()` before executing (threading itself was fixed in v0.2.1) |
+| 10 | Remember-position broken | Feature flag existed in Settings but nothing read/wrote positions anywhere | New `PlaybackPositionStore` port (DataStore impl, Hilt-bound): saved every ~5 s while playing + on pause/stop; restored on play() when the setting is on, guarded against trivial/near-end positions |
+
+Also in this release: `versionCode` starts moving with releases (was stuck at 1).

@@ -7,6 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,7 +18,9 @@ import com.exapps.velox.core.data.preferences.UserSettings
 import com.exapps.velox.core.data.preferences.VeloxLocaleManager
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlayerController
+import androidx.compose.ui.Modifier
 import com.exapps.velox.core.ui.theme.VeloxAccentOptions
+import com.exapps.velox.core.ui.theme.VeloxColors
 import com.exapps.velox.core.ui.theme.VeloxTheme
 import com.exapps.velox.navigation.VeloxNavHost
 import dagger.hilt.android.AndroidEntryPoint
@@ -61,13 +66,22 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by appViewModel.settings.collectAsStateWithLifecycle()
-            VeloxTheme(
-                amoled = settings.amoled,
-                accent = VeloxAccentOptions.getOrElse(settings.accentIndex) { VeloxAccentOptions.first() },
+            // The window background comes from the XML theme (a fixed color
+            // resource), and screens draw on top of it transparently — so without
+            // this root the AMOLED toggle never reached what the user actually sees.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(VeloxColors.currentBackground),
             ) {
-                val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
-                startDestination?.let { destination ->
-                    VeloxNavHost(startDestination = destination)
+                VeloxTheme(
+                    amoled = settings.amoled,
+                    accent = VeloxAccentOptions.getOrElse(settings.accentIndex) { VeloxAccentOptions.first() },
+                ) {
+                    val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
+                    startDestination?.let { destination ->
+                        VeloxNavHost(startDestination = destination)
+                    }
                 }
             }
         }

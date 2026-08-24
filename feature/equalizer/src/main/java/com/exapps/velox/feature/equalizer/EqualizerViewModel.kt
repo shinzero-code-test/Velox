@@ -10,8 +10,6 @@ import com.exapps.velox.core.domain.player.EqualizerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,24 +34,10 @@ class EqualizerViewModel @Inject constructor(
         initialValue = null,
     )
 
-    init {
-        // Restore the saved curve once an audio session exists (the platform EQ
-        // can't be configured before then). Levels are applied while the effect is
-        // still off, then the switch flips — no audible pop.
-        viewModelScope.launch {
-            val saved = preferences.settings.first()
-            effects.state.filterNotNull().first()
-            val preset = saved.presetId?.let { runCatching { EqualizerPreset.valueOf(it) }.getOrNull() }
-            if (preset != null) {
-                effects.applyPreset(preset)
-            } else {
-                applyCanonicalGains(saved.bandGainsMillibel)
-            }
-            effects.setBassBoostStrength(saved.bassBoostStrength)
-            effects.setVirtualizerStrength(saved.virtualizerStrength)
-            effects.setEnabled(saved.enabled)
-        }
-    }
+    // Persisted-curve restoration lives in AndroidAudioEffectsController.attachToAudioSession —
+    // the effects (and their audio session) belong to the service layer, and restoring
+    // there covers cold-start-with-playback as well as pre-playback edits. This VM only
+    // edits live and persists on interaction end.
 
     fun onEnabledChange(enabled: Boolean) {
         effects.setEnabled(enabled)
@@ -99,16 +83,6 @@ class EqualizerViewModel @Inject constructor(
                     virtualizerStrength = current.virtualizerStrength,
                 ),
             )
-        }
-    }
-
-    private fun applyCanonicalGains(canonical: List<Int>) {
-        val bands = state.value?.bands.orEmpty()
-        if (bands.isEmpty()) return
-        EqualizerPreset.NORMAL.frequenciesHz.forEachIndexed { canonicalIndex, freqHz ->
-            val band = bands.minBy { abs(it.centerFrequencyMilliHz / 1000.0 - freqHz) }
-            val gain = canonical.getOrNull(canonicalIndex) ?: 0
-            effects.setBandLevel(band.index, gain)
         }
     }
 

@@ -5,13 +5,17 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
+import androidx.media3.common.Timeline
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.domain.model.MediaItem
+import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlaybackState
 import com.exapps.velox.core.domain.player.PlaybackStatus
+import com.exapps.velox.core.domain.player.PlaybackPositionStore
 import com.exapps.velox.core.domain.player.PlayerController
 import com.exapps.velox.core.domain.player.PlayerTrack
 import com.exapps.velox.core.domain.player.RepeatMode
@@ -98,10 +102,22 @@ class MediaControllerPlayerController @Inject constructor(
         mainScope.launch {
             queueById = queue.associateBy { it.id.toString() }
             val media3Items = queue.map(MediaItem::toMedia3MediaItem)
-            controller?.apply {
+
+            // The single session player is shared by songs and videos. A speed set
+            // for a video used to bleed into music playback; songs always start at
+            // 1x (the Now Playing chip re-applies a song speed explicitly).
+            val startType = queue.getOrNull(startIndex.coerceIn(queue.indices))?.mediaType
+                ?: queue.firstOrNull()?.mediaType
+            if (startType != MediaType.VIDEO && _state.value.playbackSpeed != 1f) {
+                controller?.setPlaybackSpeed(1f)
+                _state.update { it.copy(playbackSpeed = 1f) }
+            }
+
+            awaitController()?.apply {
                 setMediaItems(media3Items, startIndex.coerceIn(media3Items.indices), 0L)
                 prepare()
                 play()
+                applyResumePosition(startIndex, queue)
             }
         }
     }
@@ -221,16 +237,75 @@ class MediaControllerPlayerController @Inject constructor(
         }
     }
 
-    override fun stop() { mainScope.launch { controller?.stop() } }
+    override fun stop() {
+        mainScope.launch {
+            awaitController()?.let { saveResumePosition(it) }
+            controller?.stop()
+        }
+    }
+
+    /**
+     * Commands can legally arrive before the async MediaController connect
+     * completes (e.g. track selection right after opening the app). Dropping them
+     * made features like subtitle/track selection silently do nothing; wait a
+     * short bounded window instead.
+     */
+    private suspend fun awaitController(): MediaController? {
+        var waitedMs = 0L
+        while (controller == null && waitedMs < CONTROLLER_WAIT_TIMEOUT_MS) {
+            delay(CONTROLLER_POLL_MS)
+            waitedMs += CONTROLLER_POLL_MS
+        }
+        return controller
+    }
+
+    /** Remember-position write (Settings → "Remember position" gates reads only —
+     * writes are cheap and always-on so the setting applies to past plays too). */
+    private suspend fun saveResumePosition(c: MediaController) {
+        val duration = c.duration
+        if (duration <= 0) return // unknown/unset duration → position not trustworthy
+        val mediaItemId = c.currentMediaItem?.mediaId?.toLongOrNull() ?: return
+        runCatching { positionStore.put(mediaItemId, c.currentPosition.coerceAtLeast(0)) }
+    }
+
+    private suspend fun applyResumePosition(startIndex: Int, queue: List<MediaItem>) {
+        val item = queue.getOrNull(startIndex) ?: return
+        val resumeEnabled = runCatching { userSettings.settings.first().resumePlayback }.getOrDefault(true)
+        if (!resumeEnabled) return
+        val saved = runCatching { positionStore.get(item.id) }.getOrNull() ?: return
+        // Skip trivial positions (just-started) and near-end positions (auto-advance
+        // territory) — resuming 2s into a song or at the last second is worse than
+        // starting clean.
+        val maxResume = item.durationMs - END_RESUME_GUARD_MS
+        if (saved > START_RESUME_GUARD_MS && saved < maxResume) {
+            controller?.seekTo(startIndex, saved)
+        }
+    }
+
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _state.update { it.copy(isPlaying = isPlaying) }
+            if (!isPlaying) {
+                // Poll stops with pause — flush one last position save so "remember
+                // position" never trails more than the moment of pausing.
+                mainScope.launch { controller?.let { saveResumePosition(it) } }
+            }
             managePositionPolling(isPlaying)
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             _state.update { it.copy(status = playbackState.toDomainStatus()) }
+            if (playbackState == Player.STATE_READY) {
+                // Duration/queue metadata become valid here — without this sync the
+                // progress bar pinned at max while both time labels read zero until
+                // the first track change happened to fire a transition event.
+                syncStateFromController()
+            }
+        }
+
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            syncStateFromController()
         }
 
         override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
@@ -287,11 +362,13 @@ class MediaControllerPlayerController @Inject constructor(
         if (!isPlaying) return
         // Main-confined: reading currentPosition/bufferedPosition off the
         // controller's application looper throws (see [mainScope] doc).
+        var ticks = 0
         positionPollingJob = mainScope.launch {
             while (isActive) {
                 val c = controller
                 if (c != null) {
                     _state.update { it.copy(positionMs = c.currentPosition.coerceAtLeast(0)) }
+                    if (++ticks % POSITION_SAVE_EVERY_TICKS == 0) saveResumePosition(c)
                 }
                 delay(POSITION_POLL_INTERVAL_MS)
             }
@@ -346,6 +423,15 @@ class MediaControllerPlayerController @Inject constructor(
 
     private companion object {
         const val POSITION_POLL_INTERVAL_MS = 500L
+
+        /** ~5s between remember-position writes (every 10th 500ms poll tick). */
+        const val POSITION_SAVE_EVERY_TICKS = 10
+        const val START_RESUME_GUARD_MS = 5_000L
+        const val END_RESUME_GUARD_MS = 10_000L
+
+        /** Bounded wait for the async MediaController connect (see [awaitController]). */
+        const val CONTROLLER_WAIT_TIMEOUT_MS = 2_500L
+        const val CONTROLLER_POLL_MS = 50L
     }
 }
 

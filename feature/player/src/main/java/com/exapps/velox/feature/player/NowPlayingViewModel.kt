@@ -85,6 +85,14 @@ class NowPlayingViewModel @Inject constructor(
         viewModelScope.launch { libraryRepository.setFavorite(mediaItemId, favorite) }
     }
 
+    /** Songs share the session player with videos; play() resets audio to 1x, and
+     * this chip (Now Playing §7) is where a song speed gets re-applied. */
+    fun onCycleSpeed() {
+        val speeds = listOf(1f, 1.25f, 1.5f, 2f)
+        val next = speeds[(speeds.indexOf(state.value.playbackSpeed) + 1).mod(speeds.size)]
+        playerController.setPlaybackSpeed(next)
+    }
+
     fun onCycleRepeat() {
         val next = when (state.value.repeatMode) {
             RepeatMode.OFF -> RepeatMode.ALL

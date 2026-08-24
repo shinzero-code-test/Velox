@@ -14,8 +14,8 @@ android {
         applicationId = "com.exapps.velox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.2.0-phase1"
+        versionCode = 5
+        versionName = "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
