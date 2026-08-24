@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.exapps.velox.player.engine"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

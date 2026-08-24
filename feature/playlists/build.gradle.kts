@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.exapps.velox.feature.playlists"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

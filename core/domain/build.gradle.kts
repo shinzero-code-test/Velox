@@ -23,6 +23,10 @@ dependencies {
     // Android dependency, which has no place in a framework-agnostic domain module.
     implementation(libs.kotlinx.coroutines.core)
 
+    // @Inject annotations (JSR-330) for constructor injection wiring via Hilt,
+    // without dragging Hilt itself into the domain layer.
+    implementation(libs.javax.inject)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
