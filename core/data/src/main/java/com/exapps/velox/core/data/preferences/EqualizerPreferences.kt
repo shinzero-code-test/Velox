@@ -35,12 +35,14 @@ class EqualizerPreferences @Inject constructor(
 
     val settings: Flow<EqualizerSettings> = dataStore.data.map { prefs ->
         val size = EqualizerPreset.NORMAL.frequenciesHz.size
+        val storedGains = prefs[GAINS_KEY]
+            ?.split(',')
+            ?.mapNotNull { it.trim().toIntOrNull() }
+            .orEmpty()
         EqualizerSettings(
             enabled = prefs[ENABLED_KEY] ?: false,
             presetId = prefs[PRESET_KEY],
-            bandGainsMillibel = prefs[GAINS_KEY]?.take(size)?.toList()?.let {
-                it + List(size - it.size) { 0 }
-            } ?: List(size) { 0 },
+            bandGainsMillibel = List(size) { i -> storedGains.getOrElse(i) { 0 } },
             bassBoostStrength = prefs[BASS_KEY] ?: 0,
             virtualizerStrength = prefs[VIRTUALIZER_KEY] ?: 0,
         )
@@ -50,7 +52,7 @@ class EqualizerPreferences @Inject constructor(
         dataStore.edit { prefs ->
             prefs[ENABLED_KEY] = settings.enabled
             if (settings.presetId == null) prefs.remove(PRESET_KEY) else prefs[PRESET_KEY] = settings.presetId
-            prefs[GAINS_KEY] = settings.bandGainsMillibel.toIntArray()
+            prefs[GAINS_KEY] = settings.bandGainsMillibel.joinToString(",")
             prefs[BASS_KEY] = settings.bassBoostStrength
             prefs[VIRTUALIZER_KEY] = settings.virtualizerStrength
         }
@@ -59,7 +61,8 @@ class EqualizerPreferences @Inject constructor(
     private companion object {
         val ENABLED_KEY = booleanPreferencesKey("eq_enabled")
         val PRESET_KEY = stringPreferencesKey("eq_preset")
-        val GAINS_KEY = intPreferencesKey("eq_band_gains")
+        // Preferences has no Int-list type; the canonical gains are stored as a CSV string.
+        val GAINS_KEY = stringPreferencesKey("eq_band_gains")
         val BASS_KEY = intPreferencesKey("eq_bass_strength")
         val VIRTUALIZER_KEY = intPreferencesKey("eq_virtualizer_strength")
     }

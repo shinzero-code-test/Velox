@@ -28,8 +28,10 @@ private val LocalVeloxAccent = staticCompositionLocalOf { VeloxColors.Accent }
 /** Mirrors the `MaterialTheme.xxx` access pattern for the tokens Material3 doesn't model
  * (glass alpha tiers, the doc's own spacing/radius scale, the full 11-style type scale). */
 object VeloxTheme {
-    val spacing get() = LocalVeloxSpacing.current
-    val shapes get() = LocalVeloxShapes.current
+    val spacing: VeloxSpacing
+        @Composable get() = LocalVeloxSpacing.current
+    val shapes: VeloxShapes
+        @Composable get() = LocalVeloxShapes.current
     val typography: VeloxTypography
         @Composable get() = LocalVeloxTypography.current
 }

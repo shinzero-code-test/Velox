@@ -119,6 +119,7 @@ class MediaLibraryRepositoryImpl @Inject constructor(
         artistDao.upsertAll(result.artists)
         artistDao.deleteMissing(result.artists.map { it.id })
         preferencesDataStore.edit { it[HAS_SCANNED_KEY] = true }
+        Unit
     }
 
     /** Settings → Storage (SCREEN_SETTINGS.md §8). Also zeroes the denormalized
