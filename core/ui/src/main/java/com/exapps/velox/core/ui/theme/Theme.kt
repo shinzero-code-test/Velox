@@ -51,21 +51,21 @@ fun VeloxTheme(
     accent: Color = VeloxColors.Accent,
     content: @Composable () -> Unit,
 ) {
-    val backgroundColor = VeloxColors.background
-    val surfaceColor = VeloxColors.surface
+    val backgroundColor = VeloxColors.currentBackground
+    val surfaceColor = VeloxColors.currentSurface
 
-    // Publish the mode for the palette helpers and every VeloxColors.surface /
+    // Publish the mode for the palette helpers and every VeloxColors.currentSurface /
     // .background reader across the app (see the flag's doc on why this must be
     // snapshot state). SideEffect = write after successful composition, no loop.
     SideEffect { VeloxColors.amoledMode = amoled }
 
     val colorScheme = darkColorScheme(
         primary = accent,
-        onPrimary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.background,
+        onPrimary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.currentBackground,
         primaryContainer = accent.copy(alpha = VeloxColors.AccentContainerAlpha),
         onPrimaryContainer = accent,
         secondary = accent,
-        onSecondary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.background,
+        onSecondary = if (amoled) VeloxColors.AmoledBackground else VeloxColors.currentBackground,
         background = backgroundColor,
         onBackground = VeloxColors.OnBackground,
         surface = surfaceColor,

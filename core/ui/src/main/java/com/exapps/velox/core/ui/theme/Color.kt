@@ -62,9 +62,11 @@ object VeloxColors {
     var amoledMode: Boolean by mutableStateOf(false)
         internal set
 
-    /** Mode-aware tokens — prefer these over [Surface]/[Background] in UI code. */
-    val surface: Color get() = if (amoledMode) AmoledSurface else Surface
-    val background: Color get() = if (amoledMode) AmoledBackground else Background
+    /** Mode-aware tokens — prefer these over [Surface]/[Background] in UI code.
+     * (Distinct names from the base constants: Color is a value class, and a pair
+     * like Background/background collides on the same mangled JVM getter.) */
+    val currentSurface: Color get() = if (amoledMode) AmoledSurface else Surface
+    val currentBackground: Color get() = if (amoledMode) AmoledBackground else Background
 
     /** User-selectable accents (BRANDING.md / DESIGN_SYSTEM.md §2.2). Teal ships as default in v1;
      * the picker itself is a later Settings feature — these are just the swatch values. */

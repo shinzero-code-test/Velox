@@ -99,7 +99,7 @@ fun EqualizerScreen(
                 checked = state?.enabled == true,
                 onCheckedChange = viewModel::onEnabledChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = VeloxColors.background,
+                    checkedThumbColor = VeloxColors.currentBackground,
                     checkedTrackColor = accentColor(),
                 ),
             )
@@ -239,7 +239,7 @@ private fun PresetChip(
         Text(
             text = label,
             style = VeloxTheme.typography.labelLarge,
-            color = if (selected) VeloxColors.background else VeloxColors.OnSurface,
+            color = if (selected) VeloxColors.currentBackground else VeloxColors.OnSurface,
         )
     }
 }

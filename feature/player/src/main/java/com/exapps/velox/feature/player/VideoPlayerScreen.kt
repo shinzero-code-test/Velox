@@ -639,7 +639,7 @@ private fun SpeedPickerSheet(
     onSelected: (Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Text(
                 text = stringResource(R.string.video_speed_title),
@@ -667,7 +667,7 @@ private fun SpeedPickerSheet(
                         Text(
                             text = formatSpeed(speed),
                             style = VeloxTheme.typography.titleMedium,
-                            color = if (selected) VeloxColors.background else VeloxColors.OnSurface,
+                            color = if (selected) VeloxColors.currentBackground else VeloxColors.OnSurface,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -689,7 +689,7 @@ private fun TracksSheet(
     val audioTracks = tracks.filter { it.type == TrackType.AUDIO }
     val textTracks = tracks.filter { it.type == TrackType.TEXT }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Text(
                 text = stringResource(R.string.video_tracks_title),

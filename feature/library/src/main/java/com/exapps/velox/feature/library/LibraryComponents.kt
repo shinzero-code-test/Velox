@@ -59,7 +59,7 @@ fun LibraryTabChip(label: String, selected: Boolean, onClick: () -> Unit, modifi
         Text(
             text = label,
             style = VeloxTheme.typography.labelLarge,
-            color = if (selected) VeloxColors.background else VeloxColors.OnSurface,
+            color = if (selected) VeloxColors.currentBackground else VeloxColors.OnSurface,
         )
     }
 }

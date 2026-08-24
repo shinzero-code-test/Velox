@@ -45,7 +45,7 @@ fun VeloxGlassIconButton(
             .clickable(onClick = onClick)
             .semantics { this.contentDescription = contentDescription },
     ) {
-        CompositionLocalProvider(LocalContentColor provides if (filled) VeloxColors.background else tint) {
+        CompositionLocalProvider(LocalContentColor provides if (filled) VeloxColors.currentBackground else tint) {
             Icon(
                 imageVector = icon,
                 contentDescription = null, // already set on the Box above

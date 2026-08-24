@@ -340,7 +340,7 @@ fun SettingsScreen(
                         .padding(VeloxSpacing.md),
                 )
             },
-            containerColor = VeloxColors.surface,
+            containerColor = VeloxColors.currentSurface,
             titleContentColor = VeloxColors.OnBackground,
             textContentColor = VeloxColors.OnSurfaceVariant,
         )
@@ -383,7 +383,7 @@ private fun SwitchRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = VeloxColors.background,
+                checkedThumbColor = VeloxColors.currentBackground,
                 checkedTrackColor = accentColor(),
             ),
         )
@@ -441,7 +441,7 @@ private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit, mo
         Text(
             text = label,
             style = VeloxTheme.typography.labelLarge,
-            color = if (selected) VeloxColors.background else VeloxColors.OnSurface,
+            color = if (selected) VeloxColors.currentBackground else VeloxColors.OnSurface,
         )
     }
 }

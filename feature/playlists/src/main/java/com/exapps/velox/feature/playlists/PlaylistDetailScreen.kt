@@ -258,7 +258,7 @@ private fun AddTracksSheet(
 ) {
     val selected = remember { mutableStateOf(setOf<Long>()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Text(
                 text = stringResource(R.string.playlist_add_tracks),
