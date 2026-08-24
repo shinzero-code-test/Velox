@@ -56,7 +56,8 @@ import androidx.media3.common.Tracks as Media3Tracks
 @Singleton
 class MediaControllerPlayerController @Inject constructor(
     @ApplicationContext private val context: Context,
-
+    private val userSettings: UserSettingsPreferences,
+    private val positionStore: PlaybackPositionStore,
 ) : PlayerController, Media3PlayerAccessor {
 
     /**
