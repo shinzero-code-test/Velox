@@ -12,6 +12,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 dependencies {
     // coroutines-core only — the -android artifact pulls in the Main dispatcher's
     // Android dependency, which has no place in a framework-agnostic domain module.
