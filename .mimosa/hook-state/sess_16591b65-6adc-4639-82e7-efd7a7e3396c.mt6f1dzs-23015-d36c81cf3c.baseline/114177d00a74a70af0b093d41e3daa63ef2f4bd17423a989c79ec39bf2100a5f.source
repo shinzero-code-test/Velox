@@ -1,0 +1,118 @@
+package com.exapps.velox.feature.playlists
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.exapps.velox.core.common.util.ScreenState
+import com.exapps.velox.core.domain.model.Playlist
+import com.exapps.velox.core.domain.model.PlaylistType
+import com.exapps.velox.core.ui.components.ClickableGlassCard
+import com.exapps.velox.core.ui.components.VeloxEmptyState
+import com.exapps.velox.core.ui.components.VeloxFullScreenLoading
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxShapes
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+import com.exapps.velox.core.ui.theme.glassSurfaceColor
+
+@Composable
+fun PlaylistsScreen(
+    onPlaylistClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: PlaylistsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(R.string.playlists_title),
+            style = VeloxTheme.typography.headlineLarge,
+            color = VeloxColors.OnBackground,
+            modifier = Modifier.padding(VeloxSpacing.lg),
+        )
+
+        when (val s = state) {
+            is ScreenState.Loading -> VeloxFullScreenLoading()
+            is ScreenState.Error -> VeloxEmptyState(
+                icon = Icons.Filled.QueueMusic,
+                title = stringResource(R.string.playlists_empty_title),
+                body = s.message ?: stringResource(R.string.playlists_empty_body),
+            )
+            is ScreenState.Empty, is ScreenState.PermissionRequired -> VeloxEmptyState(
+                icon = Icons.Filled.QueueMusic,
+                title = stringResource(R.string.playlists_empty_title),
+                body = stringResource(R.string.playlists_empty_body),
+            )
+            is ScreenState.Content -> LazyColumn(
+                contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
+            ) {
+                items(s.data, key = { it.id }) { playlist ->
+                    PlaylistRow(playlist = playlist, onClick = { onPlaylistClick(playlist.id) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistRow(playlist: Playlist, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val (icon, label) = playlistDisplay(playlist)
+    ClickableGlassCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(VeloxShapes.sm)
+                    .background(glassSurfaceColor(elevated = true)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = VeloxColors.Accent)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = VeloxTheme.typography.titleLarge, color = VeloxColors.OnSurface)
+                Text(
+                    text = stringResource(R.string.playlist_track_count, playlist.trackCount),
+                    style = VeloxTheme.typography.bodyMedium,
+                    color = VeloxColors.OnSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun playlistDisplay(playlist: Playlist): Pair<ImageVector, String> = when (playlist.type) {
+    PlaylistType.FAVORITES -> Icons.Filled.Favorite to stringResource(R.string.playlist_favorites)
+    PlaylistType.RECENTLY_PLAYED -> Icons.Filled.History to stringResource(R.string.playlist_recently_played)
+    PlaylistType.MOST_PLAYED -> Icons.Filled.TrendingUp to stringResource(R.string.playlist_most_played)
+    PlaylistType.RECENTLY_ADDED -> Icons.Filled.LibraryMusic to playlist.name
+    PlaylistType.USER -> Icons.Filled.QueueMusic to playlist.name
+}

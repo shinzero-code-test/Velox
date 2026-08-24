@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox - معادل الصوت</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-container": "#4f319c",
+                      "inverse-surface": "#e5e2e1",
+                      "on-error": "#690005",
+                      "inverse-on-surface": "#313030",
+                      "tertiary": "#ffb783",
+                      "surface-container-high": "#2a2a2a",
+                      "tertiary-fixed": "#ffdcc5",
+                      "on-primary": "#1000a9",
+                      "on-tertiary-fixed": "#301400",
+                      "on-secondary-fixed": "#21005e",
+                      "surface-dim": "#131313",
+                      "surface-container-low": "#1c1b1b",
+                      "on-tertiary-container": "#452000",
+                      "secondary": "#cebdff",
+                      "primary": "#c0c1ff",
+                      "surface-bright": "#3a3939",
+                      "on-primary-fixed": "#07006c",
+                      "on-secondary-fixed-variant": "#4f319c",
+                      "error": "#ffb4ab",
+                      "on-secondary-container": "#bea8ff",
+                      "surface": "#131313",
+                      "tertiary-container": "#d97721",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "tertiary-fixed-dim": "#ffb783",
+                      "secondary-fixed": "#e8ddff",
+                      "surface-variant": "#353534",
+                      "surface-container": "#201f1f",
+                      "on-surface": "#e5e2e1",
+                      "secondary-fixed-dim": "#cebdff",
+                      "outline": "#908fa0",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-highest": "#353534",
+                      "outline-variant": "#464554",
+                      "on-tertiary": "#4f2500",
+                      "on-tertiary-fixed-variant": "#703700",
+                      "primary-container": "#8083ff",
+                      "on-primary-container": "#0d0096",
+                      "surface-tint": "#c0c1ff",
+                      "inverse-primary": "#494bd6",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "background": "#131313",
+                      "on-secondary": "#381385",
+                      "on-background": "#e5e2e1",
+                      "surface-container-lowest": "#0e0e0e",
+                      "error-container": "#93000a",
+                      "primary-fixed": "#e1e0ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-sm": "8px",
+                      "stack-md": "16px",
+                      "gutter": "16px",
+                      "stack-lg": "32px",
+                      "container-margin": "20px"
+              },
+              "fontFamily": {
+                      "headline-md": ["IBM Plex Sans Arabic"],
+                      "body-lg": ["IBM Plex Sans Arabic"],
+                      "label-sm": ["IBM Plex Sans Arabic"],
+                      "display-lg": ["IBM Plex Sans Arabic"],
+                      "body-md": ["IBM Plex Sans Arabic"],
+                      "headline-lg-mobile": ["IBM Plex Sans Arabic"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "display-lg": ["34px", {"lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Custom range slider styling for EQ */
+        input[type=range].eq-slider {
+            -webkit-appearance: none;
+            width: 150px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            outline: none;
+            transform: rotate(-90deg);
+            transform-origin: center;
+        }
+        input[type=range].eq-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #c0c1ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(192, 193, 255, 0.5);
+            border: 2px solid white;
+        }
+        input[type=range].horiz-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            outline: none;
+        }
+        input[type=range].horiz-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #c0c1ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(192, 193, 255, 0.5);
+            border: 2px solid white;
+        }
+        /* Custom Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #908fa0;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider-round {
+            background-color: #8083ff;
+        }
+        input:checked + .slider-round:before {
+            transform: translateX(20px);
+            background-color: #0d0096;
+        }
+        
+        /* Hide scrollbar for preset chips */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen relative overflow-x-hidden pt-24 pb-40">
+<!-- Ambient Background -->
+<div class="fixed inset-0 z-[-1] bg-surface-lowest">
+<div class="absolute inset-0 opacity-30 mix-blend-screen" style="background: radial-gradient(circle at 50% 50%, rgba(128, 131, 255, 0.15) 0%, transparent 70%);"></div>
+
+</div>
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin py-stack-sm bg-white/5 dark:bg-white/5 backdrop-blur-xl border-b border-white/15">
+<button class="text-on-surface-variant hover:bg-white/10 p-2 rounded-full transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">معادل الصوت</h1>
+<button class="font-label-sm text-label-sm text-primary hover:bg-white/10 px-3 py-2 rounded-full transition-colors active:scale-95 duration-200">
+            إعادة تعيين
+        </button>
+</header>
+<main class="max-w-4xl mx-auto px-container-margin flex flex-col gap-stack-lg">
+<!-- Apply Settings Context -->
+<section class="flex justify-between items-center bg-surface-container/50 backdrop-blur-xl p-4 rounded-xl border border-white/10">
+<span class="font-body-lg text-body-lg text-on-surface">تطبيق على</span>
+<div class="flex bg-surface-container-high rounded-full p-1">
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-primary-container text-on-primary-container transition-all">الوسائط الحالية</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full text-on-surface-variant hover:text-on-surface transition-all">الكل</button>
+</div>
+</section>
+<!-- Presets Row -->
+<section>
+<h2 class="font-label-sm text-label-sm text-outline mb-stack-sm uppercase tracking-wider">الإعدادات المسبقة</h2>
+<div class="flex gap-stack-sm overflow-x-auto no-scrollbar pb-2">
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-primary-container text-on-primary-container border border-primary/20 shrink-0">مخصص</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">عادي</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">بوب</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">روك</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">جاز</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">كلاسيك</button>
+<button class="font-label-sm text-label-sm px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant border border-white/10 hover:bg-white/10 shrink-0 transition-colors">صوت الجهير</button>
+</div>
+</section>
+<!-- 10-Band EQ -->
+<section class="bg-surface-container/30 backdrop-blur-2xl rounded-2xl p-6 border border-white/5 shadow-2xl relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+<div class="flex justify-between items-center mb-12">
+<span class="font-label-sm text-label-sm text-outline">+12dB</span>
+<span class="font-label-sm text-label-sm text-outline">0dB</span>
+<span class="font-label-sm text-label-sm text-outline">-12dB</span>
+</div>
+<!-- EQ Sliders Container LTR for technical accuracy -->
+<div class="flex justify-between items-end h-[200px] mt-8 mb-4 px-2" dir="ltr">
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="4"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">31</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="2"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">62</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="-1"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">125</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="-2"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">250</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="0"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">500</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="1"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">1k</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="3"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2k</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="5"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">4k</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="4"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">8k</span>
+</div>
+<div class="flex flex-col items-center gap-4 h-full">
+<div class="relative h-full flex items-center justify-center w-8">
+<input class="eq-slider" max="12" min="-12" type="range" value="2"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">16k</span>
+</div>
+</div>
+<div class="mt-8 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">معادل طيف ترددي (10-Band)</span>
+<label class="toggle-switch">
+<input checked="" type="checkbox"/>
+<span class="slider-round"></span>
+</label>
+</div>
+</section>
+<!-- Additional Effects -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<!-- Bass Boost -->
+<div class="bg-surface-container-low backdrop-blur-md rounded-xl p-4 border border-white/5 flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="speaker">speaker</span>
+<span class="font-body-md text-body-md text-on-surface">تعزيز الجهير</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary">60%</span>
+</div>
+<input class="horiz-slider" max="100" min="0" type="range" value="60"/>
+</div>
+<!-- Virtualizer -->
+<div class="bg-surface-container-low backdrop-blur-md rounded-xl p-4 border border-white/5 flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="surround_sound">surround_sound</span>
+<span class="font-body-md text-body-md text-on-surface">المحيط الصوتي</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary">40%</span>
+</div>
+<input class="horiz-slider" max="100" min="0" type="range" value="40"/>
+</div>
+<!-- Loudness -->
+<div class="bg-surface-container-low backdrop-blur-md rounded-xl p-4 border border-white/5 flex justify-between items-center md:col-span-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="volume_up">volume_up</span>
+<div>
+<span class="font-body-md text-body-md text-on-surface block">قوة الصوت</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">تحسين الوضوح في المستويات المنخفضة</span>
+</div>
+</div>
+<label class="toggle-switch">
+<input type="checkbox"/>
+<span class="slider-round"></span>
+</label>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Shell & Mini Player -->
+<div class="fixed bottom-0 left-0 w-full z-50">
+<!-- Mini Player -->
+<div class="mx-2 mb-2 bg-surface-container-high/90 backdrop-blur-2xl rounded-xl p-2 flex items-center gap-3 border border-white/10 shadow-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="A dark, moody album cover featuring abstract neon purple and blue geometric shapes resembling sound waves over a deep space background, cinematic lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqTb_fsbduELNGbI4RXEQ8WFhj97Mk28Jgvb7GvDF8hz0nJWeSLZg1Tl-Dn2KXGUxlnriQXM3Qn1NdUNe5faPMWck0-xYi8bPJ86ZuE5W9YcnzoxAMVgvQM7Tg1MoJEFh_m2ObLW7ZNZwoChDic40Vevv685oETzBejWNXa9skH7Hu0UIOX23LxcVTqRjdupajGas1nzFc7G52H6W26T6bMKWnIDnQuku6_eUlle-px5VOICrJkHPK"/>
+<div class="flex-1 overflow-hidden">
+<p class="font-body-md text-body-md text-on-surface font-medium truncate">ليلة في الصحراء</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">مشروع الموسيقى العربية</p>
+</div>
+<div class="flex items-center gap-1 pr-2">
+<button class="p-2 text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="favorite_border">favorite_border</span>
+</button>
+<button class="p-2 text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="play_arrow" data-weight="fill">play_arrow</span>
+</button>
+</div>
+<!-- Progress bar -->
+<div class="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10 rounded-b-xl overflow-hidden">
+<div class="h-full bg-primary w-1/3"></div>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="flex justify-around items-center px-4 pb-safe pt-2 bg-white/5 dark:bg-white/5 backdrop-blur-2xl border-t border-white/10">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="library_music">library_music</span>
+<span class="font-label-sm text-label-sm">المكتبة</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="search">search</span>
+<span class="font-label-sm text-label-sm">البحث</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary font-bold active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="settings" data-weight="fill">settings</span>
+<span class="font-label-sm text-label-sm">الإعدادات</span>
+</a>
+</nav>
+</div>
+</body></html>

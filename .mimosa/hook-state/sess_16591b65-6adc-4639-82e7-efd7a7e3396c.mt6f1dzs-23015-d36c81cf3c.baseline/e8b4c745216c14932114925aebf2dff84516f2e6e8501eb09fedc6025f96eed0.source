@@ -1,0 +1,138 @@
+package com.exapps.velox.core.data.repository
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import com.exapps.velox.core.common.di.IoDispatcher
+import com.exapps.velox.core.data.local.dao.AlbumDao
+import com.exapps.velox.core.data.local.dao.ArtistDao
+import com.exapps.velox.core.data.local.dao.MediaItemDao
+import com.exapps.velox.core.data.local.entity.PlayHistoryEntity
+import com.exapps.velox.core.data.local.mapper.toDomain
+import com.exapps.velox.core.data.scanner.MediaStoreScanner
+import com.exapps.velox.core.domain.model.Album
+import com.exapps.velox.core.domain.model.Artist
+import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.MediaItem
+import com.exapps.velox.core.domain.model.MediaType
+import com.exapps.velox.core.domain.model.SortOrder
+import com.exapps.velox.core.domain.repository.MediaLibraryRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class MediaLibraryRepositoryImpl @Inject constructor(
+    private val mediaItemDao: MediaItemDao,
+    private val albumDao: AlbumDao,
+    private val artistDao: ArtistDao,
+    private val playHistoryDao: com.exapps.velox.core.data.local.dao.PlayHistoryDao,
+    private val scanner: MediaStoreScanner,
+    private val preferencesDataStore: DataStore<Preferences>,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+) : MediaLibraryRepository {
+
+    override fun observeTracks(sortOrder: SortOrder): Flow<List<MediaItem>> =
+        mediaItemDao.observeByTypeOrderedByTitle(MediaType.AUDIO.name)
+            .map { entities -> entities.map { it.toDomain() }.sortedWith(sortOrder) }
+
+    override fun observeVideos(sortOrder: SortOrder): Flow<List<MediaItem>> =
+        mediaItemDao.observeByTypeOrderedByTitle(MediaType.VIDEO.name)
+            .map { entities -> entities.map { it.toDomain() }.sortedWith(sortOrder) }
+
+    override fun observeAlbums(): Flow<List<Album>> =
+        albumDao.observeAll().map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeArtists(): Flow<List<Artist>> =
+        artistDao.observeAll().map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeFolders(parentPath: String?): Flow<List<Folder>> =
+        mediaItemDao.observeDistinctFolderPaths().map { paths ->
+            paths.filterNotNull()
+                .filter { path -> parentPath == null || File(path).parent == parentPath }
+                .map { path ->
+                    Folder(
+                        path = path,
+                        displayName = File(path).name,
+                        itemCount = 0, // resolved lazily by the UI via observeFolderContents when opened
+                        parentPath = File(path).parent,
+                    )
+                }
+        }
+
+    override fun observeFolderContents(path: String): Flow<List<MediaItem>> =
+        mediaItemDao.observeByFolder(path).map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeAlbumTracks(albumId: Long): Flow<List<MediaItem>> =
+        mediaItemDao.observeByAlbum(albumId).map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeArtistTracks(artistId: Long): Flow<List<MediaItem>> =
+        // Artist rows are keyed by a hash of their name (see MediaStoreScanner) since
+        // MediaStore doesn't expose a stable artist id — look the name back up rather
+        // than threading a second id scheme through the DAO layer.
+        flow {
+            val artist = artistDao.getById(artistId)
+            if (artist == null) {
+                emit(emptyList())
+            } else {
+                emitAll(mediaItemDao.observeByArtist(artist.name).map { entities -> entities.map { it.toDomain() } })
+            }
+        }
+
+    override fun observeFavorites(): Flow<List<MediaItem>> =
+        mediaItemDao.observeFavorites().map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeRecentlyPlayed(limit: Int): Flow<List<MediaItem>> =
+        mediaItemDao.observeRecentlyPlayed(limit).map { it.map { entity -> entity.toDomain() } }
+
+    override fun observeMostPlayed(limit: Int): Flow<List<MediaItem>> =
+        mediaItemDao.observeMostPlayed(limit).map { it.map { entity -> entity.toDomain() } }
+
+    override suspend fun getById(id: Long): MediaItem? =
+        withContext(ioDispatcher) { mediaItemDao.getById(id)?.toDomain() }
+
+    override fun search(query: String, type: MediaType?): Flow<List<MediaItem>> =
+        mediaItemDao.search(query, type?.name).map { it.map { entity -> entity.toDomain() } }
+
+    override suspend fun setFavorite(id: Long, favorite: Boolean) =
+        withContext(ioDispatcher) { mediaItemDao.setFavorite(id, favorite) }
+
+    override suspend fun recordPlayed(id: Long) = withContext(ioDispatcher) {
+        val now = System.currentTimeMillis() / 1000
+        mediaItemDao.recordPlayed(id, now)
+        playHistoryDao.insert(PlayHistoryEntity(mediaItemId = id, playedAtEpochSeconds = now))
+    }
+
+    override suspend fun rescanLibrary() = withContext(ioDispatcher) {
+        val result = scanner.scan()
+        mediaItemDao.upsertAll(result.mediaItems)
+        mediaItemDao.deleteMissing(result.mediaItems.map { it.id })
+        albumDao.upsertAll(result.albums)
+        albumDao.deleteMissing(result.albums.map { it.id })
+        artistDao.upsertAll(result.artists)
+        artistDao.deleteMissing(result.artists.map { it.id })
+        preferencesDataStore.edit { it[HAS_SCANNED_KEY] = true }
+    }
+
+    override fun hasScannedBefore(): Flow<Boolean> =
+        preferencesDataStore.data.map { it[HAS_SCANNED_KEY] ?: false }
+
+    private companion object {
+        val HAS_SCANNED_KEY = booleanPreferencesKey("has_scanned_library")
+    }
+}
+
+private fun List<MediaItem>.sortedWith(sortOrder: SortOrder): List<MediaItem> = when (sortOrder) {
+    SortOrder.TITLE -> sortedBy { it.title.lowercase() }
+    SortOrder.DATE_ADDED -> sortedByDescending { it.dateAddedEpochSeconds }
+    SortOrder.DURATION -> sortedByDescending { it.durationMs }
+    SortOrder.SIZE -> sortedByDescending { it.sizeBytes }
+    SortOrder.PATH -> sortedBy { it.folderPath ?: "" }
+}

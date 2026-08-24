@@ -1,0 +1,114 @@
+package com.exapps.velox.core.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+
+/**
+ * Standard empty-state layout (SCREEN_PATTERNS.md §4): icon, title, short body,
+ * primary CTA, optional secondary text action. Every screen's "no content" branch
+ * should render this rather than a bespoke layout — see the Library empty-state
+ * copy in SCREEN_HOME_LIBRARY.md §7 for the reference strings.
+ */
+@Composable
+fun VeloxEmptyState(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    modifier: Modifier = Modifier,
+    primaryActionLabel: String? = null,
+    onPrimaryAction: (() -> Unit)? = null,
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(VeloxSpacing.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.OnSurfaceVariant) {
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(48.dp))
+        }
+        Spacer(Modifier.height(VeloxSpacing.md))
+        Text(
+            text = title,
+            style = VeloxTheme.typography.headlineMedium,
+            color = VeloxColors.OnBackground,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(VeloxSpacing.xs))
+        Text(
+            text = body,
+            style = VeloxTheme.typography.bodyMedium,
+            color = VeloxColors.OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        if (primaryActionLabel != null && onPrimaryAction != null) {
+            Spacer(Modifier.height(VeloxSpacing.xl))
+            VeloxPrimaryButton(text = primaryActionLabel, onClick = onPrimaryAction)
+        }
+        if (secondaryActionLabel != null && onSecondaryAction != null) {
+            Spacer(Modifier.height(VeloxSpacing.xs))
+            VeloxTextButton(
+                text = secondaryActionLabel,
+                onClick = onSecondaryAction,
+                color = VeloxColors.OnSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Full-screen centered glass progress indicator (SCREEN_PATTERNS.md §5: "Full screen"). */
+@Composable
+fun VeloxFullScreenLoading(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = VeloxColors.Accent)
+    }
+}
+
+/** Inline retry row for list-level errors (SCREEN_PATTERNS.md §6: "Inline for lists"). */
+@Composable
+fun VeloxErrorRow(
+    message: String,
+    retryLabel: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(VeloxSpacing.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = message,
+            style = VeloxTheme.typography.bodyMedium,
+            color = VeloxColors.OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(VeloxSpacing.md))
+        VeloxSecondaryButton(text = retryLabel, onClick = onRetry)
+    }
+}

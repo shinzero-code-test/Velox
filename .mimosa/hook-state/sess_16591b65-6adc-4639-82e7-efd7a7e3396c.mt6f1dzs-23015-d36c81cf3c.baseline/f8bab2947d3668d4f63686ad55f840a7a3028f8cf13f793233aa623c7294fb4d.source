@@ -1,0 +1,46 @@
+package com.exapps.velox.feature.playlists
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.exapps.velox.core.ui.components.ClickableGlassCard
+import com.exapps.velox.core.ui.components.VeloxFullScreenLoading
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+
+/** Tracklist is read straight from PlaylistRepository — reordering, removal, and the
+ * full SCREEN_PLAYLISTS.md §6 chrome (header art collage, play-all bar) are Phase 1. */
+@Composable
+fun PlaylistDetailScreen(
+    playlistId: Long,
+    modifier: Modifier = Modifier,
+    viewModel: PlaylistDetailViewModel = hiltViewModel(),
+) {
+    val detail by viewModel.detail.collectAsStateWithLifecycle()
+    val current = detail
+    if (current == null) {
+        VeloxFullScreenLoading(modifier.fillMaxSize())
+        return
+    }
+    LazyColumn(modifier = modifier.fillMaxSize()) {
+        items(current.tracks, key = { it.id }) { track ->
+            ClickableGlassCard(
+                onClick = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xxs),
+            ) {
+                Text(track.title, style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
+            }
+        }
+    }
+}

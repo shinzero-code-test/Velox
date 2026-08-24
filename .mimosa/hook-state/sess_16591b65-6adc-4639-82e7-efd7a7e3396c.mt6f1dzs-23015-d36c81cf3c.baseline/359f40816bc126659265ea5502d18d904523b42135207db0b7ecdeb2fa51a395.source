@@ -1,0 +1,46 @@
+package com.exapps.velox
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.exapps.velox.core.ui.theme.VeloxTheme
+import com.exapps.velox.navigation.VeloxNavHost
+import dagger.hilt.android.AndroidEntryPoint
+
+/**
+ * Master prompt Phase 0 item 4: "Single-activity host + Navigation skeleton". Every
+ * screen in the app is a composable reached through [VeloxNavHost]; this Activity's
+ * only jobs are the platform-required setup (splash, edge-to-edge, theme root) and
+ * resolving where the nav graph should start.
+ */
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+
+    private val appViewModel: AppViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        super.onCreate(savedInstanceState)
+
+        // Holds the splash screen (system-drawn, not a fake in-app screen — see
+        // Theme.Velox.Splash) up until AppViewModel has resolved onboarding state,
+        // so the very first frame the person sees is already the correct one.
+        splashScreen.setKeepOnScreenCondition { appViewModel.startDestination.value == null }
+
+        enableEdgeToEdge()
+
+        setContent {
+            VeloxTheme {
+                val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
+                startDestination?.let { destination ->
+                    VeloxNavHost(startDestination = destination)
+                }
+            }
+        }
+    }
+}

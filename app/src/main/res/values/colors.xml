@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- These mirror VeloxColors.kt (core:ui) exactly — the handful of color resources
+     the platform needs outside Compose (splash screen theme, adaptive icon). Compose
+     screens should never reference these directly; use VeloxTheme / VeloxColors. -->
+<resources>
+    <color name="velox_background">#0B0D10</color>
+    <color name="velox_accent">#2EE6A6</color>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">المكتبة</string>
+    <string name="library_tab_tracks">الأغاني</string>
+    <string name="library_tab_albums">الألبومات</string>
+    <string name="library_tab_artists">الفنانون</string>
+    <string name="library_tab_folders">المجلدات</string>
+    <string name="library_tab_videos">الفيديوهات</string>
+    <string name="library_empty_title">مكتبتك فارغة</string>
+    <string name="library_empty_body">يبحث Velox عن ملفات الصوت والفيديو الموجودة على جهازك بالفعل. امنح الإذن للبدء.</string>
+    <string name="library_empty_action">فحص الوسائط</string>
+    <string name="library_rescan">إعادة فحص المكتبة</string>
+    <string name="library_error_body">تعذّر تحميل مكتبتك.</string>
+    <string name="library_error_retry">إعادة المحاولة</string>
+    <string name="library_permission_title">الوصول إلى وسائطك</string>
+    <string name="library_permission_body">يحتاج Velox إلى إذن لرؤية ملفات الصوت والفيديو المخزّنة على هذا الجهاز. لا تغادر بياناتك هاتفك أبدًا.</string>
+    <string name="library_permission_action">السماح بالوصول</string>
+    <string name="library_track_subtitle">%1$s • %2$s</string>
+
+    <string name="library_sort">ترتيب حسب</string>
+    <string name="library_sort_title">العنوان</string>
+    <string name="library_sort_date_added">تاريخ الإضافة</string>
+    <string name="library_sort_duration">المدة</string>
+    <string name="library_sort_size">الحجم</string>
+    <string name="library_sort_path">المجلد</string>
+
+    <string name="search_title">البحث</string>
+    <string name="search_hint">ابحث عن أغاني، ألبومات، فنانين…</string>
+    <string name="search_empty_title">لا توجد نتائج</string>
+    <string name="search_empty_body">جرّب عنوانًا أو فنانًا أو ألبومًا مختلفًا.</string>
+    <string name="search_prompt_title">ابحث عمّا تريد تشغيله</string>
+    <string name="search_prompt_body">ابدأ بالكتابة للبحث في مكتبتك.</string>
+    <string name="cd_video_result">فيديو</string>
+</resources>

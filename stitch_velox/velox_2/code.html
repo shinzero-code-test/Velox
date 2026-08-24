@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox Onboarding</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#301400",
+                    "background": "#131313",
+                    "on-surface-variant": "#c7c4d7",
+                    "surface-dim": "#131313",
+                    "inverse-surface": "#e5e2e1",
+                    "tertiary-fixed": "#ffdcc5",
+                    "on-primary-container": "#0d0096",
+                    "on-tertiary-fixed-variant": "#703700",
+                    "on-error-container": "#ffdad6",
+                    "primary-fixed": "#e1e0ff",
+                    "surface": "#131313",
+                    "surface-container-highest": "#353534",
+                    "on-surface": "#e5e2e1",
+                    "on-secondary": "#381385",
+                    "on-background": "#e5e2e1",
+                    "tertiary-fixed-dim": "#ffb783",
+                    "tertiary-container": "#d97721",
+                    "secondary": "#cebdff",
+                    "surface-tint": "#c0c1ff",
+                    "surface-bright": "#3a3939",
+                    "outline": "#908fa0",
+                    "secondary-container": "#4f319c",
+                    "on-primary-fixed": "#07006c",
+                    "primary": "#c0c1ff",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-fixed": "#e8ddff",
+                    "surface-container": "#201f1f",
+                    "on-error": "#690005",
+                    "surface-variant": "#353534",
+                    "primary-fixed-dim": "#c0c1ff",
+                    "tertiary": "#ffb783",
+                    "on-secondary-fixed-variant": "#4f319c",
+                    "on-primary-fixed-variant": "#2f2ebe",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-secondary-fixed": "#21005e",
+                    "error-container": "#93000a",
+                    "error": "#ffb4ab",
+                    "on-tertiary": "#4f2500",
+                    "on-secondary-container": "#bea8ff",
+                    "secondary-fixed-dim": "#cebdff",
+                    "on-primary": "#1000a9",
+                    "inverse-on-surface": "#313030",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-container": "#452000",
+                    "inverse-primary": "#494bd6",
+                    "primary-container": "#8083ff",
+                    "outline-variant": "#464554"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "gutter": "16px",
+                    "container-margin": "20px",
+                    "stack-md": "16px",
+                    "stack-lg": "32px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["IBM Plex Sans Arabic"],
+                    "display-lg": ["IBM Plex Sans Arabic"],
+                    "body-md": ["IBM Plex Sans Arabic"],
+                    "label-sm": ["IBM Plex Sans Arabic"],
+                    "body-lg": ["IBM Plex Sans Arabic"],
+                    "headline-md": ["IBM Plex Sans Arabic"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "display-lg": ["34px", {"lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Custom animations for the glassmorphism feel */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col relative overflow-hidden font-sans">
+<!-- Background Layer (Level 0) -->
+<div class="absolute inset-0 z-0">
+<!-- Abstract glowing glass sphere background -->
+<div class="w-full h-full bg-cover bg-center opacity-70" data-alt="A highly abstract, stunning 3D render of a glowing, translucent glass sphere floating in a deep, infinite dark void. The sphere emits a soft, mesmerizing bioluminescent light in vibrant shades of primary neon purple and cool indigo, reflecting and refracting off its sleek, frosted glass surface. The overall mood is cinematic, futuristic, and deeply immersive, perfectly establishing the premium dark glassmorphism aesthetic of a high-end media player." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCMKPX3soMttkCKtkKDI_Ef9znht6Hih0EI7U0hUmQ8tmzdClh7EeT-eNbvvLct7aUazuhrTFQDt8UC2r4xlOdgASEiURwqUquTX5GPoHVo9vcqYSZ2BHnPpORUJy3NwdYDIDd0m2ixBgCW6_fxuYwyoLnaiwzX1qApwdg2VS44ICXdhDRX0S1MXzKP9JNcav15WJqc3SCGaHO1raPgddWwHIeoFWtBH3HYEn9tszGXD41ZB4rEmP2P')">
+</div>
+<!-- Deep overlay to push background back and ensure text readability -->
+<div class="absolute inset-0 bg-background/80 backdrop-blur-[5px]"></div>
+</div>
+<!-- Main Content Canvas (Z-Index High) -->
+<main class="relative z-10 flex-1 flex flex-col items-center justify-center w-full max-w-md mx-auto px-container-margin py-stack-lg min-h-screen">
+<!-- Center Content / Glass Container -->
+<div class="flex-1 flex flex-col items-center justify-center w-full animate-float">
+<!-- Logo Container (Stylized V / Play) -->
+<div class="relative w-40 h-40 mb-stack-lg flex items-center justify-center">
+<!-- Radial Glow Lift -->
+<div class="absolute inset-0 bg-primary/20 rounded-full blur-[40px]"></div>
+<!-- Glass Orb Shell -->
+<div class="absolute inset-4 rounded-full border-t border-white/20 glass-panel shadow-2xl flex items-center justify-center">
+<!-- The Stylized 'V' constructed with SVGs for sharpness -->
+<svg class="text-primary drop-shadow-[0_0_15px_rgba(192,193,255,0.6)]" fill="none" height="64" viewbox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
+<path d="M4.5 4.5L12 19.5L19.5 4.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<path class="opacity-50" d="M12 19.5V10" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+<!-- Typography -->
+<div class="text-center space-y-stack-sm w-full">
+<h1 class="font-display-lg text-display-lg text-on-background tracking-tight drop-shadow-md">
+                    مرحبًا بك في Velox
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[280px] mx-auto opacity-90">
+                    مشغل وسائط قوي وأنيق
+                </p>
+</div>
+</div>
+<!-- Footer / Navigation Controls -->
+<div class="w-full flex flex-col items-center mt-auto pb-stack-md gap-stack-lg">
+<!-- Page Indicators -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(192,193,255,0.8)] transition-all duration-300"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-surface-variant opacity-50"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-surface-variant opacity-50"></div>
+</div>
+<!-- Primary Action Button -->
+<button class="w-full relative group overflow-hidden rounded-full glass-panel bg-primary-container/20 border-white/10 hover:bg-primary-container/40 transition-all duration-300 h-16 flex items-center justify-center gap-gutter shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+<!-- Inner glow hover state -->
+<div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<span class="relative z-10 font-headline-md text-headline-md text-primary tracking-wide">
+                    التالي
+                </span>
+<!-- In RTL context, 'Next' arrow usually points left -->
+<span class="material-symbols-outlined relative z-10 text-primary" style="font-variation-settings: 'wght' 300;">
+                    arrow_back
+                </span>
+</button>
+</div>
+</main>
+</body></html>

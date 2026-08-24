@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox Onboarding - Feature Highlights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "on-tertiary-fixed": "#301400",
+                            "background": "#131313",
+                            "on-surface-variant": "#c7c4d7",
+                            "surface-dim": "#131313",
+                            "inverse-surface": "#e5e2e1",
+                            "tertiary-fixed": "#ffdcc5",
+                            "on-primary-container": "#0d0096",
+                            "on-tertiary-fixed-variant": "#703700",
+                            "on-error-container": "#ffdad6",
+                            "primary-fixed": "#e1e0ff",
+                            "surface": "#131313",
+                            "surface-container-highest": "#353534",
+                            "on-surface": "#e5e2e1",
+                            "on-secondary": "#381385",
+                            "on-background": "#e5e2e1",
+                            "tertiary-fixed-dim": "#ffb783",
+                            "tertiary-container": "#d97721",
+                            "secondary": "#cebdff",
+                            "surface-tint": "#c0c1ff",
+                            "surface-bright": "#3a3939",
+                            "outline": "#908fa0",
+                            "secondary-container": "#4f319c",
+                            "on-primary-fixed": "#07006c",
+                            "primary": "#c0c1ff",
+                            "surface-container-high": "#2a2a2a",
+                            "secondary-fixed": "#e8ddff",
+                            "surface-container": "#201f1f",
+                            "on-error": "#690005",
+                            "surface-variant": "#353534",
+                            "primary-fixed-dim": "#c0c1ff",
+                            "tertiary": "#ffb783",
+                            "on-secondary-fixed-variant": "#4f319c",
+                            "on-primary-fixed-variant": "#2f2ebe",
+                            "surface-container-lowest": "#0e0e0e",
+                            "on-secondary-fixed": "#21005e",
+                            "error-container": "#93000a",
+                            "error": "#ffb4ab",
+                            "on-tertiary": "#4f2500",
+                            "on-secondary-container": "#bea8ff",
+                            "secondary-fixed-dim": "#cebdff",
+                            "on-primary": "#1000a9",
+                            "inverse-on-surface": "#313030",
+                            "surface-container-low": "#1c1b1b",
+                            "on-tertiary-container": "#452000",
+                            "inverse-primary": "#494bd6",
+                            "primary-container": "#8083ff",
+                            "outline-variant": "#464554"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "stack-sm": "8px",
+                            "gutter": "16px",
+                            "container-margin": "20px",
+                            "stack-md": "16px",
+                            "stack-lg": "32px"
+                    },
+                    "fontFamily": {
+                            "headline-lg-mobile": ["IBM Plex Sans Arabic"],
+                            "display-lg": ["IBM Plex Sans Arabic"],
+                            "body-md": ["IBM Plex Sans Arabic"],
+                            "label-sm": ["IBM Plex Sans Arabic"],
+                            "body-lg": ["IBM Plex Sans Arabic"],
+                            "headline-md": ["IBM Plex Sans Arabic"]
+                    },
+                    "fontSize": {
+                            "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                            "display-lg": ["34px", {"lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700"}],
+                            "body-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400"}],
+                            "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                            "body-lg": ["18px", {"lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400"}],
+                            "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .bg-pattern {
+            background-image: radial-gradient(circle at 15% 50%, rgba(192, 193, 255, 0.08), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(206, 189, 255, 0.05), transparent 25%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen w-screen overflow-hidden flex flex-col bg-pattern">
+<!-- Header / Nav Shell suppressed as this is a linear onboarding screen -->
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col justify-between p-container-margin md:max-w-2xl md:mx-auto md:w-full md:justify-center relative z-10 h-full">
+<!-- Top Section: Title -->
+<div class="mt-stack-lg md:mt-0 text-center animate-fade-in-up">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-display-lg md:text-display-lg text-primary mb-stack-sm">
+                مميزات Velox
+            </h1>
+</div>
+<!-- Middle Section: Feature Highlights -->
+<div class="flex-1 flex flex-col justify-center gap-stack-md my-stack-lg">
+<!-- Feature 1 -->
+<div class="glass-panel rounded-xl p-stack-md flex items-center gap-stack-md transform transition-all duration-300 hover:scale-[1.02]">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container text-[28px]" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-1">تشغيل سلس</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">تشغيل سلس لأي ملف تقريبًا</p>
+</div>
+</div>
+<!-- Feature 2 -->
+<div class="glass-panel rounded-xl p-stack-md flex items-center gap-stack-md transform transition-all duration-300 hover:scale-[1.02]">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container text-[28px]" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-1">تصميم مريح</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">تصميم زجاجي داكن وواجهات مريحة</p>
+</div>
+</div>
+<!-- Feature 3 -->
+<div class="glass-panel rounded-xl p-stack-md flex items-center gap-stack-md transform transition-all duration-300 hover:scale-[1.02]">
+<div class="w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-container text-[28px]" style="font-variation-settings: 'FILL' 1;">tune</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-1">تحكم كامل</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">تحكم كامل + خبرة عربية أصيلة</p>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Actions & Indicators -->
+<div class="mb-stack-lg flex flex-col items-center gap-stack-lg">
+<!-- Page Indicators -->
+<div class="flex gap-2 justify-center items-center">
+<div class="w-2 h-2 rounded-full bg-surface-variant transition-colors duration-300"></div>
+<div class="w-8 h-2 rounded-full bg-primary transition-all duration-300 shadow-[0_0_8px_rgba(192,193,255,0.4)]"></div>
+<div class="w-2 h-2 rounded-full bg-surface-variant transition-colors duration-300"></div>
+</div>
+<!-- Primary Action -->
+<button class="w-full md:w-auto md:min-w-[200px] bg-primary text-on-primary font-headline-md text-headline-md py-4 px-8 rounded-full transition-all duration-300 hover:bg-primary-fixed-dim hover:shadow-[0_0_15px_rgba(192,193,255,0.3)] active:scale-95 flex justify-center items-center gap-2">
+                التالي
+                <span class="material-symbols-outlined text-on-primary">arrow_back</span> <!-- RTL arrow points left -->
+</button>
+</div>
+</main>
+</body></html>

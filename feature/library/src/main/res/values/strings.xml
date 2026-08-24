@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_tab_tracks">Songs</string>
+    <string name="library_tab_albums">Albums</string>
+    <string name="library_tab_artists">Artists</string>
+    <string name="library_tab_folders">Folders</string>
+    <string name="library_tab_videos">Videos</string>
+    <string name="library_empty_title">Your library is empty</string>
+    <string name="library_empty_body">Velox looks for audio and video already on your device. Grant access to get started.</string>
+    <string name="library_empty_action">Scan for media</string>
+    <string name="library_rescan">Rescan library</string>
+    <string name="library_error_body">Couldn\'t load your library.</string>
+    <string name="library_error_retry">Retry</string>
+    <string name="library_permission_title">Access your media</string>
+    <string name="library_permission_body">Velox needs permission to see the audio and video files stored on this device. Nothing ever leaves your phone.</string>
+    <string name="library_permission_action">Allow access</string>
+    <string name="library_track_subtitle">%1$s • %2$s</string>
+
+    <!-- ROADMAP M2 "Search & sort" -->
+    <string name="library_sort">Sort by</string>
+    <string name="library_sort_title">Title</string>
+    <string name="library_sort_date_added">Date added</string>
+    <string name="library_sort_duration">Duration</string>
+    <string name="library_sort_size">Size</string>
+    <string name="library_sort_path">Folder</string>
+
+    <string name="search_title">Search</string>
+    <string name="search_hint">Search songs, albums, artists…</string>
+    <string name="search_empty_title">No results</string>
+    <string name="search_empty_body">Try a different title, artist, or album name.</string>
+    <string name="search_prompt_title">Find something to play</string>
+    <string name="search_prompt_body">Start typing to search your library.</string>
+    <string name="cd_video_result">Video</string>
+</resources>

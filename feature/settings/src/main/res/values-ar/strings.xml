@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">الإعدادات</string>
+
+    <string name="settings_section_appearance">المظهر</string>
+    <string name="settings_section_playback">التشغيل</string>
+    <string name="settings_section_subtitles">الترجمة</string>
+    <string name="settings_section_language">اللغة</string>
+    <string name="settings_section_storage">التخزين وذاكرة التخزين المؤقت</string>
+    <string name="settings_section_about">حول التطبيق</string>
+
+    <string name="settings_theme_dark_glass">الزجاجي الداكن (افتراضي)</string>
+    <string name="settings_theme_amoled">أسود AMOLED</string>
+    <string name="settings_accent_color">لون التمييز</string>
+
+    <string name="settings_resume_playback">تذكّر موضع التشغيل</string>
+    <string name="settings_auto_pip">صورة داخل صورة تلقائية</string>
+    <string name="settings_auto_pip_hint">تصغير تشغيل الفيديو عند مغادرة التطبيق</string>
+    <string name="settings_seek_interval">مدة التقديم بالضغط المزدوج</string>
+
+    <string name="settings_subtitle_size">حجم الترجمة الافتراضي</string>
+    <string name="settings_subtitle_small">صغير</string>
+    <string name="settings_subtitle_large">كبير</string>
+    <string name="settings_subtitle_position">الموضع</string>
+    <string name="settings_subtitle_bottom">أسفل</string>
+    <string name="settings_subtitle_top">أعلى</string>
+    <string name="settings_subtitle_autoload">تحميل الترجمة الخارجية تلقائيًا</string>
+    <string name="settings_subtitle_autoload_hint">مطابقة ملفات الترجمة مع الفيديوهات حسب اسم الملف</string>
+
+    <string name="settings_language_system">لغة النظام</string>
+
+    <string name="settings_clear_history">مسح سجل الاستماع</string>
+    <string name="settings_clear_history_hint">يعيد تعيين «استُمع إليها مؤخرًا» و«الأكثر تشغيلًا»</string>
+    <string name="settings_clear_history_confirm_title">مسح سجل الاستماع؟</string>
+    <string name="settings_clear_history_confirm_body">سيبدأ «استُمع إليها مؤخرًا» و«الأكثر تشغيلًا» من جديد. مكتبتك وقوائم تشغيلك لن يتأثروا.</string>
+    <string name="settings_clear_action">مسح</string>
+
+    <string name="settings_version">الإصدار</string>
+    <string name="settings_replay_intro">إعادة عرض المقدمة</string>
+    <string name="settings_replay_intro_hint">عرض</string>
+
+    <string name="cancel">إلغاء</string>
+</resources>

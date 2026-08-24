@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox - Now Playing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#1c1b1b",
+                        "on-tertiary-container": "#452000",
+                        "outline": "#908fa0",
+                        "background": "#131313",
+                        "primary-container": "#8083ff",
+                        "surface-tint": "#c0c1ff",
+                        "tertiary": "#ffb783",
+                        "on-primary-fixed": "#07006c",
+                        "surface": "#131313",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#cebdff",
+                        "on-secondary": "#381385",
+                        "inverse-surface": "#e5e2e1",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "surface-dim": "#131313",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-on-surface": "#313030",
+                        "secondary": "#cebdff",
+                        "surface-container-highest": "#353534",
+                        "error": "#ffb4ab",
+                        "on-secondary-fixed": "#21005e",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container": "#201f1f",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "tertiary-fixed": "#ffdcc5",
+                        "inverse-primary": "#494bd6",
+                        "on-surface-variant": "#c7c4d7",
+                        "secondary-container": "#4f319c",
+                        "outline-variant": "#464554",
+                        "on-tertiary": "#4f2500",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#4f319c",
+                        "on-secondary-container": "#bea8ff",
+                        "on-primary": "#1000a9",
+                        "primary-fixed": "#e1e0ff",
+                        "tertiary-container": "#d97721",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "surface-bright": "#3a3939",
+                        "on-background": "#e5e2e1",
+                        "surface-container-high": "#2a2a2a",
+                        "primary": "#c0c1ff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#301400",
+                        "secondary-fixed": "#e8ddff",
+                        "on-primary-container": "#0d0096",
+                        "surface-variant": "#353534"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "container-margin": "20px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["IBM Plex Sans Arabic"],
+                        "headline-md": ["IBM Plex Sans Arabic"],
+                        "body-md": ["IBM Plex Sans Arabic"],
+                        "display-lg": ["IBM Plex Sans Arabic"],
+                        "label-sm": ["IBM Plex Sans Arabic"],
+                        "headline-lg-mobile": ["IBM Plex Sans Arabic"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400" }],
+                        "display-lg": ["34px", { "lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom styles for progress bar and glowing effects */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-effect {
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: linear-gradient(to right, #6366F1 var(--value, 0%), rgba(255, 255, 255, 0.2) var(--value, 0%));
+            border-radius: 2px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen relative overflow-hidden flex flex-col font-body-md">
+<!-- Immersive Background -->
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-black/60 z-10 backdrop-blur-3xl"></div>
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-background/80 to-background z-20"></div>
+<img class="w-full h-full object-cover opacity-50 blur-xl scale-110" data-alt="A macro, abstract photograph of a vinyl record surface, heavily blurred, featuring deep indigo and purple hues. The lighting is moody and cinematic, creating a rich, textured dark glassmorphism background suitable for a high-end audio player." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwmzWNj6Tp5Pwyn6ryViHUQfzjRu-R-f_sKvTHr9KCnd2FmTiRf1iGlpeSRL6RVFrCqILwxtX5jm1Pb8z03X9HtMzX77jNT9LCZ_9Q-sSmiadbZW4dSL6atrpSvLxHSWovvFZGdxy2NCQ7KG20WhaunhjokcQFFGZ1HT9EPH9Ham4vMI5wSx8zvuXGeNHlxEDKrVqQeqEd0Uz7Mvyx2a0TVDeNOmeBqptpfJk-qceN61QxoymBMvhE"/>
+</div>
+<!-- Top App Bar (Custom for Now Playing) -->
+<header class="relative z-50 flex justify-between items-center px-container-margin h-16 pt-safe">
+<button class="p-2 hover:opacity-80 transition-opacity rounded-full glass-panel active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary-fixed-dim">keyboard_arrow_down</span>
+</button>
+<span class="font-label-sm text-label-sm text-on-surface-variant tracking-widest uppercase">التشغيل الآن</span>
+<button class="p-2 hover:opacity-80 transition-opacity rounded-full glass-panel active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary-fixed-dim">more_vert</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="relative z-10 flex-1 flex flex-col items-center justify-center px-container-margin pb-32 max-w-lg mx-auto w-full">
+<!-- Album Artwork -->
+<div class="relative w-64 h-64 md:w-80 md:h-80 rounded-[32px] overflow-hidden glow-effect mb-10 shrink-0">
+<img class="w-full h-full object-cover" data-alt="A striking, high-contrast album cover artwork featuring a surreal desert landscape under a starry night sky. A glowing, floating geometric shape (an octahedron) hovers above a solitary sand dune. The color palette is dominated by deep blues, indigos, and vibrant neon accents, embodying a modern, atmospheric electronic music aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5rV0vaLAh327kvPRVjP1qY1HUkJiaGNqcT5w4TeT-YRTSpC84KI-2Aw3LC0DzIkd7gNbl86B2EPtF684F4AhfgMZT4GDG3rkVWpNbsBGnlK0nsapWygDOKgy6Pf1QwaP8rDSuJAUny3o4jQK9tnlcaHR5jwnPtR26wlwQlnNsEH5B7XAgioorcCVPDAnwtsbvdV7pIwYzWXxGRVo_n1FC5siOaypg5gMw-dNehZX3fF7IhTTlPNsK"/>
+</div>
+<!-- Metadata -->
+<div class="w-full text-center mb-8">
+<h1 class="font-display-lg text-display-lg font-bold text-white mb-2 truncate">ليالي المدينة</h1>
+<p class="font-headline-md text-headline-md font-semibold text-primary-fixed-dim truncate">مشروع الموسيقى الإلكترونية</p>
+</div>
+<!-- Progress Bar -->
+<div class="w-full mb-8">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mb-2" dir="ltr">
+<span>01:42</span>
+<span>-03:15</span>
+</div>
+<input class="w-full" max="100" min="0" oninput="this.style.setProperty('--value', this.value + '%')" type="range" value="35"/>
+</div>
+<!-- Transport Controls -->
+<div class="w-full flex items-center justify-center gap-6 mb-8" dir="ltr">
+<button class="p-3 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">shuffle</span>
+</button>
+<button class="p-4 text-white hover:opacity-80 transition-opacity active:scale-90">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">skip_previous</span>
+</button>
+<button class="w-20 h-20 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary-container/30">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="p-4 text-white hover:opacity-80 transition-opacity active:scale-90">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">skip_next</span>
+</button>
+<button class="p-3 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">repeat</span>
+</button>
+</div>
+<!-- Secondary Actions -->
+<div class="w-full flex items-center justify-between px-4 glass-panel rounded-2xl py-3">
+<button class="p-2 text-primary-fixed-dim hover:text-white transition-colors active:scale-90">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-white transition-colors active:scale-90">
+<span class="material-symbols-outlined text-xl">queue_music</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-white transition-colors active:scale-90">
+<span class="material-symbols-outlined text-xl">tune</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-white transition-colors active:scale-90">
+<span class="material-symbols-outlined text-xl">timer</span>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Shell Suppressed as this is a focused linear task view -->
+<script>
+        // Initialize progress bar style
+        const range = document.querySelector('input[type=range]');
+        range.style.setProperty('--value', range.value + '%');
+    </script>
+</body></html>

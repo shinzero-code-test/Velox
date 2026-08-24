@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="now_playing_title">التشغيل الآن</string>
+    <string name="cd_collapse">طي</string>
+    <string name="cd_more_options">مزيد من الخيارات</string>
+    <string name="cd_shuffle">تشغيل عشوائي</string>
+    <string name="cd_repeat">تكرار</string>
+    <string name="cd_previous">السابق</string>
+    <string name="cd_next">التالي</string>
+    <string name="cd_play">تشغيل</string>
+    <string name="cd_pause">إيقاف مؤقت</string>
+    <string name="cd_sleep_timer">مؤقت النوم</string>
+    <string name="cd_equalizer">معادل الصوت</string>
+    <string name="cd_queue">قائمة الانتظار</string>
+    <string name="cd_favorite">المفضلة</string>
+    <string name="cd_back">رجوع</string>
+
+    <string name="cd_pip">صورة داخل صورة</string>
+    <string name="cd_lock_controls">قفل التحكم</string>
+    <string name="cd_unlock_controls">إلغاء قفل التحكم</string>
+    <string name="cd_aspect_ratio">نسبة العرض إلى الارتفاع</string>
+    <string name="cd_subtitles">الترجمة</string>
+    <string name="cd_audio_tracks">المسارات الصوتية</string>
+    <string name="video_speed_title">سرعة التشغيل</string>
+    <string name="video_tracks_title">المسارات والترجمة</string>
+    <string name="video_tracks_audio_section">الصوت</string>
+    <string name="video_tracks_audio_none">المسار الصوتي الافتراضي</string>
+    <string name="video_tracks_subtitles_section">الترجمة</string>
+    <string name="video_subtitles_off">إيقاف</string>
+    <string name="video_subtitles_open_file">فتح ملف ترجمة خارجي…</string>
+
+    <string name="queue_title">قائمة الانتظار</string>
+    <string name="queue_clear">مسح</string>
+    <string name="cd_remove_from_queue">إزالة من قائمة الانتظار</string>
+
+    <string name="sleep_timer_title">مؤقت النوم</string>
+    <string name="sleep_timer_off">إيقاف</string>
+    <string name="sleep_timer_end_of_track">نهاية المقطع</string>
+    <string name="sleep_timer_15">15 دقيقة</string>
+    <string name="sleep_timer_30">30 دقيقة</string>
+    <string name="sleep_timer_60">60 دقيقة</string>
+</resources>

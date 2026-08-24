@@ -1,0 +1,74 @@
+package com.exapps.velox.feature.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import com.exapps.velox.core.ui.components.GlassCard
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+
+private data class SettingsRow(val icon: ImageVector, val label: Int)
+
+@Composable
+fun SettingsScreen(modifier: Modifier = Modifier) {
+    val rows = listOf(
+        SettingsRow(Icons.Filled.Palette, R.string.settings_row_theme),
+        SettingsRow(Icons.Filled.Tune, R.string.settings_row_gestures),
+        SettingsRow(Icons.Filled.LibraryMusic, R.string.settings_row_folders),
+        SettingsRow(Icons.Filled.Language, R.string.settings_row_language),
+        SettingsRow(Icons.Filled.Info, R.string.settings_row_about),
+    )
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(R.string.settings_title),
+            style = VeloxTheme.typography.headlineLarge,
+            color = VeloxColors.OnBackground,
+            modifier = Modifier.padding(VeloxSpacing.lg),
+        )
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = VeloxSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
+        ) {
+            items(rows) { row ->
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md),
+                    ) {
+                        Icon(row.icon, contentDescription = null, tint = VeloxColors.Accent)
+                        Text(stringResource(row.label), style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
+                    }
+                }
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.settings_placeholder_note),
+                    style = VeloxTheme.typography.bodyMedium,
+                    color = VeloxColors.OnSurfaceVariant,
+                    modifier = Modifier.padding(vertical = VeloxSpacing.md),
+                )
+            }
+        }
+    }
+}

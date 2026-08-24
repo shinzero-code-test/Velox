@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Velox</string>
+
+    <!-- Bottom navigation (VeloxNavHost / MainScaffold, both in :app) -->
+    <string name="nav_library">Library</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Onboarding (OnboardingScreen lives in :app — it's a one-time app-shell
+         flow, not an ongoing feature area, so it doesn't own a feature module) -->
+    <string name="onboarding_welcome_title">Welcome to Velox</string>
+    <string name="onboarding_welcome_body">A fast, private media player built Arabic-first — for the music and videos already on your device.</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_feature_playback_title">Plays almost anything</string>
+    <string name="onboarding_feature_playback_body">Smooth local playback for every audio and video format on your device.</string>
+    <string name="onboarding_feature_design_title">Dark glass design</string>
+    <string name="onboarding_feature_design_body">A calm, elegant interface that stays out of the way of your media.</string>
+    <string name="onboarding_feature_arabic_title">Full control, Arabic first</string>
+    <string name="onboarding_feature_arabic_body">An authentic Arabic experience with complete playback control.</string>
+    <string name="onboarding_permissions_title">Access your media</string>
+    <string name="onboarding_permissions_body">Velox reads the audio and video already on your device to build your library. Nothing is uploaded — everything stays on your phone.</string>
+    <string name="onboarding_permissions_cta">Allow media access</string>
+    <string name="onboarding_permissions_skip">Skip for now</string>
+</resources>

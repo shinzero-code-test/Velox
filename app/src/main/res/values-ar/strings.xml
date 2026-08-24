@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Velox</string>
+
+    <string name="nav_library">المكتبة</string>
+    <string name="nav_playlists">قوائم التشغيل</string>
+    <string name="nav_search">البحث</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <string name="onboarding_welcome_title">مرحبًا بك في Velox</string>
+    <string name="onboarding_welcome_body">مشغل وسائط سريع وخاص، صُمم أولًا للعربية — لموسيقاك وفيديوهاتك الموجودة بالفعل على جهازك.</string>
+    <string name="onboarding_next">التالي</string>
+    <string name="onboarding_feature_playback_title">تشغيل سلس لأي ملف تقريبًا</string>
+    <string name="onboarding_feature_playback_body">تشغيل محلي سلس لجميع صيغ الصوت والفيديو الموجودة على جهازك.</string>
+    <string name="onboarding_feature_design_title">تصميم زجاجي داكن</string>
+    <string name="onboarding_feature_design_body">واجهة أنيقة وهادئة تبقى بعيدًا عن طريق وسائطك.</string>
+    <string name="onboarding_feature_arabic_title">تحكم كامل وخبرة عربية أصيلة</string>
+    <string name="onboarding_feature_arabic_body">تجربة عربية أصيلة مع تحكم كامل في التشغيل.</string>
+    <string name="onboarding_permissions_title">الوصول إلى وسائطك</string>
+    <string name="onboarding_permissions_body">يقرأ Velox الصوتيات والمرئيات الموجودة على جهازك لبناء مكتبتك. لا يتم رفع أي شيء — كل شيء يبقى على هاتفك.</string>
+    <string name="onboarding_permissions_cta">السماح بالوصول إلى الوسائط</string>
+    <string name="onboarding_permissions_skip">تخطي الآن</string>
+</resources>

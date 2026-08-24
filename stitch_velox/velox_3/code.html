@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox - المكتبة</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#703700",
+                      "surface-container": "#201f1f",
+                      "on-error": "#690005",
+                      "inverse-primary": "#494bd6",
+                      "on-primary-container": "#0d0096",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-surface-variant": "#c7c4d7",
+                      "surface-variant": "#353534",
+                      "primary": "#c0c1ff",
+                      "outline-variant": "#464554",
+                      "outline": "#908fa0",
+                      "surface-tint": "#c0c1ff",
+                      "surface-container-low": "#1c1b1b",
+                      "secondary": "#cebdff",
+                      "tertiary-fixed": "#ffdcc5",
+                      "surface-bright": "#3a3939",
+                      "surface-container-highest": "#353534",
+                      "on-secondary-container": "#bea8ff",
+                      "tertiary-container": "#d97721",
+                      "secondary-fixed-dim": "#cebdff",
+                      "on-secondary-fixed": "#21005e",
+                      "background": "#131313",
+                      "secondary-fixed": "#e8ddff",
+                      "on-primary-fixed": "#07006c",
+                      "surface-dim": "#131313",
+                      "on-secondary": "#381385",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-error-container": "#ffdad6",
+                      "error": "#ffb4ab",
+                      "on-tertiary": "#4f2500",
+                      "primary-container": "#8083ff",
+                      "surface": "#131313",
+                      "inverse-surface": "#e5e2e1",
+                      "on-tertiary-fixed": "#301400",
+                      "surface-container-high": "#2a2a2a",
+                      "primary-fixed": "#e1e0ff",
+                      "tertiary": "#ffb783",
+                      "on-tertiary-container": "#452000",
+                      "secondary-container": "#4f319c",
+                      "inverse-on-surface": "#313030",
+                      "on-surface": "#e5e2e1",
+                      "on-primary": "#1000a9",
+                      "on-background": "#e5e2e1",
+                      "on-secondary-fixed-variant": "#4f319c",
+                      "error-container": "#93000a",
+                      "tertiary-fixed-dim": "#ffb783"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-lg": "32px",
+                      "stack-md": "16px",
+                      "stack-sm": "8px",
+                      "container-margin": "20px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "label-sm": [
+                              "IBM Plex Sans Arabic"
+                      ],
+                      "headline-lg-mobile": [
+                              "IBM Plex Sans Arabic"
+                      ],
+                      "headline-md": [
+                              "IBM Plex Sans Arabic"
+                      ],
+                      "body-md": [
+                              "IBM Plex Sans Arabic"
+                      ],
+                      "display-lg": [
+                              "IBM Plex Sans Arabic"
+                      ],
+                      "body-lg": [
+                              "IBM Plex Sans Arabic"
+                      ]
+              },
+              "fontSize": {
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "34px",
+                              {
+                                      "lineHeight": "44px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        /* Hide scrollbar for tabs */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface min-h-screen pb-[140px] md:pb-stack-md pt-[72px] md:pt-[130px]">
+<!-- Top App Bar (Mobile) -->
+<header class="md:hidden fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin py-stack-sm bg-white/5 dark:bg-white/5 backdrop-blur-xl border-b border-white/15">
+<span class="material-symbols-outlined text-primary dark:text-primary active:scale-95 duration-200">menu</span>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">المكتبة</h1>
+<div class="flex gap-stack-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary active:scale-95 duration-200">search</span>
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant active:scale-95 duration-200">more_vert</span>
+</div>
+</header>
+<!-- Top App Bar (Desktop) -->
+<header class="hidden md:flex fixed top-0 left-0 w-full z-50 justify-between items-center px-container-margin py-stack-md bg-white/5 dark:bg-white/5 backdrop-blur-xl border-b border-white/15">
+<div class="flex items-center gap-stack-lg w-1/3">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">Velox</h1>
+<nav class="flex gap-stack-md">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">الرئيسية</a>
+<a class="font-body-md text-body-md text-primary font-bold" href="#">المكتبة</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">البحث</a>
+</nav>
+</div>
+<div class="flex items-center gap-stack-md w-1/3 justify-center">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-2 pr-10 pl-4 text-on-surface focus:ring-1 focus:ring-primary focus:outline-none font-body-md text-body-md" placeholder="بحث في المكتبة..." type="text"/>
+</div>
+</div>
+<div class="flex items-center justify-end gap-stack-md w-1/3">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors cursor-pointer">settings</span>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A small, stylized profile avatar of a user in a premium media app, dark mode aesthetic with subtle purple glowing accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbSftKHsE1srSa_fYri5o_ChaB3RtpDMxXJcP51NfsFVhR_TpJViVlDeHT6ugDsSXlcI2NcOA7PElGEzdGMO6v_2j6CwOG5AnN-tujRwircsvvI9cudOEoK7TXAI0kH0m5sOlZTaXZl587z3y4J_bN6em_5xTT9SytN9LYLunTbrzvVXFsks0gyEy0j62yIkA124uWQlJM82jpUCL558gP9IYdNCWlMeXcvL8nPStHkwTuPJQS_L_m"/>
+</div>
+</div>
+</header>
+<!-- Desktop Title (Only visible on desktop below nav) -->
+<div class="hidden md:block px-container-margin py-stack-lg max-w-7xl mx-auto">
+<h2 class="font-display-lg text-display-lg text-on-surface">المكتبة</h2>
+</div>
+<!-- Scrollable Tab Bar -->
+<div class="sticky top-[72px] md:static w-full z-40 bg-surface-container-lowest/80 backdrop-blur-md px-container-margin py-stack-sm md:max-w-7xl md:mx-auto">
+<div class="flex gap-stack-md overflow-x-auto hide-scrollbar snap-x">
+<button class="snap-start shrink-0 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-label-sm text-label-sm whitespace-nowrap">المجلدات</button>
+<button class="snap-start shrink-0 px-4 py-2 rounded-full border border-outline text-on-surface-variant hover:bg-white/5 font-label-sm text-label-sm whitespace-nowrap transition-colors">الفنانون</button>
+<button class="snap-start shrink-0 px-4 py-2 rounded-full border border-outline text-on-surface-variant hover:bg-white/5 font-label-sm text-label-sm whitespace-nowrap transition-colors">الألبومات</button>
+<button class="snap-start shrink-0 px-4 py-2 rounded-full border border-outline text-on-surface-variant hover:bg-white/5 font-label-sm text-label-sm whitespace-nowrap transition-colors">الأغاني</button>
+<button class="snap-start shrink-0 px-4 py-2 rounded-full border border-outline text-on-surface-variant hover:bg-white/5 font-label-sm text-label-sm whitespace-nowrap transition-colors">مؤخرًا</button>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="px-container-margin py-stack-md max-w-7xl mx-auto">
+<!-- Filter/Sort row -->
+<div class="flex justify-between items-center mb-stack-md">
+<span class="font-body-md text-body-md text-on-surface-variant">6 عناصر</span>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">sort</span>
+<span class="font-label-sm text-label-sm">ترتيب حسب الأحدث</span>
+</button>
+</div>
+<!-- Albums Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter">
+<!-- Album Card 1 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="أصوات الطبيعة" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A lush, cinematic dark-mode illustration of a serene forest at night, deep greens and moody blues with subtle glowing fireflies, high-end digital art style for an album cover titled 'Nature Sounds'." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWBXc7ejfRLfeOhSFSL5cD7rFkaCWine6Q711LiQAvCayRvE5EjvB5_4Eun8XomjZmjd3SCqwzKGCxUN0muqE8X1hAQ44NL5D7PpzzUCgUPwwYDj14xKkdYo79VQY7nq5cYKEZtNqTwuJnJ6qZJ72JtNBwMj2G2vOiYqFLmy1MXZ6ki1cVwvmqG2OieMNmcOklsXY2BlXtvtKkPY99U4zpt4SU9q09FztKWbHjf7NWq-O1iNW7thWx"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">أصوات الطبيعة</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">فنان غير معروف</p>
+</div>
+</div>
+<!-- Album Card 2 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="روائع الكلاسيك" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A sophisticated, minimalist dark-mode album cover featuring a classical grand piano abstractly rendered with glowing silver and deep purple lighting, high contrast, elegant design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5IHEnP3GyzLYM-3_Jy2TlGby_p_4gPI1gheXqC4jVfhBZCInY3vjH2GqkDWX0cPKA-m9Gq8hDOP3jn-ZE0ao0bzTc8LEw33lBw_RSHdgm5Lkomi8dZzGqGEmuyCg1IIbuFBZ7Tux3R6vM2yjZl_PY3FKChxHvVdBfjdIoWEH4Y2vB20SPc47KNUiEKwuHoB3PMmA4PBBuAXAu2hNDVee2pzwAHERag5FTQUInP_33bRKN5WODu27X"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">روائع الكلاسيك</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">بيتهوفن</p>
+</div>
+</div>
+<!-- Album Card 3 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="موسيقى هادئة" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A lo-fi aesthetic dark-mode album cover showing a cozy, dimly lit bedroom at night with neon purple and blue glow from a computer screen, pixel art style or smooth vector art, relaxing vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvX5eoakJPBgXlu89epW-hSDEAr9WViVjdlq5zcx_YZpSLay4mVAyC4bXX4kKy3k9pyqk1CwzFoRZT73fhzsXX_7na9tCDim0GyjQxaItmoNhIV5u9t5lmPP8aQ1FE7zjv8-gIfXz2IJM1QnJA4n60kzsVf5RqgWGqVomSwwmJUE31KXKJ7MGmonMleEAWIkFS5O7bhV01c6fdI-bl-ebahJfkNVgd4oW5MSThShR6MorQIwHsCmzI"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">موسيقى هادئة</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">لو-فاي</p>
+</div>
+</div>
+<!-- Album Card 4 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="أغاني شرقية" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A vintage yet modern dark-mode album cover blending traditional Middle Eastern geometric patterns in glowing gold and deep indigo, elegant and premium cinematic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzLVR_-JPeubOKF75lFmUmKGCePFXebPa3EsQZfNsB0LkBmZ34Xb62oS7JBSzkTzAVC-Mp7Ay-xT4Ic4aJcf0XfS5h0RVTKRwpFEy6ct-Clu6jLANzAaiQpFvGzubZqhIRhNTE5B4A6sKDvmEKg_k26nv6zGQWnc0nt0dya2rKvAgxhIj23D613t2OYuvaKWnCuxvHFOs0AH-NjB7ixF5wH_LAKl4ctGFAxAWjAVDFRDn56IugVCNu"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">أغاني شرقية</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">كوكب الشرق</p>
+</div>
+</div>
+<!-- Album Card 5 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="إيقاعات حديثة" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A highly dynamic, energetic dark-mode album cover with abstract glowing neon soundwaves in cyan and magenta against a pitch-black background, conveying modern electronic beats." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyISnqpwrVraWdPoYvMBwiJTn94F43I2Y88pHpLqyzSM-Zcc18IpGfBE4q3WQr8GTq4faH5sjsa2fkIcgap0gXfv6u3fdFuoZkN7pxoq63amo5SSDqjIR0uEQQMXtD5eSlQRExf5Lz0d0UyqZnYDu4fLUGLDb6iZ2LeC9pLDH46vIumQHvLCyL9U9XEHtzzRpcIqaX9sVjfst45gs8jwApfuTBGaw4jLNdV5UGmy-BppZmAZ1RzJts"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">إيقاعات حديثة</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">فنانين متنوعين</p>
+</div>
+</div>
+<!-- Album Card 6 -->
+<div class="glass-card rounded-xl p-stack-sm flex flex-col gap-stack-sm cursor-pointer group">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden bg-surface-variant">
+<img alt="بودكاست اليوم" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A clean, typographic dark-mode podcast cover with a sleek microphone icon, deep space background with soft ambient lighting, professional and intellectual mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZQsk7mMhHAWsxRtMaP5cQ6T5ZNlKEgbMUkM2wEAfX_ju1YzxIx1XD7E6yEzfNIuQLho7PTjxYXK0NQFQkkn1pTilQcnO30Clsi5iP8svwWOJF5HUywg1aqoMWUH-LAl9F32PHtEt6RO8xkUruIzduYtz1LxtsFgla45SLG-WzHscnmvmRagaJ8DlfBhQvzyhyTbxjZNyQZc80p5HR2GdsJeulPnvsIa478YMBDLcygMLuwuckMY7y"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate">بودكاست اليوم</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">شبكة كيرنينج الثقافية</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Mini Player (Persistent above nav) -->
+<div class="fixed bottom-[80px] md:bottom-0 left-0 w-full z-40 px-2 md:px-0">
+<div class="glass-panel mx-auto md:w-full md:rounded-none rounded-xl overflow-hidden max-w-7xl">
+<!-- Progress Bar -->
+<div class="h-1 w-full bg-surface-variant relative">
+<div class="absolute top-0 right-0 h-full bg-primary" style="width: 45%;"></div>
+</div>
+<div class="flex items-center justify-between p-2 md:p-4">
+<div class="flex items-center gap-3 w-2/3">
+<div class="w-12 h-12 rounded-lg bg-surface-variant overflow-hidden shrink-0">
+<img alt="Now Playing" class="w-full h-full object-cover" data-alt="Mini player thumbnail showing a serene forest scene in dark mode, matching the currently playing track 'Nature Sounds'." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgoO-tPOJbIUrf9s71luh63FrQkYcgjzrE9r6RjrYEZAUI1SDM2SX6NsZpmP8b7YsLxY-_ldbb9ZUV2MbZgkZpiHMQTYR5zADi4AUizZ4eZTCLkC5lMKCgjj16rrxb1fVhZQkCxgnLMTpZqKuwCleiXNHzmLyM3Pv-JxHckOEho7U8lfF0E9QRJJcyS_w53nSqKmy3AsOe4MTw3SphGroWQCDoeS6zDuVQIseSodMVj3xz8Uvuld9f"/>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="font-body-md text-body-md font-semibold text-on-surface truncate">أصوات الطبيعة المهدئة</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant truncate">فنان غير معروف</span>
+</div>
+</div>
+<div class="flex items-center gap-2 md:gap-4 shrink-0">
+<button class="hidden md:block text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">skip_next</span>
+</button>
+<button class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="hidden md:block text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">skip_previous</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Nav Bar (Mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-2 bg-white/5 dark:bg-white/5 backdrop-blur-2xl">
+<div class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform w-16">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">الرئيسية</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary dark:text-primary font-bold hover:text-primary/80 active:scale-90 transition-transform w-16">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_music</span>
+<span class="font-label-sm text-label-sm mt-1">المكتبة</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform w-16">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-sm text-label-sm mt-1">البحث</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform w-16">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm mt-1">الإعدادات</span>
+</div>
+</nav>
+</body></html>

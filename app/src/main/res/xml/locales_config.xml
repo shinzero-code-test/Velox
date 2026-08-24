@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Powers Settings > Apps > Velox > Language on API 33+ (and the in-app language
+     picker via AppCompatDelegate.setApplicationLocales on older versions —
+     SCREEN_SETTINGS.md's "Language: Arabic / English" row). Arabic listed first:
+     it is the default and primary locale, not a translation of an English original. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="ar" />
+    <locale android:name="en" />
+</locale-config>

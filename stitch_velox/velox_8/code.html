@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox - Search</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353534",
+                        "surface-tint": "#c0c1ff",
+                        "on-secondary-container": "#bea8ff",
+                        "outline": "#908fa0",
+                        "outline-variant": "#464554",
+                        "on-surface": "#e5e2e1",
+                        "on-primary": "#1000a9",
+                        "secondary-fixed": "#e8ddff",
+                        "on-secondary-fixed-variant": "#4f319c",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed": "#301400",
+                        "tertiary-container": "#d97721",
+                        "secondary-container": "#4f319c",
+                        "error-container": "#93000a",
+                        "surface-bright": "#3a3939",
+                        "on-surface-variant": "#c7c4d7",
+                        "tertiary": "#ffb783",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface": "#131313",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#cebdff",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary": "#cebdff",
+                        "on-error-container": "#ffdad6",
+                        "background": "#131313",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-on-surface": "#313030",
+                        "primary": "#c0c1ff",
+                        "on-primary-fixed": "#07006c",
+                        "surface-dim": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "primary-container": "#8083ff",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "on-secondary": "#381385",
+                        "error": "#ffb4ab",
+                        "on-primary-container": "#0d0096",
+                        "surface-container": "#201f1f",
+                        "on-tertiary": "#4f2500",
+                        "tertiary-fixed": "#ffdcc5",
+                        "surface-container-high": "#2a2a2a",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#452000",
+                        "primary-fixed": "#e1e0ff",
+                        "on-secondary-fixed": "#21005e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "stack-sm": "8px",
+                        "stack-lg": "32px",
+                        "container-margin": "20px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["IBM Plex Sans Arabic"],
+                        "headline-md": ["IBM Plex Sans Arabic"],
+                        "body-lg": ["IBM Plex Sans Arabic"],
+                        "body-md": ["IBM Plex Sans Arabic"],
+                        "label-sm": ["IBM Plex Sans Arabic"],
+                        "headline-lg-mobile": ["IBM Plex Sans Arabic"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["34px", { "lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .chip {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        .chip:hover, .chip.active {
+            background: rgba(192, 193, 255, 0.2);
+            border-color: rgba(192, 193, 255, 0.5);
+            color: #c0c1ff;
+        }
+        
+        /* Hide scrollbar for horizontal scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-24">
+<!-- Top Navigation (Desktop Only) -->
+<header class="hidden md:flex fixed top-0 left-0 w-full z-50 justify-between items-center px-container-margin py-stack-sm bg-white/5 dark:bg-white/5 backdrop-blur-xl border-b border-white/15">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-white/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Velox</h1>
+</div>
+<!-- Desktop Search Bar -->
+<div class="relative w-full max-w-xl mx-auto hidden lg:block">
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-white/10 border border-white/15 rounded-full py-2 pr-12 pl-4 text-on-surface focus:outline-none focus:border-primary transition-colors font-body-md" placeholder="ابحث عن أغنية، فنان، ألبوم..." type="text"/>
+<button class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-white/10 p-2 rounded-full transition-colors lg:hidden">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="text-on-surface-variant hover:bg-white/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-4 md:pt-24 px-container-margin max-w-7xl mx-auto space-y-stack-lg">
+<!-- Mobile Search Header (Sticky) -->
+<div class="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-xl pt-4 pb-4 -mx-container-margin px-container-margin shadow-sm">
+<div class="flex items-center gap-3 mb-4">
+<button class="text-on-surface-variant p-2 rounded-full hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined" style="transform: scaleX(-1);">arrow_back</span>
+</button>
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full glass-input rounded-xl py-3 pr-10 pl-10 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-body-md" placeholder="ابحث عن أغنية، فنان، ألبوم..." type="text" value="فيروز"/>
+<button class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Quick Filters -->
+<div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+<button class="chip px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap active text-primary">الكل</button>
+<button class="chip px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap text-on-surface-variant">أغاني</button>
+<button class="chip px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap text-on-surface-variant">فنانون</button>
+<button class="chip px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap text-on-surface-variant">ألبومات</button>
+<button class="chip px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap text-on-surface-variant">قوائم تشغيل</button>
+</div>
+</div>
+<!-- Desktop Quick Filters (Only show if search is active on desktop, simulating state) -->
+<div class="hidden md:flex gap-3 mt-4">
+<button class="chip px-6 py-2 rounded-full font-body-md active text-primary">الكل</button>
+<button class="chip px-6 py-2 rounded-full font-body-md text-on-surface-variant">أغاني</button>
+<button class="chip px-6 py-2 rounded-full font-body-md text-on-surface-variant">فنانون</button>
+<button class="chip px-6 py-2 rounded-full font-body-md text-on-surface-variant">ألبومات</button>
+</div>
+<!-- Results Section (Simulating active query "فيروز") -->
+<div class="space-y-stack-lg animate-[fadeIn_0.3s_ease-out]">
+<!-- Top Result (Hero Style) -->
+<section>
+<h2 class="font-headline-md text-headline-md font-bold mb-stack-md text-on-surface">أفضل نتيجة</h2>
+<div class="glass-panel p-4 rounded-xl flex items-center gap-4 hover:bg-white/10 transition-colors cursor-pointer group">
+<div class="relative w-24 h-24 rounded-full overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A detailed portrait of an iconic female singer in a serene, cinematic lighting. The image captures her expressive face in a dark, atmospheric studio setting, highlighting the deep contrast between the moody backdrop and the soft, focused light on her features, embodying a premium, dramatic musical essence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrEbRU0wiRStKubt9sDfCHQmXsyXVfXkmiy2OhPEXxiLQtRAy9pUrMaI-hgjOOO90zwi-8cqRXIPs7w95Wy1SiEZNu3efS2n2gNE6qlYacmycg9mOFKHKbgbq80W73PyD_nIjH_Mg84s1mF6xZjlmyXLycuNeivZ9VXGeQ8q0N8gj5UYdrSxcBGzCQEFGg02_FWK2O4Tr0RNw9gCsNilAOh7xnqrCW5TIj60SDKZkGZgIZ4f2lMSu4"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-3xl" data-weight="fill">play_arrow</span>
+</div>
+</div>
+<div class="flex-1">
+<h3 class="font-headline-md text-xl font-bold text-on-surface mb-1">فيروز</h3>
+<p class="font-body-md text-on-surface-variant">فنان</p>
+</div>
+<button class="w-10 h-10 rounded-full border border-outline flex items-center justify-center text-on-surface hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-xl">favorite_border</span>
+</button>
+</div>
+</section>
+<!-- Tracks Section -->
+<section>
+<div class="flex justify-between items-center mb-stack-md">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">أغاني</h2>
+<button class="font-body-md text-primary hover:text-primary-container transition-colors">عرض الكل</button>
+</div>
+<div class="space-y-2">
+<!-- Track Item 1 -->
+<div class="glass-panel p-2 pr-3 rounded-lg flex items-center gap-3 hover:bg-white/10 transition-colors group cursor-pointer">
+<div class="relative w-12 h-12 rounded-md overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up of a vintage vinyl record spinning on a high-end turntable. The lighting is warm and cinematic, casting deep shadows across the grooved surface. The mood is nostalgic and premium, perfect for a classic music album cover in a dark glassmorphism interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9vcXXe07Hmjci109t62gPp01zh0GHyG7zsy9bKMK76eT-2XvHvxdicTwM1uat8moFDjrQ_UkINNcttnz1DkIFa5kid0NwboB_vRo1v_WingfkMgZO8eCgJfNtd64laB66qkMnyPrIA3TllWDSobAfTLgOVy1LP1Wol7uZH3zYKQ8szAR6OQSVDr3KML2I4Ro7oH-6k0BtNG69du9mSLHCvctC2vqK8M5smsW9HJ7clMzIh2hCzA_4"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white" data-weight="fill">play_arrow</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-body-md font-semibold text-on-surface truncate">كيفك إنت</h4>
+<p class="font-label-sm text-on-surface-variant truncate">فيروز</p>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">favorite_border</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Track Item 2 -->
+<div class="glass-panel p-2 pr-3 rounded-lg flex items-center gap-3 hover:bg-white/10 transition-colors group cursor-pointer">
+<div class="relative w-12 h-12 rounded-md overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="An abstract, moody musical background featuring soft, glowing dust particles drifting through a dark, cinematic space. A solitary acoustic guitar sits faintly in the shadows, illuminated by a sliver of cool blue moonlight, capturing a calm, melancholic mood suitable for a premium dark-themed media player." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYFfzwu26h1L42Rozc9G9K8YgVWPsxVzF0maoR9rTq0MiprRNs1jGMSrZ19whIgk7AUt-BhoRWj9qhKPJGgkoKuSHMaMF7bMiz2TIogpYej7vjrp-ApI6cya8_El71DwQmB96ow4GiOawPvGhi5NHY4eA1fmeZUABsiA5KMFoIXkl-YfNG7D8PNwRRAioio3oRs9nO31aJsArvwLz99PYx6Hz0jlxM9-Gbq0WkNRuJaZ5e4tZNZBz0"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white" data-weight="fill">play_arrow</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-body-md font-semibold text-on-surface truncate">نسم علينا الهوى</h4>
+<p class="font-label-sm text-on-surface-variant truncate">فيروز</p>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">favorite_border</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Track Item 3 -->
+<div class="glass-panel p-2 pr-3 rounded-lg flex items-center gap-3 hover:bg-white/10 transition-colors group cursor-pointer">
+<div class="relative w-12 h-12 rounded-md overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A minimalist photograph of a solitary microphone stand on a dimly lit stage. The background is a deep, impenetrable black, contrasted by a single spotlight shining down, creating an aura of expectation and high-quality live performance in a dark, sophisticated environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTHlcyXMcc-bx7Wr-TzFTX36l1E4cm-EXa-piA0n2oiS7zJ9fSgvgX9hn70IoH46MbDZI0SPWRO2Who1zSNuzdHCIs02q44glIkIcRhmZchIT4My605kqZY6VCCl8-OcRkqih7T4nOTKycTiYk879u793J0beAEPpRPdeIRhPXybINKUrSzl6cUZQEPa7oBJ5FyMfpdjNMLym5qkzMiJshgWXs924x6sn8kSy-0-u77j2n8mdgDRU2"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white" data-weight="fill">play_arrow</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-body-md font-semibold text-on-surface truncate">سألوني الناس</h4>
+<p class="font-label-sm text-on-surface-variant truncate">فيروز</p>
+</div>
+<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">favorite_border</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Albums Section (Horizontal Scroll on Mobile, Grid on Desktop) -->
+<section>
+<div class="flex justify-between items-center mb-stack-md">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">ألبومات</h2>
+<button class="font-body-md text-primary hover:text-primary-container transition-colors">عرض الكل</button>
+</div>
+<div class="flex md:grid md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-x-auto no-scrollbar pb-2 -mx-container-margin px-container-margin md:mx-0 md:px-0">
+<!-- Album 1 -->
+<div class="w-32 md:w-auto shrink-0 group cursor-pointer">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-2 glass-panel">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A striking abstract album cover featuring fluid, glassy waves of deep indigo and soft white against a charcoal background. The composition is sleek, modern, and cinematic, evoking a sense of calm sophistication typical of a high-end music streaming interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8zMIs7jcjktadoRHuZ7gwmjo8cd_yERixAClECrqd3V4Zx5vbtyxpOPpN2SeLbAW_jTkybyORhbqRkZJpIpswtK7gFE_eO2WWkeWYgKb4eWpYI0AVmVEbIuufqO9RCluuT_SdEdBIc-dnWNpV3kiC3kFbAeNUuMQh7ZJ4qsYAl6-OPDv3cvNeBcDSeUXGiVPZgVXYlGMn3-yTRECPr0nshIWgM4ew_Fy5tmbETQPLvjQnzWkyXZme"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_0_15px_rgba(192,193,255,0.4)] transform translate-y-2 group-hover:translate-y-0 transition-all">
+<span class="material-symbols-outlined" data-weight="fill">play_arrow</span>
+</button>
+</div>
+</div>
+<h4 class="font-body-md font-semibold text-on-surface truncate">فيروز في بيت الدين</h4>
+<p class="font-label-sm text-on-surface-variant truncate">٢٠٠٠</p>
+</div>
+<!-- Album 2 -->
+<div class="w-32 md:w-auto shrink-0 group cursor-pointer">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-2 glass-panel">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A moody, atmospheric image of a moonlit ocean surface, rendered with a slight blur to emphasize depth and tranquility. The dark, rich tones of navy and silver create a premium, restful aesthetic suitable for a classical or calming album cover in a dark UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDb3o8k9-fVYJSgro1XX_nfpqIKd_M2t88_rZYDf-qJ8n8tUeafKnMVRSk20y0LDmlOb2CqNqpYt0Lyt-gaoXodgoH298fkn8V8knsiWsM8esiGxKals2LgHt7MoHJ3z6zmA7TaA6nQbYFXtX2yXd3g8-XmLSQT7gl2WgMF0137Xwiic7dxtWI5MwHvz4cG5qIsKaSr4q_8H3Z9x_k2ZPvExXXgmEZEJD5VfC3rUCJZF35WRhjkrj1"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_0_15px_rgba(192,193,255,0.4)] transform translate-y-2 group-hover:translate-y-0 transition-all">
+<span class="material-symbols-outlined" data-weight="fill">play_arrow</span>
+</button>
+</div>
+</div>
+<h4 class="font-body-md font-semibold text-on-surface truncate">كيفك إنت</h4>
+<p class="font-label-sm text-on-surface-variant truncate">١٩٩١</p>
+</div>
+<!-- Album 3 -->
+<div class="w-32 md:w-auto shrink-0 group cursor-pointer">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-2 glass-panel">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A stylized, high-contrast illustration of a desert landscape at dusk. The sky is a deep, velvety black fading into a subtle indigo horizon. The scene is minimal, elegant, and evocative of traditional themes viewed through a modern, premium design lens." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcZc0vqUKKRBWGbFfTD7K6ZfnU-zPLDBqrs43fR2Rg8a6tifUepHt9Zil-dyBUcN5HBFW3Gp_qjdfL91fBS9zIgNnHJ9yWyMT71BlLkV2TTTc0_29AL5hgpJdDHiRhbZJZAYaTGOo-Q9nMmpAKxp2OtSnXxtravhZW8clV-h06mfacIziyS0t3JabK9TyCFhOohe49GzjANuKql_viROMn5WGi37PllBiw-taIGZuMRm33JC_3AyR5"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_0_15px_rgba(192,193,255,0.4)] transform translate-y-2 group-hover:translate-y-0 transition-all">
+<span class="material-symbols-outlined" data-weight="fill">play_arrow</span>
+</button>
+</div>
+</div>
+<h4 class="font-body-md font-semibold text-on-surface truncate">إيه في أمل</h4>
+<p class="font-label-sm text-on-surface-variant truncate">٢٠١٠</p>
+</div>
+</div>
+</section>
+</div>
+<!-- Empty State (Hidden in this mockup, but structured for logic) -->
+<div class="hidden flex-col items-center justify-center py-24 text-center">
+<span class="material-symbols-outlined text-6xl text-outline-variant mb-4">search_off</span>
+<h3 class="font-headline-md text-on-surface mb-2">لا توجد نتائج</h3>
+<p class="font-body-md text-on-surface-variant max-w-sm">لم نتمكن من العثور على ما تبحث عنه. حاول استخدام كلمات مفتاحية مختلفة.</p>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-2 bg-white/5 dark:bg-white/5 backdrop-blur-2xl border-t border-white/10">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform p-2" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform p-2" href="#">
+<span class="material-symbols-outlined">library_music</span>
+<span class="font-label-sm text-label-sm mt-1">المكتبة</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary font-bold active:scale-90 transition-transform p-2 relative" href="#">
+<span class="material-symbols-outlined" data-weight="fill">search</span>
+<span class="font-label-sm text-label-sm mt-1">البحث</span>
+<!-- Active Indicator -->
+<div class="absolute -top-2 w-8 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(192,193,255,0.8)]"></div>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary/80 active:scale-90 transition-transform p-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm mt-1">الإعدادات</span>
+</a>
+</nav>
+</body></html>

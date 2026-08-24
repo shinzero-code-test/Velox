@@ -1,0 +1,25 @@
+package com.exapps.velox.feature.player
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.exapps.velox.core.ui.components.VeloxEmptyState
+
+/**
+ * Placeholder — the route is real (Phase 0 item 4: navigation skeleton) but the
+ * gesture-driven playback surface from SCREEN_VIDEO_PLAYER.md is Phase 1 item 11.
+ * [mediaItemId] is already threaded through from VeloxRoute.VideoPlayer so the
+ * real screen only has to start reading it, not get a new nav argument wired up.
+ */
+@Composable
+fun VideoPlayerScreen(mediaItemId: Long, modifier: Modifier = Modifier) {
+    VeloxEmptyState(
+        icon = Icons.Filled.Movie,
+        title = stringResource(R.string.video_player_placeholder_title),
+        body = stringResource(R.string.video_player_placeholder_body),
+        modifier = modifier.fillMaxSize(),
+    )
+}

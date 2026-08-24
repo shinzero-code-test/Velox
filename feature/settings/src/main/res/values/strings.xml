@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+
+    <!-- Sections (SCREEN_SETTINGS.md §2) -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_playback">Playback</string>
+    <string name="settings_section_subtitles">Subtitles</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_section_storage">Storage &amp; cache</string>
+    <string name="settings_section_about">About</string>
+
+    <!-- Appearance (§3) -->
+    <string name="settings_theme_dark_glass">Dark Glass (default)</string>
+    <string name="settings_theme_amoled">AMOLED black</string>
+    <string name="settings_accent_color">Accent color</string>
+
+    <!-- Playback (§4) -->
+    <string name="settings_resume_playback">Remember playback position</string>
+    <string name="settings_auto_pip">Auto picture-in-picture</string>
+    <string name="settings_auto_pip_hint">Minimize video playback when you leave the app</string>
+    <string name="settings_seek_interval">Double-tap seek interval</string>
+
+    <!-- Subtitles (§6) -->
+    <string name="settings_subtitle_size">Default subtitle size</string>
+    <string name="settings_subtitle_small">Small</string>
+    <string name="settings_subtitle_large">Large</string>
+    <string name="settings_subtitle_position">Position</string>
+    <string name="settings_subtitle_bottom">Bottom</string>
+    <string name="settings_subtitle_top">Top</string>
+    <string name="settings_subtitle_autoload">Auto-load external subtitles</string>
+    <string name="settings_subtitle_autoload_hint">Match subtitle files to videos by filename</string>
+
+    <!-- Language (§7) -->
+    <string name="settings_language_system">System default</string>
+
+    <!-- Storage (§8) -->
+    <string name="settings_clear_history">Clear playback history</string>
+    <string name="settings_clear_history_hint">Resets Recently Played and Most Played</string>
+    <string name="settings_clear_history_confirm_title">Clear playback history?</string>
+    <string name="settings_clear_history_confirm_body">Recently Played and Most Played will start over. Your library and playlists are not affected.</string>
+    <string name="settings_clear_action">Clear</string>
+
+    <!-- About (§9) -->
+    <string name="settings_version">Version</string>
+    <string name="settings_replay_intro">Replay introduction</string>
+    <string name="settings_replay_intro_hint">Show</string>
+
+    <string name="cancel">Cancel</string>
+</resources>

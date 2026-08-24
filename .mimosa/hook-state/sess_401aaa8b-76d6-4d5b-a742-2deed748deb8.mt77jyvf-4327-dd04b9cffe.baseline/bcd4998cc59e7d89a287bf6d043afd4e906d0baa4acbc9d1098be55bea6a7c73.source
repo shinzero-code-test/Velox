@@ -1,0 +1,117 @@
+package com.exapps.velox.core.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxShapes
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+import com.exapps.velox.core.ui.theme.accentColor
+import com.exapps.velox.core.ui.theme.glassOutlineColor
+import com.exapps.velox.core.ui.theme.glassSurfaceColor
+
+/** Filled-accent, rounded — main CTAs (SCREEN_PATTERNS.md §10: "Primary"). */
+@Composable
+fun VeloxPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(VeloxShapes.full)
+            .background(if (enabled) accentColor() else accentColor().copy(alpha = 0.4f))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = VeloxSpacing.xl, vertical = VeloxSpacing.sm),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.Background) {
+            Text(text = text, style = VeloxTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** Glass / outline — secondary actions (SCREEN_PATTERNS.md §10: "Secondary"). */
+@Composable
+fun VeloxSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(VeloxShapes.full)
+            .background(glassSurfaceColor())
+            .border(1.dp, glassOutlineColor(strong = true), VeloxShapes.full)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = VeloxSpacing.xl, vertical = VeloxSpacing.sm),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.OnSurface) {
+            Text(text = text, style = VeloxTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** Accent or on-surface text, no fill/border — tertiary actions (SCREEN_PATTERNS.md §10: "Text"). */
+@Composable
+fun VeloxTextButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    color: Color? = null,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(VeloxShapes.sm)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = VeloxSpacing.md, vertical = VeloxSpacing.sm),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides (color ?: accentColor())) {
+            Text(text = text, style = VeloxTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** Error-colored fill — destructive confirmations (SCREEN_PATTERNS.md §10: "Destructive"). */
+@Composable
+fun VeloxDestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(VeloxShapes.full)
+            .background(if (enabled) VeloxColors.Error else VeloxColors.Error.copy(alpha = 0.4f))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = VeloxSpacing.xl, vertical = VeloxSpacing.sm),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides VeloxColors.Background) {
+            Text(text = text, style = VeloxTheme.typography.labelLarge)
+        }
+    }
+}

@@ -1,0 +1,69 @@
+package com.exapps.velox.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.exapps.velox.R
+import com.exapps.velox.core.ui.components.VeloxPrimaryButton
+import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxShapes
+import com.exapps.velox.core.ui.theme.VeloxSpacing
+import com.exapps.velox.core.ui.theme.VeloxTheme
+import com.exapps.velox.core.ui.theme.glassSurfaceColor
+
+/** SCREEN_ONBOARDING.md's full flow is welcome → feature highlights → permission
+ * priming (3 pages); this Phase 0 pass ships the welcome page only, wired to the
+ * real "get started" → OnboardingPreferences → Library handoff, since that end-to-end
+ * plumbing is what the nav skeleton needed to prove. The other two pages are
+ * additive, not architectural, and are tracked in PROGRESS.md. */
+@Composable
+fun OnboardingScreen(onGetStarted: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(VeloxSpacing.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(VeloxShapes.xl)
+                .background(glassSurfaceColor(elevated = true)),
+        )
+
+        Spacer(Modifier.height(VeloxSpacing.xxl))
+
+        Text(
+            text = stringResource(R.string.onboarding_welcome_title),
+            style = VeloxTheme.typography.displayMedium,
+            color = VeloxColors.OnBackground,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(VeloxSpacing.sm))
+        Text(
+            text = stringResource(R.string.onboarding_welcome_body),
+            style = VeloxTheme.typography.bodyLarge,
+            color = VeloxColors.OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(VeloxSpacing.xxxl))
+
+        VeloxPrimaryButton(text = stringResource(R.string.onboarding_get_started), onClick = onGetStarted)
+    }
+}

@@ -1,0 +1,19 @@
+package com.exapps.velox.feature.equalizer
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.exapps.velox.core.ui.components.VeloxEmptyState
+
+@Composable
+fun EqualizerScreen(modifier: Modifier = Modifier) {
+    VeloxEmptyState(
+        icon = Icons.Filled.Equalizer,
+        title = stringResource(R.string.equalizer_title),
+        body = stringResource(R.string.equalizer_placeholder_body),
+        modifier = modifier.fillMaxSize(),
+    )
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velox - الإعدادات</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#494bd6",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-container": "#452000",
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-secondary-fixed-variant": "#4f319c",
+                        "on-primary": "#1000a9",
+                        "inverse-surface": "#e5e2e1",
+                        "outline": "#908fa0",
+                        "outline-variant": "#464554",
+                        "primary-container": "#8083ff",
+                        "on-secondary-fixed": "#21005e",
+                        "secondary": "#cebdff",
+                        "surface-dim": "#131313",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "on-background": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "on-tertiary": "#4f2500",
+                        "tertiary-container": "#d97721",
+                        "on-surface": "#e5e2e1",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#1c1b1b",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#3a3939",
+                        "on-secondary-container": "#bea8ff",
+                        "on-surface-variant": "#c7c4d7",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-fixed": "#e1e0ff",
+                        "on-tertiary-fixed": "#301400",
+                        "primary": "#c0c1ff",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "on-primary-fixed": "#07006c",
+                        "surface-container": "#201f1f",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed-dim": "#cebdff",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#381385",
+                        "surface-tint": "#c0c1ff",
+                        "background": "#131313",
+                        "on-primary-container": "#0d0096",
+                        "secondary-fixed": "#e8ddff",
+                        "surface-container-highest": "#353534",
+                        "surface": "#131313",
+                        "tertiary": "#ffb783",
+                        "secondary-container": "#4f319c",
+                        "on-error": "#690005"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-lg": "32px",
+                        "stack-md": "16px",
+                        "stack-sm": "8px",
+                        "gutter": "16px",
+                        "container-margin": "20px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["IBM Plex Sans Arabic"],
+                        "body-lg": ["IBM Plex Sans Arabic"],
+                        "display-lg": ["IBM Plex Sans Arabic"],
+                        "label-sm": ["IBM Plex Sans Arabic"],
+                        "headline-md": ["IBM Plex Sans Arabic"],
+                        "body-md": ["IBM Plex Sans Arabic"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0px", "fontWeight": "400" }],
+                        "display-lg": ["34px", { "lineHeight": "44px", "letterSpacing": "0px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "0px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #6366F1;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #6366F1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased pb-24">
+<!-- TopAppBar -->
+<header class="bg-surface/5 dark:bg-surface/5 backdrop-blur-[20px] w-full top-0 sticky border-b border-white/10 flex flex-row-reverse items-center justify-between px-container-margin h-16 w-full z-40">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary active:scale-95 duration-200 cursor-pointer hover:bg-white/5 transition-colors p-2 rounded-full" data-icon="arrow_forward">arrow_forward</span>
+<h1 class="font-headline-md text-headline-md text-primary dark:text-primary">الإعدادات</h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="px-container-margin py-stack-lg max-w-3xl mx-auto space-y-stack-lg">
+<!-- Appearance Section -->
+<section class="space-y-stack-md">
+<h2 class="font-label-sm text-label-sm text-primary-fixed-dim uppercase tracking-wider">المظهر</h2>
+<div class="glass-panel rounded-xl overflow-hidden shadow-lg shadow-black/50">
+<!-- Theme -->
+<div class="flex flex-row-reverse items-center justify-between p-4 border-b border-white/5 active:bg-white/5 transition-colors cursor-pointer">
+<div class="flex flex-col text-right">
+<span class="font-body-lg text-body-lg text-on-surface font-semibold">السمة</span>
+<span class="font-body-md text-body-md text-on-surface-variant">الزجاج الداكن</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="chevron_left">chevron_left</span>
+</div>
+<!-- Accent Color -->
+<div class="flex flex-row-reverse items-center justify-between p-4 border-b border-white/5 active:bg-white/5 transition-colors cursor-pointer">
+<div class="flex flex-col text-right">
+<span class="font-body-lg text-body-lg text-on-surface font-semibold">لون التمييز</span>
+<span class="font-body-md text-body-md text-on-surface-variant">افتراضي</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-[#6366F1] border border-white/20"></div>
+</div>
+<!-- Reduce Motion -->
+<div class="flex flex-row-reverse items-center justify-between p-4">
+<div class="flex flex-col text-right">
+<span class="font-body-lg text-body-lg text-on-surface font-semibold">تقليل الحركة</span>
+<span class="font-body-md text-body-md text-on-surface-variant">تعطيل الرسوم المتحركة غير الضرورية</span>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out left-0" id="toggle1" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-surface-container-highest cursor-pointer" for="toggle1"></label>
+</div>
+</div>
+</div>
+</section>
+<!-- Playback Section -->
+<section class="space-y-stack-md">
+<h2 class="font-label-sm text-label-sm text-primary-fixed-dim uppercase tracking-wider">التشغيل</h2>
+<div class="glass-panel rounded-xl overflow-hidden shadow-lg shadow-black/50">
+<!-- Resume -->
+<div class="flex flex-row-reverse items-center justify-between p-4 border-b border-white/5">
+<div class="flex flex-col text-right">
+<span class="font-body-lg text-body-lg text-on-surface font-semibold">استئناف التشغيل</span>
+<span class="font-body-md text-body-md text-on-surface-variant">تذكر موضع التشغيل الأخير</span>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out left-0" id="toggle2" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-surface-container-highest cursor-pointer" for="toggle2"></label>
+</div>
+</div>
+<!-- Default Speed -->
+<div class="flex flex-col p-4 border-b border-white/5 space-y-2">
+<div class="flex flex-row-reverse items-center justify-between">
+<span class="font-body-lg text-body-lg text-on-surface font-semibold">سرعة التشغيل الافتراضية</span>
+<span class="font-body-md text-body-md text-primary font-semibold">1.0x</span>
+</div>
+<input class="w-full h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-[#6366F1]" max="2" min="0.5" step="0.1" type="range" value="1"/>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface/5 dark:bg-surface/5 backdrop-blur-[40px] fixed bottom-0 w-full z-50 rounded-t-xl border-t border-white/10 flex flex-row-reverse justify-around items-center h-20 px-4 w-full md:hidden">
+<!-- Home -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform duration-300 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-1">الرئيسية</span>
+</div>
+<!-- Library -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform duration-300 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="video_library">video_library</span>
+<span class="font-label-sm text-label-sm mt-1">المكتبة</span>
+</div>
+<!-- Search -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform duration-300 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-label-sm text-label-sm mt-1">البحث</span>
+</div>
+<!-- Settings (Active) -->
+<div class="flex flex-col items-center justify-center text-primary bg-primary/10 rounded-full px-4 py-1 active:scale-90 transition-transform duration-300 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-sm text-label-sm mt-1">الإعدادات</span>
+</div>
+</nav>
+<script>
+        // Simple toggle logic for custom styling
+        document.querySelectorAll('.toggle-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if(this.checked) {
+                    this.style.transform = 'translateX(100%)';
+                } else {
+                    this.style.transform = 'translateX(0)';
+                }
+            });
+            // Initial state
+            if(checkbox.checked) checkbox.style.transform = 'translateX(100%)';
+        });
+    </script>
+</body></html>

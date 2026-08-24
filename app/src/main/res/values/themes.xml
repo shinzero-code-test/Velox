@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- All real theming (colors, typography, shapes) lives in Compose via
+         VeloxTheme (core:ui). This XML theme only needs to exist for the platform
+         window/manifest requirement and to seed sensible defaults before Compose
+         takes over — DESIGN_SYSTEM.md's tokens are the source of truth, not this file. -->
+    <style name="Theme.Velox" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/velox_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
+    </style>
+
+    <style name="Theme.Velox.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/velox_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_velox_mark</item>
+        <item name="postSplashScreenTheme">@style/Theme.Velox</item>
+    </style>
+
+</resources>

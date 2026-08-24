@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equalizer_title">Equalizer</string>
+    <string name="cd_back">Back</string>
+    <string name="equalizer_reset">Reset</string>
+    <string name="equalizer_standby_body">Start playing something and the equalizer will attach to the audio session automatically.</string>
+
+    <!-- Presets (SCREEN_EQUALIZER.md §4) -->
+    <string name="equalizer_preset_normal">Normal</string>
+    <string name="equalizer_preset_pop">Pop</string>
+    <string name="equalizer_preset_rock">Rock</string>
+    <string name="equalizer_preset_jazz">Jazz</string>
+    <string name="equalizer_preset_classical">Classical</string>
+    <string name="equalizer_preset_bass">Bass</string>
+    <string name="equalizer_preset_vocal">Vocal</string>
+    <string name="equalizer_preset_electronic">Electronic</string>
+    <string name="equalizer_preset_user">User</string>
+
+    <!-- Additional effects (§5) -->
+    <string name="equalizer_bass_boost">Bass boost</string>
+    <string name="equalizer_virtualizer">Virtualizer</string>
+</resources>

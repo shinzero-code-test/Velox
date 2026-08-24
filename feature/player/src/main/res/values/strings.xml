@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="now_playing_title">Now Playing</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_shuffle">Shuffle</string>
+    <string name="cd_repeat">Repeat</string>
+    <string name="cd_previous">Previous</string>
+    <string name="cd_next">Next</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_sleep_timer">Sleep timer</string>
+    <string name="cd_equalizer">Equalizer</string>
+    <string name="cd_queue">Queue</string>
+    <string name="cd_favorite">Favorite</string>
+    <string name="cd_back">Back</string>
+
+    <!-- Video player (SCREEN_VIDEO_PLAYER.md) -->
+    <string name="cd_pip">Picture in picture</string>
+    <string name="cd_lock_controls">Lock controls</string>
+    <string name="cd_unlock_controls">Unlock controls</string>
+    <string name="cd_aspect_ratio">Aspect ratio</string>
+    <string name="cd_subtitles">Subtitles</string>
+    <string name="cd_audio_tracks">Audio tracks</string>
+    <string name="video_speed_title">Playback speed</string>
+    <string name="video_tracks_title">Tracks &amp; subtitles</string>
+    <string name="video_tracks_audio_section">Audio</string>
+    <string name="video_tracks_audio_none">Default audio track</string>
+    <string name="video_tracks_subtitles_section">Subtitles</string>
+    <string name="video_subtitles_off">Off</string>
+    <string name="video_subtitles_open_file">Open external subtitle file…</string>
+
+    <!-- Queue sheet (SCREEN_NOW_PLAYING.md §9) -->
+    <string name="queue_title">Queue</string>
+    <string name="queue_clear">Clear</string>
+    <string name="cd_remove_from_queue">Remove from queue</string>
+
+    <!-- Sleep timer sheet (SCREEN_NOW_PLAYING.md §7) -->
+    <string name="sleep_timer_title">Sleep timer</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_end_of_track">End of track</string>
+    <string name="sleep_timer_15">15 minutes</string>
+    <string name="sleep_timer_30">30 minutes</string>
+    <string name="sleep_timer_60">60 minutes</string>
+</resources>

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260824T005230413Z-18522-4e8747ad149f",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:core/data/src/main/java/com/exapps/velox/core/data/preferences/UserSettingsPreferences.kt: candidate_limit_exceeded: 40 changed reviewable file(s) were not scanned because the limit is 20",
+    "scan:app/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/engine/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/service/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:core/common/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:core/ui/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:feature/library/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:feature/playlists/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:feature/settings/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:feature/equalizer/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:feature/subtitles/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:core/data/build.gradle.kts: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:core/domain/src/main/java/com/exapps/velox/core/domain/player/AudioEffects.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:core/domain/src/main/java/com/exapps/velox/core/domain/player/PlayerController.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/engine/src/main/java/com/exapps/velox/player/engine/AndroidAudioEffectsController.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/engine/src/main/java/com/exapps/velox/player/engine/Media3PlayerAccessor.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/engine/src/main/java/com/exapps/velox/player/engine/VeloxVideoSurface.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/engine/src/main/java/com/exapps/velox/player/engine/VeloxExoPlayerFactory.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/service/src/main/java/com/exapps/velox/player/service/MediaControllerPlayerController.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "scan:player/service/src/main/java/com/exapps/velox/player/service/VeloxPlaybackService.kt: scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+    "supply-chain-check:.: stop_budget_exhausted: focused supply-chain check was not run before the gate budget"
+  ],
+  "target": ".",
+  "revision": null,
+  "diffHash": "d53f7b9f4524f22cfc9a52a4e8c97254e96f19607bfddda30c4d996f1fb64791",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-24T00:52:30.413Z",
+  "timing": {
+    "startedAt": "2026-08-24T00:52:19.568Z",
+    "completedAt": "2026-08-24T00:52:30.413Z",
+    "durationMs": 10845
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "candidate_limit_exceeded": 1,
+      "scanner_failed": 19,
+      "stop_budget_exhausted": 1,
+      "project_check_failed": 21
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_401aaa8b-76d6-4d5b-a742-2deed748deb8-20260824T005230413Z-18522-4e8747ad149f.json"
+}

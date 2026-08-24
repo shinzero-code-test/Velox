@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equalizer_title">معادل الصوت</string>
+    <string name="cd_back">رجوع</string>
+    <string name="equalizer_reset">إعادة تعيين</string>
+    <string name="equalizer_standby_body">ابدأ تشغيل أي مقطع وسيتصل معادل الصوت بجلسة الصوت تلقائيًا.</string>
+
+    <string name="equalizer_preset_normal">عادي</string>
+    <string name="equalizer_preset_pop">بوب</string>
+    <string name="equalizer_preset_rock">روك</string>
+    <string name="equalizer_preset_jazz">جاز</string>
+    <string name="equalizer_preset_classical">كلاسيكي</string>
+    <string name="equalizer_preset_bass">صوت الجهير</string>
+    <string name="equalizer_preset_vocal">صوت بشري</string>
+    <string name="equalizer_preset_electronic">إلكتروني</string>
+    <string name="equalizer_preset_user">مستخدم</string>
+
+    <string name="equalizer_bass_boost">تعزيز الجهير</string>
+    <string name="equalizer_virtualizer">المؤثر المجسّم</string>
+</resources>

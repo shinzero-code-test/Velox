@@ -1,0 +1,27 @@
+package com.exapps.velox.feature.playlists
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.exapps.velox.core.domain.model.PlaylistDetail
+import com.exapps.velox.core.domain.repository.PlaylistRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
+
+@HiltViewModel
+class PlaylistDetailViewModel @Inject constructor(
+    playlistRepository: PlaylistRepository,
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+
+    // Reads the same `playlistId` nav argument the screen receives directly — Nav
+    // Compose's type-safe args land in SavedStateHandle automatically, so this is
+    // a plain field lookup rather than a manual Bundle parse.
+    private val playlistId: Long = checkNotNull(savedStateHandle["playlistId"])
+
+    val detail: StateFlow<PlaylistDetail?> = playlistRepository.observePlaylistDetail(playlistId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+}

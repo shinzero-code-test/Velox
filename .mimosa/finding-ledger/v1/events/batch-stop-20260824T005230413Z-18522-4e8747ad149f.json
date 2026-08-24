@@ -1,0 +1,318 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260824T005230413Z-18522-4e8747ad149f",
+  "runId": "20260824T005230413Z-18522-4e8747ad149f",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "core/data/src/main/java/com/exapps/velox/core/data/preferences/UserSettingsPreferences.kt",
+        "detail": "40 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "app/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/engine/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/service/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "core/common/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "core/ui/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "feature/library/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "feature/playlists/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "feature/settings/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "feature/equalizer/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "feature/subtitles/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "core/data/build.gradle.kts",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "core/domain/src/main/java/com/exapps/velox/core/domain/player/AudioEffects.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "core/domain/src/main/java/com/exapps/velox/core/domain/player/PlayerController.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/AndroidAudioEffectsController.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/Media3PlayerAccessor.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/VeloxVideoSurface.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/VeloxExoPlayerFactory.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/service/src/main/java/com/exapps/velox/player/service/MediaControllerPlayerController.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "player/service/src/main/java/com/exapps/velox/player/service/VeloxPlaybackService.kt",
+        "detail": "spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "stop_budget_exhausted",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "focused supply-chain check was not run before the gate budget",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "core/data/src/main/java/com/exapps/velox/core/data/preferences/UserSettingsPreferences.kt",
+        "detail": "candidate_limit_exceeded: 40 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "app/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/engine/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/service/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "core/common/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "core/ui/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "feature/library/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "feature/playlists/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "feature/settings/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "feature/equalizer/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "feature/subtitles/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "core/data/build.gradle.kts",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "core/domain/src/main/java/com/exapps/velox/core/domain/player/AudioEffects.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "core/domain/src/main/java/com/exapps/velox/core/domain/player/PlayerController.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/AndroidAudioEffectsController.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/Media3PlayerAccessor.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/VeloxVideoSurface.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/engine/src/main/java/com/exapps/velox/player/engine/VeloxExoPlayerFactory.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/service/src/main/java/com/exapps/velox/player/service/MediaControllerPlayerController.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "player/service/src/main/java/com/exapps/velox/player/service/VeloxPlaybackService.kt",
+        "detail": "scanner_failed: spawnSync /data/data/com.termux/files/usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "stop_budget_exhausted: focused supply-chain check was not run before the gate budget",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "d53f7b9f4524f22cfc9a52a4e8c97254e96f19607bfddda30c4d996f1fb64791",
+  "rulesVersion": "unavailable",
+  "sessionHash": "0252dffb02d9e96d67b7e60cb832f08c632ac803aa9c58bb973fc0568ef97657",
+  "reportRef": ".mimosa/reports/task-review-sess_401aaa8b-76d6-4d5b-a742-2deed748deb8-20260824T005230413Z-18522-4e8747ad149f.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-24T00:52:36.676Z"
+}
