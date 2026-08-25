@@ -290,7 +290,7 @@ fun NowPlayingScreen(
             // Phase 1.1 "Lyrics display (basic)": sidecar .lrc (synced highlight) or
             // .txt (plain). Hidden entirely when the track has no sidecar content.
             val currentLyrics = lyrics
-            if (showLyrics && currentLyrics != null && !currentLyrics.isEmpty()) {
+            if (showLyrics && currentLyrics != null && !currentLyrics.isEmpty) {
                 GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
                     LyricsPanel(
                         lyrics = currentLyrics,
