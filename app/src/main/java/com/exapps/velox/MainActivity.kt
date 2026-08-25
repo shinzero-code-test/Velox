@@ -16,6 +16,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.exapps.velox.core.data.preferences.UserSettings
 import com.exapps.velox.core.data.preferences.VeloxLocaleManager
+import android.content.Intent
+import android.database.Cursor
+import android.net.Uri
+import android.provider.OpenableColumns
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlayerController
 import androidx.compose.ui.Modifier
@@ -52,6 +56,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        handleViewIntent(intent)
 
         // Holds the splash screen (system-drawn, not a fake in-app screen — see
         // Theme.Velox.Splash) up until AppViewModel has resolved onboarding state,
@@ -86,6 +91,42 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleViewIntent(intent)
+    }
+
+    /**
+     * Phase 1 M4 "File association": ACTION_VIEW on a content/file audio or video
+     * URI starts playing it immediately and asks the nav host to surface the player
+     * chrome. The synthetic MediaItem uses a negative id so it can never collide
+     * with library rows; duration is resolved by the player itself.
+     */
+    private fun handleViewIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        val data = intent.data ?: return
+        val isVideo = (intent.type ?: dataMimeType(data)).startsWith("video")
+        lifecycleScope.launch {
+            val title = resolveDisplayName(data) ?: data.lastPathSegment ?: "Unknown"
+            val item = com.exapps.velox.core.domain.model.MediaItem(
+                id = -(System.currentTimeMillis()),
+                uri = data.toString(),
+                title = title,
+                mediaType = if (isVideo) MediaType.VIDEO else MediaType.AUDIO,
+            )
+            playerController.play(listOf(item))
+            appViewModel.onExternalMediaStarted(item.id, isVideo)
+        }
+    }
+
+    private fun dataMimeType(data: Uri): String =
+        runCatching { contentResolver.getType(data) }.getOrNull() ?: "audio/*"
+
+    private fun resolveDisplayName(data: Uri): String? = runCatching {
+        contentResolver.query(data, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor: Cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+    }.getOrNull()
 
     /** SCREEN_VIDEO_PLAYER.md §9 / Settings → Playback → "Auto PiP on leave":
      * leaving the app while a video plays minimizes to picture-in-picture. */

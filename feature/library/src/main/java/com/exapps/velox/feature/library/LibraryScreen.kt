@@ -64,6 +64,7 @@ fun LibraryScreen(
     onAlbumClick: (Album) -> Unit = {},
     onArtistClick: (Artist) -> Unit = {},
     onFolderClick: (Folder) -> Unit = {},
+    onGenreClick: (Genre) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val content by viewModel.content.collectAsStateWithLifecycle()
@@ -151,6 +152,7 @@ fun LibraryScreen(
                 onAlbumClick = onAlbumClick,
                 onArtistClick = onArtistClick,
                 onFolderClick = onFolderClick,
+                onGenreClick = onGenreClick,
             )
         }
     }
@@ -203,6 +205,7 @@ private fun LibraryTabRow(selected: LibraryGroup, onSelect: (LibraryGroup) -> Un
         LibraryGroup.ALBUMS to R.string.library_tab_albums,
         LibraryGroup.ARTISTS to R.string.library_tab_artists,
         LibraryGroup.FOLDERS to R.string.library_tab_folders,
+        LibraryGroup.GENRES to R.string.library_tab_genres,
         LibraryGroup.VIDEOS to R.string.library_tab_videos,
     )
     LazyRow(

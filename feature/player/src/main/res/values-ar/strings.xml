@@ -5,6 +5,16 @@
     <string name="cd_more_options">مزيد من الخيارات</string>
     <string name="cd_shuffle">تشغيل عشوائي</string>
     <string name="cd_repeat">تكرار</string>
+    <string name="cd_edit_info">تعديل المعلومات</string>
+    <string name="edit_info_title">تعديل معلومات المقطع</string>
+    <string name="edit_info_field_title">العنوان</string>
+    <string name="edit_info_field_artist">الفنان</string>
+    <string name="edit_info_field_album">الألبوم (للقراءة فقط)</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="cd_lyrics">الكلمات</string>
+    <string name="lyrics_none">لم يتم العثور على كلمات لهذا المقطع</string>
+    <string name="cd_progress">تقدم التشغيل</string>
     <string name="cd_playback_speed">سرعة التشغيل</string>
     <string name="cd_previous">السابق</string>
     <string name="cd_next">التالي</string>

@@ -4,8 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.exapps.velox.core.data.local.entity.GenreProjection
 import com.exapps.velox.core.data.local.entity.MediaItemEntity
-import com.exapps.velox.core.data.local.entity.PlayStatisticsProjection
+import com.exapps.velox.core.data.local.entity.UserMetadataProjection
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -28,6 +29,16 @@ interface MediaItemDao {
 
     @Query("SELECT * FROM media_items WHERE artistName = :artistName ORDER BY title COLLATE NOCASE ASC")
     fun observeByArtist(artistName: String): Flow<List<MediaItemEntity>>
+
+    @Query(
+        """SELECT genre AS name, COUNT(*) AS trackCount FROM media_items
+           WHERE genre IS NOT NULL AND genre != ''
+           GROUP BY genre ORDER BY genre COLLATE NOCASE ASC"""
+    )
+    fun observeGenreSummaries(): Flow<List<GenreProjection>>
+
+    @Query("SELECT * FROM media_items WHERE genre = :genre ORDER BY title COLLATE NOCASE ASC")
+    fun observeByGenre(genre: String): Flow<List<MediaItemEntity>>
 
     @Query("SELECT * FROM media_items WHERE isFavorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun observeFavorites(): Flow<List<MediaItemEntity>>
@@ -66,22 +77,37 @@ interface MediaItemDao {
 
     // --- rescan user-data preservation -------------------------------------------------
     // upsertAll uses OnConflictStrategy.REPLACE, which rewrites the whole row from the
-    // freshly scanned entity and would silently wipe isFavorite / playCount /
-    // lastPlayedEpochSeconds on every rescan (one runs at every app launch — see
-    // LibraryViewModel.onMediaPermissionResult). These four let the repository
-    // snapshot the user-owned columns before the upsert and re-apply them after.
+    // freshly scanned entity and would silently wipe everything the user owns —
+    // favourites, play statistics, AND tag-editor edits — on every rescan (one runs at
+    // every app launch). Snapshot all of it before the upsert, re-apply row-by-row
+    // afterwards; UPDATEs against rows deleted since the snapshot affect zero rows.
 
-    @Query("SELECT id FROM media_items WHERE isFavorite = 1")
-    suspend fun getFavoriteIds(): List<Long>
+    @Query(
+        """SELECT id, title, artistName, albumTitle, isFavorite, playCount, lastPlayedEpochSeconds
+           FROM media_items
+           WHERE isFavorite = 1 OR playCount > 0 OR lastPlayedEpochSeconds IS NOT NULL"""
+    )
+    suspend fun getUserMetadataSnapshot(): List<UserMetadataProjection>
 
-    @Query("SELECT id, playCount, lastPlayedEpochSeconds FROM media_items WHERE playCount > 0 OR lastPlayedEpochSeconds IS NOT NULL")
-    suspend fun getUserPlayStatistics(): List<PlayStatisticsProjection>
+    @Query(
+        """UPDATE media_items SET title = :title, artistName = :artistName, albumTitle = :albumTitle,
+           isFavorite = :isFavorite, playCount = :playCount, lastPlayedEpochSeconds = :lastPlayedEpochSeconds
+           WHERE id = :id"""
+    )
+    suspend fun restoreUserMetadata(
+        id: Long,
+        title: String,
+        artistName: String?,
+        albumTitle: String?,
+        isFavorite: Boolean,
+        playCount: Int,
+        lastPlayedEpochSeconds: Long?,
+    )
 
-    @Query("UPDATE media_items SET isFavorite = 1 WHERE id IN (:ids)")
-    suspend fun restoreFavorites(ids: List<Long>)
-
-    @Query("UPDATE media_items SET playCount = :playCount, lastPlayedEpochSeconds = :lastPlayedEpochSeconds WHERE id = :id")
-    suspend fun restorePlayStatistics(id: Long, playCount: Int, lastPlayedEpochSeconds: Long?)
+    /** Tag editor (Phase 1.1): in-library metadata override. File tags themselves are
+     * not rewritten; edits survive rescans via the snapshot/restore pair above. */
+    @Query("UPDATE media_items SET title = :title, artistName = :artistName, albumTitle = :albumTitle WHERE id = :id")
+    suspend fun updateTrackMetadata(id: Long, title: String, artistName: String?, albumTitle: String?)
 
     @Query("UPDATE media_items SET isFavorite = :favorite WHERE id = :id")
     suspend fun setFavorite(id: Long, favorite: Boolean)

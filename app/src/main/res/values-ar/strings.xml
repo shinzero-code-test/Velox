@@ -20,4 +20,6 @@
     <string name="onboarding_permissions_body">يقرأ Velox الصوتيات والمرئيات الموجودة على جهازك لبناء مكتبتك. لا يتم رفع أي شيء — كل شيء يبقى على هاتفك.</string>
     <string name="onboarding_permissions_cta">السماح بالوصول إلى الوسائط</string>
     <string name="onboarding_permissions_skip">تخطي الآن</string>
+    <string name="widget_label">Velox قيد التشغيل</string>
+    <string name="widget_description">عناصر التحكم في التشغيل والمقطع الحالي</string>
 </resources>

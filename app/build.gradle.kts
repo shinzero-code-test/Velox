@@ -14,8 +14,8 @@ android {
         applicationId = "com.exapps.velox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.3.0"
+        versionCode = 6
+        versionName = "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.glance.appwidget)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

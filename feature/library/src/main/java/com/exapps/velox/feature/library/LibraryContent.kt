@@ -3,6 +3,7 @@ package com.exapps.velox.feature.library
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
 import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.LibraryGroup
 import com.exapps.velox.core.domain.model.MediaItem
 
@@ -14,6 +15,7 @@ sealed interface LibraryContent {
     data class Albums(val items: List<Album>) : LibraryContent
     data class Artists(val items: List<Artist>) : LibraryContent
     data class Folders(val items: List<Folder>) : LibraryContent
+    data class Genres(val items: List<Genre>) : LibraryContent
 
     val isEmpty: Boolean get() = when (this) {
         is Tracks -> items.isEmpty()
@@ -21,5 +23,6 @@ sealed interface LibraryContent {
         is Albums -> items.isEmpty()
         is Artists -> items.isEmpty()
         is Folders -> items.isEmpty()
+        is Genres -> items.isEmpty()
     }
 }

@@ -28,15 +28,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.decode.VideoFrameDecoder
+import coil3.request.videoFrameDecoder
 import com.exapps.velox.core.common.util.formatDuration
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
 import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.MediaType
+import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.ui.components.ClickableGlassCard
 import com.exapps.velox.core.ui.theme.VeloxColors
@@ -47,6 +53,19 @@ import com.exapps.velox.core.ui.theme.accentColor
 import com.exapps.velox.core.ui.theme.glassSurfaceColor
 
 @Composable
+
+/** Phase 1.1 "Improved artwork & thumbnail pipeline": video rows decode a frame
+ * from the media itself via coil-video; audio keeps the album-art URI. */
+@Composable
+private fun trackArtworkModel(track: MediaItem): Any = if (track.mediaType == MediaType.VIDEO) {
+    ImageRequest.Builder(LocalContext.current)
+        .data(track.uri)
+        .decoderFactory(VideoFrameDecoder.Factory())
+        .build()
+} else {
+    track.artworkUri ?: track.uri
+}
+
 fun LibraryTabChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -72,6 +91,7 @@ fun LibraryContentView(
     onAlbumClick: (Album) -> Unit,
     onArtistClick: (Artist) -> Unit,
     onFolderClick: (Folder) -> Unit,
+    onGenreClick: (Genre) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (content) {
@@ -80,6 +100,7 @@ fun LibraryContentView(
         is LibraryContent.Albums -> AlbumGrid(content.items, onAlbumClick, modifier)
         is LibraryContent.Artists -> ArtistList(content.items, onArtistClick, modifier)
         is LibraryContent.Folders -> FolderList(content.items, onFolderClick, modifier)
+        is LibraryContent.Genres -> GenreList(content.items, onGenreClick, modifier)
     }
 }
 
@@ -115,7 +136,7 @@ private fun TrackRow(
     ClickableGlassCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
             AsyncImage(
-                model = track.artworkUri,
+                model = trackArtworkModel(track),
                 contentDescription = null,
                 modifier = Modifier
                     .size(48.dp)
@@ -235,6 +256,28 @@ private fun FolderList(folders: List<Folder>, onFolderClick: (Folder) -> Unit, m
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
                     Icon(Icons.Filled.Folder, contentDescription = null, tint = accentColor())
                     Text(folder.displayName, style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun GenreList(genres: List<Genre>, onGenreClick: (Genre) -> Unit, modifier: Modifier = Modifier) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
+        verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
+    ) {
+        items(genres, key = { it.name }) { genre ->
+            ClickableGlassCard(onClick = { onGenreClick(genre) }, modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+                    Icon(Icons.Filled.LibraryMusic, contentDescription = null, tint = accentColor())
+                    Column {
+                        Text(genre.name, style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
+                        Text("${genre.trackCount}", style = VeloxTheme.typography.bodyMedium, color = VeloxColors.OnSurfaceVariant)
+                    }
                 }
             }
         }

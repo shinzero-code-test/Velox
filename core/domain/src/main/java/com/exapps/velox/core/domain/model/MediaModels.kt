@@ -20,6 +20,9 @@ data class MediaItem(
     val albumTitle: String? = null,
     val artworkUri: String? = null,
     val folderPath: String? = null,
+    /** Display filename (sidecar lookups: .lrc lyrics). */
+    val fileName: String? = null,
+    val genre: String? = null,
     val dateAddedEpochSeconds: Long = 0L,
     val sizeBytes: Long = 0L,
     val isFavorite: Boolean = false,
@@ -53,6 +56,12 @@ data class Folder(
     val displayName: String,
     val itemCount: Int,
     val parentPath: String?,
+)
+
+/** Genres tab entry — derived from the media_items genre column (GROUP BY). */
+data class Genre(
+    val name: String,
+    val trackCount: Int,
 )
 
 /** SCREEN_HOME_LIBRARY.md §4: the top-level library groupings / tabs. */

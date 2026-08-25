@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Room
 import com.exapps.velox.core.data.local.VeloxDatabase
 import com.exapps.velox.core.data.local.dao.AlbumDao
@@ -27,6 +29,17 @@ import javax.inject.Singleton
 
 private val Context.veloxPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "velox_preferences")
 
+/** Ordered migration history. v2: genre + fileName on media_items (Phase 1 M2/M3:
+ * Genres tab + sidecar lyrics lookups). */
+internal val ALL_DATABASE_MIGRATIONS: Array<Migration> = arrayOf(
+    object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE media_items ADD COLUMN fileName TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE media_items ADD COLUMN genre TEXT DEFAULT NULL")
+        }
+    },
+)
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -35,9 +48,10 @@ object DatabaseModule {
     @Singleton
     fun provideVeloxDatabase(@ApplicationContext context: Context): VeloxDatabase =
         Room.databaseBuilder(context, VeloxDatabase::class.java, VeloxDatabase.DATABASE_NAME)
-            // Phase 0 has no prior schema version to migrate from. The first real
-            // migration should replace this before the room.schemaDirectory history
-            // (core/data/schemas/) gets a v2 folder — see PROGRESS.md.
+            .addMigrations(*ALL_DATABASE_MIGRATIONS)
+            // Kept as a last-resort escape hatch for pre-release installs only — a
+            // destructive reset here means re-scanning, which is cheap; losing user
+            // data (playlists/favourites) is not. Remove before any public build.
             .fallbackToDestructiveMigration(dropAllTables = false)
             .build()
 

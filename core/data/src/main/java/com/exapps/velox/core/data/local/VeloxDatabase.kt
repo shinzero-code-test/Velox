@@ -22,7 +22,7 @@ import com.exapps.velox.core.data.local.entity.PlaylistItemEntity
         PlaylistItemEntity::class,
         PlayHistoryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class VeloxDatabase : RoomDatabase() {

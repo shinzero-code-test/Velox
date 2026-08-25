@@ -2,6 +2,7 @@ package com.exapps.velox.feature.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.exapps.velox.core.common.util.LrcParser
 import com.exapps.velox.core.domain.player.PlaybackState
 import com.exapps.velox.core.domain.player.PlayerController
 import com.exapps.velox.core.domain.player.RepeatMode
@@ -13,6 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,7 +34,28 @@ enum class SleepTimerOption(val minutes: Int?) {
 class NowPlayingViewModel @Inject constructor(
     private val playerController: PlayerController,
     private val libraryRepository: MediaLibraryRepository,
+    private val lyricsLoader: LyricsLoader,
 ) : ViewModel() {
+
+    /** Phase 1.1 "Lyrics display (basic)": sidecar .lrc (synced) or .txt (plain)
+     * loaded per current track; reloaded on every item change. */
+    val lyrics: StateFlow<LyricsLoader.Lyrics?> = state
+        .map { it.currentItem }
+        .distinctUntilChangedBy { it?.id }
+        .map { item -> item?.let { lyricsLoader.load(it) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Index of the line that should be highlighted right now (-1 before first line). */
+    val activeLyricIndex: StateFlow<Int> = combine(state, lyrics) { playback, lyrics ->
+        val synced = lyrics?.syncedLines.orEmpty()
+        if (synced.isEmpty()) return@combine -1
+        var index = -1
+        synced.forEachIndexed { i, line ->
+            if ((line.timeMs ?: Long.MAX_VALUE) <= playback.positionMs) index = i
+        }
+        index
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
+
 
     val state: StateFlow<PlaybackState> = playerController.state.stateIn(
         scope = viewModelScope,
@@ -91,6 +116,14 @@ class NowPlayingViewModel @Inject constructor(
         val speeds = listOf(1f, 1.25f, 1.5f, 2f)
         val next = speeds[(speeds.indexOf(state.value.playbackSpeed) + 1).mod(speeds.size)]
         playerController.setPlaybackSpeed(next)
+    }
+
+    /** Phase 1.1 "Tag editor (basic)": library-level metadata override. File tags
+     * themselves aren't rewritten (MediaStore ownership walls); edits survive
+     * rescans via the repository's user-metadata snapshot/restore. */
+    fun onSaveTrackMetadata(id: Long, title: String, artistName: String?, albumTitle: String?) {
+        if (title.isBlank()) return
+        viewModelScope.launch { libraryRepository.updateTrackMetadata(id, title, artistName, albumTitle) }
     }
 
     fun onCycleRepeat() {

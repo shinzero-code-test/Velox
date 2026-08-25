@@ -78,7 +78,9 @@ class LibraryViewModel @Inject constructor(
             LibraryContent.Folders(it.sortedFor(sortOrder) { folder -> folder.displayName }).asScreenState()
         }
         LibraryGroup.RECENT -> repository.observeRecentlyPlayed().map { LibraryContent.Tracks(it).asScreenState() }
-        LibraryGroup.GENRES -> repository.observeTracks().map { LibraryContent.Tracks(it).asScreenState() } // TODO(Phase 2)
+        LibraryGroup.GENRES -> repository.observeGenres().map {
+            LibraryContent.Genres(it.sortedFor(sortOrder) { genre -> genre.name }).asScreenState()
+        }
     }
 
     /** Case-insensitive title sort for the grouping tabs; PATH maps to the same

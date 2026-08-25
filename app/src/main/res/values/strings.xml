@@ -23,4 +23,6 @@
     <string name="onboarding_permissions_body">Velox reads the audio and video already on your device to build your library. Nothing is uploaded — everything stays on your phone.</string>
     <string name="onboarding_permissions_cta">Allow media access</string>
     <string name="onboarding_permissions_skip">Skip for now</string>
+    <string name="widget_label">Velox now playing</string>
+    <string name="widget_description">Playback controls and the current track</string>
 </resources>

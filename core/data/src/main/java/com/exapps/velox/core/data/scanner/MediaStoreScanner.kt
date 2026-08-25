@@ -89,6 +89,7 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.DATA,
             MediaStore.Audio.Media.DATE_ADDED,
             MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.GENRE,
         )
         // IS_MUSIC filters out notification tones / ringtones MediaStore also indexes.
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -103,6 +104,10 @@ class MediaStoreScanner @Inject constructor(
             val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             val dateAddedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+            // GENRE became a first-class column on the audio table in API 30; on
+            // older devices getColumnIndex returns -1 and the helper yields null —
+            // the Genres tab is simply empty there rather than crashing.
+            val genreCol = cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -123,6 +128,8 @@ class MediaStoreScanner @Inject constructor(
                     artworkUri = albumId.takeIf { it != 0L }
                         ?.let { ContentUris.withAppendedId(ALBUM_ART_URI, it).toString() },
                     folderPath = path?.let { File(it).parent },
+                    fileName = path?.substringAfterLast('/'),
+                    genre = if (genreCol >= 0) cursor.getStringOrNull(genreCol) else null,
                     dateAddedEpochSeconds = cursor.getLong(dateAddedCol),
                     sizeBytes = cursor.getLong(sizeCol),
                 )
@@ -165,6 +172,7 @@ class MediaStoreScanner @Inject constructor(
                     albumTitle = null,
                     artworkUri = null, // Phase 1: MediaStore.Video.Thumbnails / loadThumbnail()
                     folderPath = path?.let { File(it).parent },
+                    fileName = path?.substringAfterLast('/'),
                     dateAddedEpochSeconds = cursor.getLong(dateAddedCol),
                     sizeBytes = cursor.getLong(sizeCol),
                 )

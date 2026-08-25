@@ -14,6 +14,7 @@ import com.exapps.velox.core.data.scanner.MediaStoreScanner
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
 import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.model.SortOrder
@@ -70,6 +71,12 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     override fun observeFolderContents(path: String): Flow<List<MediaItem>> =
         mediaItemDao.observeByFolder(path).map { it.map { entity -> entity.toDomain() } }
 
+    override fun observeGenres(): Flow<List<Genre>> =
+        mediaItemDao.observeGenreSummaries().map { list -> list.map { Genre(it.name, it.trackCount) } }
+
+    override fun observeGenreTracks(genre: String): Flow<List<MediaItem>> =
+        mediaItemDao.observeByGenre(genre).map { it.map { entity -> entity.toDomain() } }
+
     override fun observeAlbumTracks(albumId: Long): Flow<List<MediaItem>> =
         mediaItemDao.observeByAlbum(albumId).map { it.map { entity -> entity.toDomain() } }
 
@@ -104,6 +111,11 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     override suspend fun setFavorite(id: Long, favorite: Boolean) =
         withContext(ioDispatcher) { mediaItemDao.setFavorite(id, favorite) }
 
+    override suspend fun updateTrackMetadata(id: Long, title: String, artistName: String?, albumTitle: String?) =
+        withContext(ioDispatcher) {
+            mediaItemDao.updateTrackMetadata(id, title.trim(), artistName?.trim()?.ifEmpty { null }, albumTitle?.trim()?.ifEmpty { null })
+        }
+
     override suspend fun recordPlayed(id: Long) = withContext(ioDispatcher) {
         val now = System.currentTimeMillis() / 1000
         mediaItemDao.recordPlayed(id, now)
@@ -111,20 +123,26 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun rescanLibrary() = withContext(ioDispatcher) {
-        // Snapshot user-owned columns first: upsertAll is REPLACE, so without this
-        // every rescan (including the one at each app launch) would reset favourites
-        // and play statistics for every still-existing track.
-        val favoriteIds = mediaItemDao.getFavoriteIds()
-        val playStats = mediaItemDao.getUserPlayStatistics()
+        // Snapshot everything the user owns first: upsertAll is REPLACE, so without
+        // this every rescan (including the one at each app launch) would reset
+        // favourites, play statistics AND tag-editor edits for surviving tracks.
+        val userMetadata = mediaItemDao.getUserMetadataSnapshot()
 
         val result = scanner.scan()
         mediaItemDao.upsertAll(result.mediaItems)
         mediaItemDao.deleteMissing(result.mediaItems.map { it.id })
 
-        // Re-apply — UPDATEs against deleted ids simply affect zero rows.
-        mediaItemDao.restoreFavorites(favoriteIds)
-        playStats.forEach { stat ->
-            mediaItemDao.restorePlayStatistics(stat.id, stat.playCount, stat.lastPlayedEpochSeconds)
+        // Re-apply row-by-row — UPDATEs against deleted ids affect zero rows.
+        userMetadata.forEach { meta ->
+            mediaItemDao.restoreUserMetadata(
+                id = meta.id,
+                title = meta.title,
+                artistName = meta.artistName,
+                albumTitle = meta.albumTitle,
+                isFavorite = meta.isFavorite,
+                playCount = meta.playCount,
+                lastPlayedEpochSeconds = meta.lastPlayedEpochSeconds,
+            )
         }
 
         albumDao.upsertAll(result.albums)

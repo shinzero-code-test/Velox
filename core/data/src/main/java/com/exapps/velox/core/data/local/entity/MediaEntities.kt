@@ -25,6 +25,9 @@ data class MediaItemEntity(
     val albumTitle: String?,
     val artworkUri: String?,
     val folderPath: String?,
+    /** Display filename (from MediaStore DATA) — drives sidecar lookups (.lrc lyrics, etc.). */
+    val fileName: String? = null,
+    val genre: String? = null,
     val dateAddedEpochSeconds: Long,
     val sizeBytes: Long,
     val isFavorite: Boolean = false,
@@ -52,10 +55,20 @@ data class ArtistEntity(
     val artworkUri: String?,
 )
 
-/** Read-only projection for snapshotting user-owned playback columns before a
- * rescan's REPLACE-upsert overwrites them (see MediaItemDao.getUserPlayStatistics). */
-data class PlayStatisticsProjection(
+/** Read-only snapshot of everything a rescan's REPLACE-upsert would otherwise wipe
+ * (see MediaItemDao) — user-edited metadata plus favourites and play statistics. */
+data class UserMetadataProjection(
     val id: Long,
+    val title: String,
+    val artistName: String?,
+    val albumTitle: String?,
+    val isFavorite: Boolean,
     val playCount: Int,
     val lastPlayedEpochSeconds: Long?,
+)
+
+/** GROUP BY projection for the Genres tab. */
+data class GenreProjection(
+    val name: String,
+    val trackCount: Int,
 )

@@ -47,4 +47,5 @@
     <string name="settings_replay_intro_hint">Show</string>
 
     <string name="cancel">Cancel</string>
+    <string name="settings_last_crash">Last crash</string>
 </resources>

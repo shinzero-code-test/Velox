@@ -2,6 +2,7 @@ package com.exapps.velox.navigation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -44,6 +45,24 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
         }
     }
 
+    // Phase 1 M4 "File association": an externally-opened file already started
+    // playing in MainActivity — surface the matching player chrome once the graph
+    // exists, then clear the one-shot request.
+    LaunchedEffect(Unit) {
+        appViewModel.externalPlayback.collect { request ->
+            when (request) {
+                null -> Unit
+                is com.exapps.velox.ExternalPlayback -> {
+                    // v0.4.0: always the Now Playing chrome — the fullscreen video
+                    // route resolves its item through the library database, which
+                    // externally-opened files aren't in. Documented in PROGRESS.md.
+                    navController.navigate(VeloxRoute.NowPlaying)
+                    appViewModel.consumeExternalPlayback()
+                }
+            }
+        }
+    }
+
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
 
         composable<VeloxRoute.Onboarding> {
@@ -70,6 +89,7 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
                     onAlbumClick = { navController.navigate(VeloxRoute.AlbumDetail(it.id, it.title)) },
                     onArtistClick = { navController.navigate(VeloxRoute.ArtistDetail(it.id, it.name)) },
                     onFolderClick = { navController.navigate(VeloxRoute.FolderDetail(it.path, it.displayName)) },
+                    onGenreClick = { navController.navigate(VeloxRoute.GenreDetail(it.name, it.name)) },
                 )
             }
         }
@@ -100,10 +120,21 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
             ) {
+                val shareContext = LocalContext.current
                 SettingsScreen(
                     // Locale changes only take effect through attachBaseContext —
                     // recreate() re-runs it with the freshly persisted language.
                     onLanguageChanged = { activity?.recreate() },
+                    onShareCrashLog = { text ->
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, text)
+                        }
+                        shareContext.startActivity(
+                            android.content.Intent.createChooser(send, null)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    },
                     onReplayIntro = { navController.navigate(VeloxRoute.Onboarding) },
                 )
             }
@@ -148,6 +179,13 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
         }
 
         composable<VeloxRoute.FolderDetail> {
+            CollectionDetailScreen(
+                onBack = { navController.popBackStack() },
+                onMediaItemClick = ::openMediaItem,
+            )
+        }
+
+        composable<VeloxRoute.GenreDetail> {
             CollectionDetailScreen(
                 onBack = { navController.popBackStack() },
                 onMediaItemClick = ::openMediaItem,

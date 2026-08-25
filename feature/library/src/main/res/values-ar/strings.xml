@@ -5,6 +5,7 @@
     <string name="library_tab_albums">الألبومات</string>
     <string name="library_tab_artists">الفنانون</string>
     <string name="library_tab_folders">المجلدات</string>
+    <string name="library_tab_genres">الأنواع</string>
     <string name="library_tab_videos">الفيديوهات</string>
     <string name="library_empty_title">مكتبتك فارغة</string>
     <string name="library_empty_body">يبحث Velox عن ملفات الصوت والفيديو الموجودة على جهازك بالفعل. امنح الإذن للبدء.</string>

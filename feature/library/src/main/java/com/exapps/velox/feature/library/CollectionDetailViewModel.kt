@@ -32,6 +32,7 @@ class CollectionDetailViewModel @Inject constructor(
     private val albumId: Long? = savedStateHandle["albumId"]
     private val artistId: Long? = savedStateHandle["artistId"]
     private val folderPath: String? = savedStateHandle["folderPath"]
+    private val genre: String? = savedStateHandle["genre"]
 
     /** Header title — carried through navigation to avoid a repository round-trip. */
     val title: String = checkNotNull(
@@ -42,6 +43,7 @@ class CollectionDetailViewModel @Inject constructor(
     val tracks: StateFlow<List<MediaItem>> = when {
         albumId != null -> repository.observeAlbumTracks(albumId)
         artistId != null -> repository.observeArtistTracks(artistId)
+        genre != null -> repository.observeGenreTracks(genre)
         else -> repository.observeFolderContents(checkNotNull(folderPath))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

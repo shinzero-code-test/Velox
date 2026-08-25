@@ -50,6 +50,9 @@ sealed interface VeloxRoute {
     data class FolderDetail(val folderPath: String, val title: String) : VeloxRoute
 
     @Serializable
+    data class GenreDetail(val genre: String, val title: String) : VeloxRoute
+
+    @Serializable
     data object Equalizer : VeloxRoute
 }
 

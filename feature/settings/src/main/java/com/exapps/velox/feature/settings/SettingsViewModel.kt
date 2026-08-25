@@ -20,7 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val preferences: UserSettingsPreferences,
     private val localeManager: VeloxLocaleManager,
     private val libraryRepository: MediaLibraryRepository,
@@ -32,7 +32,26 @@ class SettingsViewModel @Inject constructor(
         initialValue = UserSettings(),
     )
 
-    /** SCREEN_SETTINGS.md §9: app version + build, read from PackageManager. */
+    /** Phase 1.1 crash hardening: last crash summary (null = none on record). */
+    val lastCrashSummary: String? by lazy {
+        runCatching {
+            val f = java.io.File(context.filesDir, "last_crash.txt")
+            if (!f.isFile) return@lazy null
+            val lines = f.readLines()
+            val time = lines.firstOrNull()?.removePrefix("time_epoch_ms=")?.toLongOrNull()
+            val at = time?.let {
+                android.text.format.DateFormat.getDateFormat(context).format(java.util.Date(it)) +
+                    " " + android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(it))
+            }
+            at ?: "unknown"
+        }.getOrNull()
+    }
+
+    fun lastCrashFullText(): String? = runCatching {
+        java.io.File(context.filesDir, "last_crash.txt").readText().takeIf { it.isNotBlank() }
+    }.getOrNull()
+
+    /** SCREEN_SETTINGS.md §9: app version + build, read from PackageManager. 
     val versionName: String = runCatching {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
         info.versionName ?: "?"

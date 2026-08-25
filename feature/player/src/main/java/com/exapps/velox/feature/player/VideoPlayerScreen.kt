@@ -142,6 +142,8 @@ fun VideoPlayerScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val seekIncrementSeconds by viewModel.seekIncrementSeconds.collectAsStateWithLifecycle()
+    val subtitleScalePercent by viewModel.subtitleScalePercent.collectAsStateWithLifecycle()
+    val subtitlePositionBottom by viewModel.subtitlePositionBottom.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val activity = context as? androidx.activity.ComponentActivity
@@ -232,6 +234,8 @@ fun VideoPlayerScreen(
             modifier = Modifier.fillMaxSize(),
             resizeMode = resizeMode,
             zoom = zoom,
+            subtitleScalePercent = subtitleScalePercent,
+            subtitlePositionBottom = subtitlePositionBottom,
         )
 
         // ---- Gesture layers (composed out entirely in lock mode, §6) ----

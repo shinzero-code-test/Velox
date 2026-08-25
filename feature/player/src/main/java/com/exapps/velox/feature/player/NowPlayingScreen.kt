@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
@@ -37,15 +39,21 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +68,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import coil3.compose.AsyncImage
 import com.exapps.velox.core.common.util.formatDuration
 import com.exapps.velox.core.common.util.formatRemaining
@@ -81,6 +90,10 @@ fun NowPlayingScreen(
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
+    val activeLyricIndex by viewModel.activeLyricIndex.collectAsStateWithLifecycle()
+    var showLyrics by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val item = state.currentItem
 
@@ -167,7 +180,9 @@ fun NowPlayingScreen(
                 val duration = state.durationMs.toFloat().coerceAtLeast(1f)
                 val position = (if (scrubbing) scrubPositionMs else state.positionMs.toFloat())
                     .coerceIn(0f, duration)
+                val progressDescription = stringResource(R.string.cd_progress)
                 Slider(
+                    modifier = Modifier.semantics { contentDescription = progressDescription },
                     value = position,
                     onValueChange = {
                         scrubbing = true
@@ -224,6 +239,12 @@ fun NowPlayingScreen(
             // Secondary actions (§7): speed, sleep timer, EQ, queue, favorite
             GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    VeloxGlassIconButton(
+                        icon = Icons.Filled.Lyrics,
+                        contentDescription = stringResource(R.string.cd_lyrics),
+                        onClick = { showLyrics = !showLyrics },
+                        tint = if (showLyrics) accentColor() else VeloxColors.OnSurface,
+                    )
                     // Playback speed for songs (videos have their own picker in the
                     // player chrome). Cycles 1x → 1.25x → 1.5x → 2x → 1x.
                     Box(
@@ -242,6 +263,11 @@ fun NowPlayingScreen(
                         )
                     }
                     VeloxGlassIconButton(
+                        icon = Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_info),
+                        onClick = { showEditDialog = true },
+                    )
+                    VeloxGlassIconButton(
                         icon = Icons.Filled.Timer,
                         contentDescription = stringResource(R.string.cd_sleep_timer),
                         onClick = { showSleepTimerSheet = true },
@@ -259,7 +285,33 @@ fun NowPlayingScreen(
             }
 
             Spacer(Modifier.height(VeloxSpacing.lg))
+
+            // Phase 1.1 "Lyrics display (basic)": sidecar .lrc (synced highlight) or
+            // .txt (plain). Hidden entirely when the track has no sidecar content.
+            val currentLyrics = lyrics
+            if (showLyrics && !currentLyrics.isNullOrEmpty()) {
+                GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
+                    LyricsPanel(
+                        lyrics = currentLyrics,
+                        activeIndex = activeLyricIndex,
+                    )
+                }
+                Spacer(Modifier.height(VeloxSpacing.lg))
+            }
         }
+    }
+
+    if (showEditDialog && state.currentItem != null) {
+        EditInfoDialog(
+            initialTitle = state.currentItem?.title.orEmpty(),
+            initialArtist = state.currentItem?.artistName.orEmpty(),
+            initialAlbum = state.currentItem?.albumTitle.orEmpty(),
+            onSave = { title, artist, album ->
+                viewModel.onSaveTrackMetadata(state.currentItem!!.id, title, artist, album)
+                showEditDialog = false
+            },
+            onDismiss = { showEditDialog = false },
+        )
     }
 
     if (showQueueSheet) {
@@ -423,3 +475,101 @@ private fun sleepTimerLabel(option: SleepTimerOption): String = stringResource(
 /** "1x" / "1.25x" — same rendering rule as the video player's speed chip. */
 private fun formatPlaybackSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}x" else "${speed}x"
+
+/** Phase 1.1 "Lyrics display (basic)": synced lines highlight + auto-scroll; plain
+ * text just scrolls. Kept deliberately simple — no karaoke wipe, no font settings. */
+@Composable
+private fun LyricsPanel(
+    lyrics: LyricsLoader.Lyrics,
+    activeIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(activeIndex) {
+        if (activeIndex >= 0 && lyrics.syncedLines.isNotEmpty()) {
+            listState.animateScrollToItem(index = (activeIndex - 2).coerceAtLeast(0))
+        }
+    }
+
+    if (lyrics.syncedLines.isNotEmpty()) {
+        LazyColumn(
+            state = listState,
+            modifier = modifier.fillMaxWidth().padding(vertical = VeloxSpacing.md),
+            contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
+        ) {
+            itemsIndexed(lyrics.syncedLines) { index, line ->
+                val active = index == activeIndex
+                Text(
+                    text = line.text.ifBlank { "♪" },
+                    style = VeloxTheme.typography.bodyLarge,
+                    color = if (active) accentColor() else VeloxColors.OnSurfaceVariant,
+                    fontWeight = if (active) FontWeight.SemiBold else null,
+                )
+            }
+        }
+    } else {
+        Text(
+            text = lyrics.plainText.orEmpty(),
+            style = VeloxTheme.typography.bodyLarge,
+            color = VeloxColors.OnSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(VeloxSpacing.lg),
+        )
+    }
+}
+
+/** Phase 1.1 "Tag editor (basic)": edits the library's display metadata for the
+ * current track. File tags are not rewritten (MediaStore ownership walls on
+ * API 29+ would need per-file recoverable-permission flows); the repository's
+ * user-metadata snapshot keeps these edits alive across rescans. */
+@Composable
+private fun EditInfoDialog(
+    initialTitle: String,
+    initialArtist: String,
+    initialAlbum: String,
+    onSave: (title: String, artist: String, album: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var title by remember { mutableStateOf(initialTitle) }
+    var artist by remember { mutableStateOf(initialArtist) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_info_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.edit_info_field_title)) },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = artist,
+                    onValueChange = { artist = it },
+                    label = { Text(stringResource(R.string.edit_info_field_artist)) },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = initialAlbum,
+                    onValueChange = { /* album display is derived from rows; kept read-only in v1 */ },
+                    label = { Text(stringResource(R.string.edit_info_field_album)) },
+                    singleLine = true,
+                    enabled = false,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(title, artist, initialAlbum) }, enabled = title.isNotBlank()) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}

@@ -67,6 +67,7 @@ private val SEEK_INTERVAL_CHOICES = listOf(5, 10, 15, 30)
 @Composable
 fun SettingsScreen(
     onLanguageChanged: () -> Unit,
+    onShareCrashLog: (String) -> Unit = {},
     onReplayIntro: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -289,6 +290,30 @@ fun SettingsScreen(
                             style = VeloxTheme.typography.bodyMedium,
                             color = VeloxColors.OnSurfaceVariant,
                         )
+                    }
+                    if (viewModel.lastCrashSummary != null) {
+                        Spacer(Modifier.height(VeloxSpacing.md))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onShareCrashLog(viewModel.lastCrashFullText().orEmpty())
+                                    },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_last_crash),
+                                style = VeloxTheme.typography.titleMedium,
+                                color = VeloxColors.OnSurface,
+                            )
+                            Text(
+                                text = viewModel.lastCrashSummary.orEmpty(),
+                                style = VeloxTheme.typography.bodyMedium,
+                                color = VeloxColors.Error,
+                            )
+                        }
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

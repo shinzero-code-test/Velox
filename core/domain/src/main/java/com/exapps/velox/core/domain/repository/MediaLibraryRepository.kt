@@ -3,6 +3,7 @@ package com.exapps.velox.core.domain.repository
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
 import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.model.SortOrder
@@ -20,6 +21,10 @@ interface MediaLibraryRepository {
     fun observeAlbums(): Flow<List<Album>>
     fun observeArtists(): Flow<List<Artist>>
     fun observeFolders(parentPath: String? = null): Flow<List<Folder>>
+
+    fun observeGenres(): Flow<List<Genre>>
+
+    fun observeGenreTracks(genre: String): Flow<List<MediaItem>>
     fun observeFolderContents(path: String): Flow<List<MediaItem>>
     fun observeAlbumTracks(albumId: Long): Flow<List<MediaItem>>
     fun observeArtistTracks(artistId: Long): Flow<List<MediaItem>>
@@ -31,6 +36,9 @@ interface MediaLibraryRepository {
     fun search(query: String, type: MediaType? = null): Flow<List<MediaItem>>
 
     suspend fun setFavorite(id: Long, favorite: Boolean)
+
+    /** Tag editor (Phase 1.1) — library-level override; file tags are not rewritten. */
+    suspend fun updateTrackMetadata(id: Long, title: String, artistName: String?, albumTitle: String?)
     suspend fun recordPlayed(id: Long)
 
     /** Triggers a MediaStore + folder rescan (TECHNICAL_PLAN.md §6.1). Suspends until

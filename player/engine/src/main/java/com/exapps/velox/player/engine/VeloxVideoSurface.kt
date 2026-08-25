@@ -37,6 +37,10 @@ fun VeloxVideoSurface(
     modifier: Modifier = Modifier,
     resizeMode: VeloxResizeMode = VeloxResizeMode.FIT,
     zoom: Float = 1f,
+    /** SCREEN_SUBTITLES.md scale % (100 = default). */
+    subtitleScalePercent: Int = 100,
+    /** true = bottom (default), false = raised above controls. */
+    subtitlePositionBottom: Boolean = true,
 ) {
     val context = LocalContext.current
     val player = (playerController as? Media3PlayerAccessor)?.media3Player
@@ -57,9 +61,22 @@ fun VeloxVideoSurface(
         update = { view ->
             view.resizeMode = resizeMode.media3Mode
             if (view.player !== player) view.player = player
+
+            // Subtitle styling (Phase 1 M3): PlayerView hosts a SubtitleView that
+            // renders the selected text track — size and vertical placement are the
+            // two Settings → Subtitles knobs.
+            view.subtitleView?.let { subtitles ->
+                subtitles.setFixedTextSize(
+                    android.util.TypedValue.COMPLEX_UNIT_SP,
+                    SUBTITLE_BASE_SP * (subtitleScalePercent / 100f),
+                )
+                subtitles.setBottomPaddingFraction(if (subtitlePositionBottom) 0.08f else 0.32f)
+            }
         },
         onRelease = { view ->
             view.player = null
         },
     )
 }
+
+private const val SUBTITLE_BASE_SP = 18f

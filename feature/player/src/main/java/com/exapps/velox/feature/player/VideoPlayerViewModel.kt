@@ -52,7 +52,18 @@ class VideoPlayerViewModel @Inject constructor(
     /** SCREEN_VIDEO_PLAYER.md §5: double-tap seek is configurable (5/10/15/30s). */
     val seekIncrementSeconds: StateFlow<Int> = userSettings.settings
         .map { it.seekIncrementSeconds }
+
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 10)
+
+    /** Subtitle styling (SCREEN_SUBTITLES.md): scale % and bottom/raised position,
+     * applied to PlayerView's SubtitleView by the video surface. */
+    val subtitleScalePercent: StateFlow<Int> = userSettings.settings
+        .map { it.subtitleScalePercent }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 100)
+
+    val subtitlePositionBottom: StateFlow<Boolean> = userSettings.settings
+        .map { it.subtitlePositionBottom }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     init {
         viewModelScope.launch {

@@ -45,6 +45,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.coil.compose)
+    implementation(libs.coil.video)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 

@@ -5,6 +5,7 @@
     <string name="library_tab_albums">Albums</string>
     <string name="library_tab_artists">Artists</string>
     <string name="library_tab_folders">Folders</string>
+    <string name="library_tab_genres">Genres</string>
     <string name="library_tab_videos">Videos</string>
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_body">Velox looks for audio and video already on your device. Grant access to get started.</string>

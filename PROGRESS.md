@@ -201,3 +201,62 @@ device proves otherwise.
 | 10 | Remember-position broken | Feature flag existed in Settings but nothing read/wrote positions anywhere | New `PlaybackPositionStore` port (DataStore impl, Hilt-bound): saved every ~5 s while playing + on pause/stop; restored on play() when the setting is on, guarded against trivial/near-end positions |
 
 Also in this release: `versionCode` starts moving with releases (was stuck at 1).
+
+---
+
+## v0.4.0 — Phase 1 completion + Phase 1.1 (scoped)
+
+Implements the remaining Phase 1 milestones that could be built without new
+external infrastructure, plus the Phase 1.1 items that survived scoping.
+**Explicitly out of scope this pass (user decision): Play Store release,
+Chromecast, online subtitle search.**
+
+### Phase 1 leftovers now done
+
+- **M2 Genres view** — real this time (was a placeholder mapping to tracks):
+  `genre` + `fileName` columns on `media_items` (**Room migration 1→2**, non-
+  destructive), scanner reads `MediaStore.Audio.Media.GENRE` (API 30+; older
+  devices just show an empty tab), DAO GROUP BY projection, repository/domain/
+  ViewModel plumbing, Genres tab chip + list rows, and a GenreDetail route into
+  the shared collection screen. Sort applies to genres like the other groupings.
+- **M3 Subtitle styling** — the Settings → Subtitles knobs (scale %, bottom vs
+  raised) finally reach PlayerView's SubtitleView; previously they persisted and
+  did nothing.
+- **M3 Gapless** — covered by Media3's setMediaItems/prepare pipeline (no action
+  between same-format items). True crossfade remains deferred: it needs either a
+  dual-player mixer or an AudioProcessor chain, both device-test-heavy.
+- **M4 Widgets** — Glance now-playing widget (title/artist, prev/play-pause/
+  next, tap-to-open). Same-process PlayerController state drives it reactively;
+  transport actions go through Hilt entry-point ActionCallbacks. Artwork in the
+  widget is deferred (needs a bitmap fetch/cache pipeline).
+- **M4 File association** — MainActivity handles ACTION_VIEW content/file audio
+  + video intents (fresh start *and* onNewIntent via singleTop): starts playback
+  with a synthetic negative-id MediaItem and routes to the Now Playing chrome.
+  Known limitation: fullscreen video route resolves through the library DB, so
+  external videos surface Now Playing rather than the video screen for now.
+- **M4 Accessibility basics** — playback slider carries a contentDescription;
+  rows/buttons already met 40dp+ targets and labelled their states.
+
+### Phase 1.1 items implemented
+
+- **Lyrics display (basic)** — sidecar lookup next to each track: `Name.lrc`
+  (synced, parsed incl. multiple timestamps per line + `[offset:]`) or `Name.txt`
+  (plain). Now Playing grows a Lyrics toggle + panel with active-line highlight
+  and auto-scroll. Embedded-tag lyrics are not read yet.
+- **Improved artwork & thumbnail pipeline** — video rows in Tracks/Videos lists
+  decode a frame from the media file itself (coil-video request-level decoder);
+  audio keeps album-art URIs.
+- **Tag editor (basic)** — "Edit info" on Now Playing edits title/artist
+  (album shown read-only) as a library-level override. File tags are NOT
+  rewritten (API 29+ ownership walls); overrides survive rescans via the new
+  consolidated user-metadata snapshot/restore (which also guards favourites and
+  play statistics).
+- **Crash & ANR hardening** — uncaught exceptions persist to
+  `filesDir/last_crash.txt` before handing off to the system handler; Settings →
+  About shows a "Last crash" row (time) and shares the full trace.
+
+### Still deferred (documented, deliberate)
+
+- Chromecast, online subtitle search, Play Store release — excluded by decision.
+- Crossfade DSP, embedded lyrics/tags writing, widget artwork, folder-walk
+  scanner for un-indexed files.

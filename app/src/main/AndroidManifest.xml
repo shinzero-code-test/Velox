@@ -37,7 +37,31 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Phase 1 M4 "File association": open audio/video from file managers,
+                 gallery share-outs and browsers. Handled in MainActivity.handleViewIntent(). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
         </activity>
+
+        <!-- Phase 1 M4 "Widgets". -->
+        <receiver
+            android:name=".widget.VeloxAppWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/velox_widget_info" />
+        </receiver>
 
     </application>
 
