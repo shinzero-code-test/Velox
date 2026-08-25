@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -35,8 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.decode.VideoFrameDecoder
-import coil3.request.videoFrameDecoder
+import coil3.video.VideoFrameDecoder
 import com.exapps.velox.core.common.util.formatDuration
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
@@ -51,8 +51,6 @@ import com.exapps.velox.core.ui.theme.VeloxSpacing
 import com.exapps.velox.core.ui.theme.VeloxTheme
 import com.exapps.velox.core.ui.theme.accentColor
 import com.exapps.velox.core.ui.theme.glassSurfaceColor
-
-@Composable
 
 /** Phase 1.1 "Improved artwork & thumbnail pipeline": video rows decode a frame
  * from the media itself via coil-video; audio keeps the album-art URI. */

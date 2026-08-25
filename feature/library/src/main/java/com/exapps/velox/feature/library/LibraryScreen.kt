@@ -39,6 +39,7 @@ import com.exapps.velox.core.common.util.ScreenState
 import com.exapps.velox.core.domain.model.Album
 import com.exapps.velox.core.domain.model.Artist
 import com.exapps.velox.core.domain.model.Folder
+import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.LibraryGroup
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.SortOrder
