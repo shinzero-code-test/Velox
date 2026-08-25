@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -240,7 +241,7 @@ fun NowPlayingScreen(
             GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     VeloxGlassIconButton(
-                        icon = Icons.Filled.Lyrics,
+                        icon = Icons.Filled.MusicNote,
                         contentDescription = stringResource(R.string.cd_lyrics),
                         onClick = { showLyrics = !showLyrics },
                         tint = if (showLyrics) accentColor() else VeloxColors.OnSurface,
@@ -289,7 +290,7 @@ fun NowPlayingScreen(
             // Phase 1.1 "Lyrics display (basic)": sidecar .lrc (synced highlight) or
             // .txt (plain). Hidden entirely when the track has no sidecar content.
             val currentLyrics = lyrics
-            if (showLyrics && !currentLyrics.isNullOrEmpty()) {
+            if (showLyrics && currentLyrics != null && !currentLyrics.isEmpty()) {
                 GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
                     LyricsPanel(
                         lyrics = currentLyrics,

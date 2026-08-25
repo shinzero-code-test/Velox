@@ -37,6 +37,12 @@ class NowPlayingViewModel @Inject constructor(
     private val lyricsLoader: LyricsLoader,
 ) : ViewModel() {
 
+    val state: StateFlow<PlaybackState> = playerController.state.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = PlaybackState(),
+    )
+
     /** Phase 1.1 "Lyrics display (basic)": sidecar .lrc (synced) or .txt (plain)
      * loaded per current track; reloaded on every item change. */
     val lyrics: StateFlow<LyricsLoader.Lyrics?> = state
@@ -55,13 +61,6 @@ class NowPlayingViewModel @Inject constructor(
         }
         index
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
-
-
-    val state: StateFlow<PlaybackState> = playerController.state.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = PlaybackState(),
-    )
 
     private val _sleepTimer = MutableStateFlow(SleepTimerOption.OFF)
     val sleepTimer: StateFlow<SleepTimerOption> = _sleepTimer.asStateFlow()
