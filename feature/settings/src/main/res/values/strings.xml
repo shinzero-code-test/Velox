@@ -48,4 +48,27 @@
 
     <string name="cancel">Cancel</string>
     <string name="settings_last_crash">Last crash</string>
+    <string name="statistics_title">Statistics</string>
+    <string name="stats_empty_title">Nothing here yet</string>
+    <string name="stats_empty_body">Play something and your listening history will show up here.</string>
+    <string name="stats_total_plays">Total plays</string>
+    <string name="stats_distinct_tracks">Different tracks</string>
+    <string name="stats_listening_time">Listening time</string>
+    <string name="stats_last_days">Last %1$d days</string>
+    <string name="stats_top_tracks">Top tracks</string>
+    <string name="cd_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="settings_section_processing">Video processing</string>
+    <string name="settings_decoder_auto">Auto decoder selection</string>
+    <string name="settings_decoder_software">Prefer software decoding</string>
+    <string name="settings_section_gestures">Gestures</string>
+    <string name="settings_gesture_long_press">Long-press 2× speed boost</string>
+    <string name="settings_gesture_h_seek">Horizontal drag to seek</string>
+    <string name="settings_gesture_v_default">Left brightness · Right volume</string>
+    <string name="settings_gesture_v_swapped">Left volume · Right brightness</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_backup_export">Export backup</string>
+    <string name="settings_backup_import">Import backup</string>
+    <string name="settings_backup_done_size">Backup written (%1$d bytes)</string>
 </resources>

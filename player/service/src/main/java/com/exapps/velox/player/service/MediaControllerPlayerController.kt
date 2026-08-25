@@ -115,6 +115,9 @@ class MediaControllerPlayerController @Inject constructor(
                 _state.update { it.copy(playbackSpeed = 1f) }
             }
 
+            // A-B loops are per-item; a fresh queue always starts clean.
+            _state.update { it.copy(loopStartMs = null, loopEndMs = null) }
+
             awaitController()?.apply {
                 setMediaItems(media3Items, startIndex.coerceIn(media3Items.indices), 0L)
                 prepare()
@@ -156,6 +159,21 @@ class MediaControllerPlayerController @Inject constructor(
     override fun setPlaybackSpeed(speed: Float) {
         _state.update { it.copy(playbackSpeed = speed) }
         mainScope.launch { controller?.setPlaybackSpeed(speed) }
+    }
+
+    /** Phase 2 A-B repeat — state-only bookkeeping; the poll enforces the wrap. */
+    override fun setLoopRegion(startMs: Long?, endMs: Long?) {
+        _state.update {
+            it.copy(
+                loopStartMs = startMs,
+                loopEndMs = endMs?.takeIf { end -> startMs != null && end > startMs },
+            )
+        }
+    }
+
+    /** Phase 2 sleep-timer fade-out surface. */
+    override fun setVolume(scale: Float) {
+        mainScope.launch { controller?.volume = scale.coerceIn(0f, 1f) }
     }
 
     override fun setFavorite(mediaItemId: Long, favorite: Boolean) {
@@ -369,8 +387,20 @@ class MediaControllerPlayerController @Inject constructor(
             while (isActive) {
                 val c = controller
                 if (c != null) {
-                    _state.update { it.copy(positionMs = c.currentPosition.coerceAtLeast(0)) }
-                    if (++ticks % POSITION_SAVE_EVERY_TICKS == 0) saveResumePosition(c)
+                    val position = c.currentPosition.coerceAtLeast(0)
+                    _state.update { it.copy(positionMs = position) }
+
+                    // Phase 2 A-B repeat: wrap to point A once playback crosses B.
+                    val loop = _state.value
+                    val loopEnd = loop.loopEndMs
+                    val loopStart = loop.loopStartMs
+                    if (loopEnd != null && position >= loopEnd) {
+                        val restartAt = (loopStart ?: 0L)
+                        c.seekTo(restartAt)
+                        _state.update { it.copy(positionMs = restartAt) }
+                    } else if (++ticks % POSITION_SAVE_EVERY_TICKS == 0) {
+                        saveResumePosition(c)
+                    }
                 }
                 delay(POSITION_POLL_INTERVAL_MS)
             }

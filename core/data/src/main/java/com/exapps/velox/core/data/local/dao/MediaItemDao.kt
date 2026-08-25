@@ -62,6 +62,10 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items WHERE id = :id")
     suspend fun getById(id: Long): MediaItemEntity?
 
+    /** Phase 2 backup/restore: batch existence check. */
+    @Query("SELECT * FROM media_items WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<Long>): List<MediaItemEntity>
+
     @Query("SELECT DISTINCT folderPath FROM media_items WHERE folderPath IS NOT NULL")
     fun observeDistinctFolderPaths(): Flow<List<String>>
 

@@ -54,6 +54,14 @@ sealed interface VeloxRoute {
 
     @Serializable
     data object Equalizer : VeloxRoute
+
+    /** Phase 2: network browsing (SMB/FTP/WebDAV) + URL streams. */
+    @Serializable
+    data object NetworkBrowser : VeloxRoute
+
+    /** Phase 2: playback statistics & history. */
+    @Serializable
+    data object Statistics : VeloxRoute
 }
 
 /** The four tabs that share the bottom navigation bar + persistent Mini Player chrome

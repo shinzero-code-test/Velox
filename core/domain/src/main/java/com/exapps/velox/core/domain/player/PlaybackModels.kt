@@ -27,4 +27,7 @@ data class PlaybackState(
     /** FEATURES.md — Video Playback: "Playback speed (0.25x – 3.0x)". */
     val playbackSpeed: Float = 1f,
     val isFavorite: Boolean = false,
+    /** Phase 2 "A-B repeat": active loop region in ms; null end = waiting for B. */
+    val loopStartMs: Long? = null,
+    val loopEndMs: Long? = null,
 )

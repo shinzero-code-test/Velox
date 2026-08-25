@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
@@ -62,6 +63,7 @@ import com.exapps.velox.core.ui.theme.accentColor
 fun LibraryScreen(
     onMediaItemClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenNetworkBrowser: () -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     onArtistClick: (Artist) -> Unit = {},
     onFolderClick: (Folder) -> Unit = {},
@@ -102,6 +104,11 @@ fun LibraryScreen(
                 color = VeloxColors.OnBackground,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.xs)) {
+                VeloxGlassIconButton(
+                    icon = Icons.Filled.Lan,
+                    contentDescription = stringResource(R.string.library_open_network),
+                    onClick = onOpenNetworkBrowser,
+                )
                 SortMenuButton(sortOrder = sortOrder, onSortSelected = viewModel::onSortSelected)
                 if (!isScanning) {
                     VeloxGlassIconButton(

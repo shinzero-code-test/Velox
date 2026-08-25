@@ -31,6 +31,7 @@ include(":core:common")
 include(":core:ui")
 include(":core:domain")
 include(":core:data")
+include(":core:network")
 
 // :feature:* — one module per user-facing feature area
 include(":feature:library")
@@ -39,6 +40,7 @@ include(":feature:playlists")
 include(":feature:settings")
 include(":feature:equalizer")
 include(":feature:subtitles")
+include(":feature:network")
 
 // :player:* — the playback engine itself, kept independent of any single feature
 include(":player:engine")

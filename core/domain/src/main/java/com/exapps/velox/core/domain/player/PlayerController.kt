@@ -68,5 +68,17 @@ interface PlayerController {
      */
     fun addExternalSubtitle(uri: String, mimeType: String, label: String)
 
+    // --- Phase 2 -------------------------------------------------------------------
+
+    /**
+     * A-B repeat (Phase 2): loops playback between [startMs] and [endMs] of the
+     * current item. Passing only [startMs] arms point A (end pending); passing both
+     * null clears the loop.
+     */
+    fun setLoopRegion(startMs: Long?, endMs: Long? = null)
+
+    /** Session playback volume 0f..1f — used by the sleep-timer fade-out. */
+    fun setVolume(scale: Float)
+
     fun stop()
 }

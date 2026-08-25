@@ -27,12 +27,18 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
+    implementation(project(":core:network"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.media3.exoplayer)
+    // Phase 2 "Network streams": HLS / DASH / RTSP support via Media3 modules —
+    // DefaultMediaSourceFactory picks them up from the classpath automatically.
+    implementation(libs.androidx.media3.exoplayer.hls)
+    implementation(libs.androidx.media3.exoplayer.dash)
+    implementation(libs.androidx.media3.exoplayer.rtsp)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
     // VeloxVideoSurface — Compose wrapper over PlayerView (video + subtitle rendering)

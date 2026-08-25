@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_title">الشبكة</string>
+    <string name="network_browse_title">تصفّح</string>
+    <string name="network_back">رجوع</string>
+    <string name="network_servers">الخوادم</string>
+    <string name="network_empty">لا توجد خوادم بعد — أضف خادمًا لتصفّح ملفاته.</string>
+    <string name="network_add_server">إضافة خادم</string>
+    <string name="network_edit">تعديل الخادم</string>
+    <string name="network_delete">حذف الخادم</string>
+    <string name="network_test">اختبار الاتصال</string>
+    <string name="network_recent">بثوث حديثة</string>
+    <string name="network_stream_hint">رابط البث (http، HLS، DASH، RTSP…)</string>
+    <string name="network_play">تشغيل</string>
+    <string name="network_secure">استخدام HTTPS</string>
+    <string name="network_field_name">الاسم</string>
+    <string name="network_field_protocol">البروتوكول</string>
+    <string name="network_field_host">المضيف</string>
+    <string name="network_field_user">اسم المستخدم (اختياري)</string>
+    <string name="network_field_password">كلمة المرور (اختيارية)</string>
+    <string name="network_field_basepath">المسار الأساسي</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_save">حفظ</string>
+</resources>

@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
@@ -39,6 +43,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ModalBottomSheet
@@ -67,6 +72,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -95,16 +101,25 @@ fun NowPlayingScreen(
     val activeLyricIndex by viewModel.activeLyricIndex.collectAsStateWithLifecycle()
     var showLyrics by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showMarkersSheet by remember { mutableStateOf(false) }
+    val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val chapters by viewModel.chapters.collectAsStateWithLifecycle()
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val item = state.currentItem
 
     var showQueueSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
 
+    // Phase 2 "Foldable / large screen optimizations": on expanded widths the
+    // column caps its width and centres instead of stretching edge to edge.
+    val isExpandedWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 720
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .systemBarsPadding()
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .widthIn(max = if (isExpandedWidth) 720.dp else androidx.compose.ui.unit.Dp.Unspecified)
             .padding(horizontal = VeloxSpacing.lg),
     ) {
         // Top bar: collapse + overflow (SCREEN_NOW_PLAYING.md §3)
@@ -237,51 +252,91 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(VeloxSpacing.xl))
 
-            // Secondary actions (§7): speed, sleep timer, EQ, queue, favorite
+            // Secondary actions (§7) — Phase 2 layout: two even rows.
             GlassCard(shape = VeloxShapes.full, modifier = Modifier.fillMaxWidth()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    VeloxGlassIconButton(
-                        icon = Icons.Filled.MusicNote,
-                        contentDescription = stringResource(R.string.cd_lyrics),
-                        onClick = { showLyrics = !showLyrics },
-                        tint = if (showLyrics) accentColor() else VeloxColors.OnSurface,
-                    )
-                    // Playback speed for songs (videos have their own picker in the
-                    // player chrome). Cycles 1x → 1.25x → 1.5x → 2x → 1x.
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = viewModel::onCycleSpeed),
-                        contentAlignment = Alignment.Center,
+                Column(modifier = Modifier.padding(vertical = VeloxSpacing.sm)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val speedLabel = stringResource(R.string.cd_playback_speed)
-                        Text(
-                            text = formatPlaybackSpeed(state.playbackSpeed),
-                            style = VeloxTheme.typography.labelLarge,
-                            color = if (state.playbackSpeed != 1f) accentColor() else VeloxColors.OnSurface,
-                            modifier = Modifier.semantics { contentDescription = speedLabel },
+                        // Phase 2 A-B repeat: OFF → A → A-B loop → OFF.
+                        val loopLabel = when {
+                            state.loopStartMs != null && state.loopEndMs != null -> "A↔B"
+                            state.loopStartMs != null -> "A…"
+                            else -> "A-B"
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = viewModel::onCycleLoopRegion),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = loopLabel,
+                                style = VeloxTheme.typography.labelLarge,
+                                color = if (state.loopStartMs != null) accentColor() else VeloxColors.OnSurface,
+                            )
+                        }
+                        VeloxGlassIconButton(Icons.Filled.QueueMusic, stringResource(R.string.cd_queue), { showQueueSheet = true })
+                        VeloxGlassIconButton(Icons.Filled.Equalizer, stringResource(R.string.cd_equalizer), onOpenEqualizer)
+                        VeloxGlassIconButton(
+                            icon = Icons.Filled.Bookmarks,
+                            contentDescription = stringResource(R.string.cd_markers),
+                            onClick = {
+                                showMarkersSheet = true
+                                state.currentItem?.let { viewModel.loadMarkersFor(it.id, it) }
+                            },
+                        )
+                        VeloxGlassIconButton(
+                            icon = Icons.Filled.Timer,
+                            contentDescription = stringResource(R.string.cd_sleep_timer),
+                            onClick = { showSleepTimerSheet = true },
+                            tint = if (sleepTimer != SleepTimerOption.OFF) accentColor() else VeloxColors.OnSurface,
                         )
                     }
-                    VeloxGlassIconButton(
-                        icon = Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.cd_edit_info),
-                        onClick = { showEditDialog = true },
-                    )
-                    VeloxGlassIconButton(
-                        icon = Icons.Filled.Timer,
-                        contentDescription = stringResource(R.string.cd_sleep_timer),
-                        onClick = { showSleepTimerSheet = true },
-                        tint = if (sleepTimer != SleepTimerOption.OFF) accentColor() else VeloxColors.OnSurface,
-                    )
-                    VeloxGlassIconButton(Icons.Filled.Equalizer, stringResource(R.string.cd_equalizer), onOpenEqualizer)
-                    VeloxGlassIconButton(Icons.Filled.QueueMusic, stringResource(R.string.cd_queue), { showQueueSheet = true })
-                    VeloxGlassIconButton(
-                        icon = if (state.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = stringResource(R.string.cd_favorite),
-                        onClick = viewModel::onFavoriteToggle,
-                        tint = if (state.isFavorite) accentColor() else VeloxColors.OnSurface,
-                    )
+                    Spacer(Modifier.height(VeloxSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        VeloxGlassIconButton(
+                            icon = Icons.Filled.MusicNote,
+                            contentDescription = stringResource(R.string.cd_lyrics),
+                            onClick = { showLyrics = !showLyrics },
+                            tint = if (showLyrics) accentColor() else VeloxColors.OnSurface,
+                        )
+                        // Playback speed for songs (videos have their own picker in the
+                        // player chrome). Cycles 1x → 1.25x → 1.5x → 2x → 1x.
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = viewModel::onCycleSpeed),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val speedLabel = stringResource(R.string.cd_playback_speed)
+                            Text(
+                                text = formatPlaybackSpeed(state.playbackSpeed),
+                                style = VeloxTheme.typography.labelLarge,
+                                color = if (state.playbackSpeed != 1f) accentColor() else VeloxColors.OnSurface,
+                                modifier = Modifier.semantics { contentDescription = speedLabel },
+                            )
+                        }
+                        VeloxGlassIconButton(
+                            icon = Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.cd_edit_info),
+                            onClick = { showEditDialog = true },
+                        )
+                        VeloxGlassIconButton(
+                            icon = if (state.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = stringResource(R.string.cd_favorite),
+                            onClick = viewModel::onFavoriteToggle,
+                            tint = if (state.isFavorite) accentColor() else VeloxColors.OnSurface,
+                        )
+                    }
                 }
             }
 
@@ -325,12 +380,26 @@ fun NowPlayingScreen(
         )
     }
 
+    if (showMarkersSheet) {
+        MarkersSheet(
+            bookmarks = bookmarks,
+            chapters = chapters,
+            currentPositionMs = state.positionMs,
+            onAddBookmark = viewModel::onAddBookmark,
+            onSeekToBookmark = viewModel::onSeekToBookmark,
+            onDeleteBookmark = viewModel::onDeleteBookmark,
+            onDismiss = { showMarkersSheet = false },
+        )
+    }
+
     if (showSleepTimerSheet) {
         SleepTimerSheet(
             current = sleepTimer,
-            onSelect = {
-                viewModel.setSleepTimer(it)
-                showSleepTimerSheet = false
+            onSelect = { option, customMinutes ->
+                viewModel.setSleepTimer(option, customMinutes)
+                if (option != SleepTimerOption.CUSTOM || customMinutes?.let { it > 0 } == true) {
+                    showSleepTimerSheet = false
+                }
             },
             onDismiss = { showSleepTimerSheet = false },
         )
@@ -425,9 +494,11 @@ private fun QueueSheet(
 @Composable
 private fun SleepTimerSheet(
     current: SleepTimerOption,
-    onSelect: (SleepTimerOption) -> Unit,
+    onSelect: (SleepTimerOption, customMinutes: Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var customMinutes by remember { mutableStateOf("") }
+
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
         Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
             Text(
@@ -436,24 +507,49 @@ private fun SleepTimerSheet(
                 color = VeloxColors.OnBackground,
                 modifier = Modifier.padding(bottom = VeloxSpacing.md),
             )
-            SleepTimerOption.entries.forEach { option ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(VeloxShapes.md)
-                        .clickable { onSelect(option) }
-                        .padding(vertical = VeloxSpacing.sm),
-                ) {
-                    Text(
-                        text = sleepTimerLabel(option),
-                        style = VeloxTheme.typography.titleMedium,
-                        color = if (option == current) accentColor() else VeloxColors.OnSurface,
-                    )
-                    if (option == current) {
-                        Icon(Icons.Filled.Check, contentDescription = null, tint = accentColor())
+            SleepTimerOption.entries
+                .filter { it != SleepTimerOption.CUSTOM }
+                .forEach { option ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(VeloxShapes.md)
+                            .clickable { onSelect(option, null) }
+                            .padding(vertical = VeloxSpacing.sm),
+                    ) {
+                        Text(
+                            text = sleepTimerLabel(option),
+                            style = VeloxTheme.typography.titleMedium,
+                            color = if (option == current) accentColor() else VeloxColors.OnSurface,
+                        )
+                        if (option == current) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = accentColor())
+                        }
                     }
+                }
+
+            Spacer(Modifier.height(VeloxSpacing.md))
+
+            // Phase 2: custom minutes + fade-out (fade is applied automatically in
+            // the final 10s by the view model).
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+                OutlinedTextField(
+                    value = customMinutes,
+                    onValueChange = { customMinutes = it.filter(Char::isDigit).take(3) },
+                    label = { Text(stringResource(R.string.sleep_timer_custom)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    enabled = customMinutes.toIntOrNull()?.let { it > 0 } == true,
+                    onClick = {
+                        current.let { }
+                        onSelect(SleepTimerOption.CUSTOM, customMinutes.toIntOrNull())
+                    },
+                ) {
+                    Text(stringResource(R.string.action_save))
                 }
             }
             Spacer(Modifier.height(VeloxSpacing.xxl))
@@ -466,6 +562,8 @@ private fun sleepTimerLabel(option: SleepTimerOption): String = stringResource(
     when (option) {
         SleepTimerOption.OFF -> R.string.sleep_timer_off
         SleepTimerOption.END_OF_TRACK -> R.string.sleep_timer_end_of_track
+        SleepTimerOption.END_OF_QUEUE -> R.string.sleep_timer_end_of_queue
+        SleepTimerOption.CUSTOM -> R.string.sleep_timer_custom
         SleepTimerOption.MINUTES_15 -> R.string.sleep_timer_15
         SleepTimerOption.MINUTES_30 -> R.string.sleep_timer_30
         SleepTimerOption.MINUTES_60 -> R.string.sleep_timer_60
@@ -573,4 +671,107 @@ private fun EditInfoDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
+}
+
+/** Phase 2 "Bookmarks + Chapters": chapters are read-only sidecar markers; bookmarks
+ * are user-saved points (add at current position, tap to jump, swipe-free delete). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MarkersSheet(
+    bookmarks: List<com.exapps.velox.core.domain.model.Bookmark>,
+    chapters: List<ChaptersLoader.Chapter>,
+    currentPositionMs: Long,
+    onAddBookmark: (Long) -> Unit,
+    onSeekToBookmark: (Long) -> Unit,
+    onDeleteBookmark: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
+        Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
+            Text(
+                text = stringResource(R.string.markers_title),
+                style = VeloxTheme.typography.headlineMedium,
+                color = VeloxColors.OnBackground,
+                modifier = Modifier.padding(bottom = VeloxSpacing.md),
+            )
+
+            if (chapters.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.markers_chapters),
+                    style = VeloxTheme.typography.labelLarge,
+                    color = VeloxColors.OnSurfaceVariant,
+                )
+                Spacer(Modifier.height(VeloxSpacing.xs))
+                chapters.forEach { chapter ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(VeloxShapes.md)
+                            .clickable { onSeekToBookmark(chapter.timeMs) }
+                            .padding(vertical = VeloxSpacing.sm),
+                    ) {
+                        Text(
+                            text = formatDuration(chapter.timeMs),
+                            style = VeloxTheme.typography.labelLarge,
+                            color = accentColor(),
+                            modifier = Modifier.width(64.dp),
+                        )
+                        Text(
+                            text = chapter.title,
+                            style = VeloxTheme.typography.bodyLarge,
+                            color = VeloxColors.OnSurface,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(VeloxSpacing.lg))
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.markers_bookmarks),
+                    style = VeloxTheme.typography.labelLarge,
+                    color = VeloxColors.OnSurfaceVariant,
+                )
+                TextButton(onClick = { onAddBookmark(currentPositionMs) }) { Text(stringResource(R.string.markers_add)) }
+            }
+            if (bookmarks.isEmpty()) {
+                Text(stringResource(R.string.lyrics_none), style = VeloxTheme.typography.bodyMedium, color = VeloxColors.OnSurfaceVariant)
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs)) {
+                    itemsIndexed(bookmarks, key = { _, b -> b.id }) { _, bookmark ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(VeloxShapes.md)
+                                .clickable { onSeekToBookmark(bookmark.positionMs) }
+                                .padding(vertical = VeloxSpacing.sm),
+                        ) {
+                            Text(
+                                text = formatDuration(bookmark.positionMs),
+                                style = VeloxTheme.typography.labelLarge,
+                                color = accentColor(),
+                                modifier = Modifier.width(64.dp),
+                            )
+                            Text(
+                                text = bookmark.label,
+                                style = VeloxTheme.typography.bodyLarge,
+                                color = VeloxColors.OnSurface,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = { onDeleteBookmark(bookmark.id) }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), tint = VeloxColors.OnSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(VeloxSpacing.xxl))
+        }
+    }
 }

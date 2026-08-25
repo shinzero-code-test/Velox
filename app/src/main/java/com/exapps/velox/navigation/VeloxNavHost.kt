@@ -20,6 +20,8 @@ import com.exapps.velox.feature.equalizer.EqualizerScreen
 import com.exapps.velox.feature.library.CollectionDetailScreen
 import com.exapps.velox.feature.library.LibraryScreen
 import com.exapps.velox.feature.library.SearchScreen
+import com.exapps.velox.feature.network.NetworkScreen
+import com.exapps.velox.feature.settings.StatisticsScreen
 import com.exapps.velox.feature.player.NowPlayingScreen
 import com.exapps.velox.feature.player.VideoPlayerScreen
 import com.exapps.velox.feature.playlists.PlaylistDetailScreen
@@ -86,6 +88,7 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
             ) {
                 LibraryScreen(
                     onMediaItemClick = ::openMediaItem,
+                    onOpenNetworkBrowser = { navController.navigate(VeloxRoute.NetworkBrowser) },
                     onAlbumClick = { navController.navigate(VeloxRoute.AlbumDetail(it.id, it.title)) },
                     onArtistClick = { navController.navigate(VeloxRoute.ArtistDetail(it.id, it.name)) },
                     onFolderClick = { navController.navigate(VeloxRoute.FolderDetail(it.path, it.displayName)) },
@@ -125,6 +128,7 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
                     // Locale changes only take effect through attachBaseContext —
                     // recreate() re-runs it with the freshly persisted language.
                     onLanguageChanged = { activity?.recreate() },
+                    onOpenStatistics = { navController.navigate(VeloxRoute.Statistics) },
                     onShareCrashLog = { text ->
                         val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -194,6 +198,19 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
 
         composable<VeloxRoute.Equalizer> {
             EqualizerScreen(onBack = { navController.popBackStack() })
+        }
+
+        // Phase 2 network browsing + URL streams.
+        composable<VeloxRoute.Statistics> {
+            StatisticsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<VeloxRoute.NetworkBrowser> {
+            NetworkScreen(onBack = {
+                if (!navController.popBackStack()) {
+                    navController.navigate(VeloxRoute.Library)
+                }
+            })
         }
     }
 }

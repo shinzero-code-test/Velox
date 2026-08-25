@@ -1,0 +1,56 @@
+package com.exapps.velox.feature.player
+
+import com.exapps.velox.core.domain.model.MediaItem
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Phase 2 "Chapters": sidecar chapter lists next to the media file —
+ * `<TrackName>.chapters.txt` with YouTube-style lines:
+ *
+ * ```
+ * 0:00 Intro
+ * 1:23 The main part
+ * 12:05 Outro
+ * ```
+ *
+ * Media3 doesn't surface embedded MKV/MP4 chapters in this version, so the sidecar
+ * is the supported source (same pattern as sidecar lyrics). Format notes: `h:mm:ss`
+ * is also accepted; anything before the first timestamp line is ignored.
+ */
+@Singleton
+class ChaptersLoader @Inject constructor() {
+
+    data class Chapter(val timeMs: Long, val title: String)
+
+    fun load(item: MediaItem): List<Chapter> = runCatching { loadUnsafe(item) }.getOrDefault(emptyList())
+
+    private fun loadUnsafe(item: MediaItem): List<Chapter> {
+        val folder = item.folderPath ?: return emptyList()
+        val base = (item.fileName ?: return emptyList()).substringBeforeLast('.')
+
+        val file = File(folder, "$base.chapters.txt")
+        if (!file.isFile) return emptyList()
+
+        val regex = Regex("""^\s*(?:(\d{1,2}):)?(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\s*[-–—]?\s*(.+)$""")
+
+        return file.readLines().mapNotNull { line ->
+            val match = regex.find(line) ?: return@mapNotNull null
+            val hours = match.groupValues[1].toLongOrNull() ?: 0L
+            val minutes = match.groupValues[2].toLong()
+            val seconds = match.groupValues[3].toLong()
+            val millisPart = match.groupValues[4]
+            val millis = when (millisPart.length) {
+                0 -> 0L
+                1 -> millisPart.toLong() * 100
+                2 -> millisPart.toLong() * 10
+                else -> millisPart.take(3).toLong()
+            }
+            Chapter(
+                timeMs = hours * 3_600_000 + minutes * 60_000 + seconds * 1_000 + millis,
+                title = match.groupValues[5].trim(),
+            )
+        }.sortedBy { it.timeMs }.filter { it.title.isNotBlank() }
+    }
+}

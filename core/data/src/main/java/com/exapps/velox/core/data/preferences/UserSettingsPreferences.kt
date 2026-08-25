@@ -23,6 +23,12 @@ enum class AppLanguage { SYSTEM, ARABIC, ENGLISH }
  * Accent is stored as its index into VeloxColors.AccentOptions to keep core:data
  * free of a Compose Color dependency.
  */
+/** Phase 2 "Advanced video processing": which decoders get first pick. */
+enum class DecoderPreference { AUTO, SOFTWARE }
+
+/** Phase 2 "Custom gesture configuration": vertical-drag mapping on the video surface. */
+enum class VerticalDragMapping { BRIGHTNESS_LEFT_VOLUME_RIGHT, VOLUME_LEFT_BRIGHTNESS_RIGHT }
+
 data class UserSettings(
     val language: AppLanguage = AppLanguage.SYSTEM,
     val amoled: Boolean = false,
@@ -33,6 +39,14 @@ data class UserSettings(
     val subtitleScalePercent: Int = 100,
     val subtitlePositionBottom: Boolean = true,
     val autoLoadExternalSubtitles: Boolean = true,
+    // --- Phase 2 ---
+    val decoderPreference: DecoderPreference = DecoderPreference.AUTO,
+    /** Long-press 2x "speed scrub" on the video surface. */
+    val gestureLongPressSpeedBoost: Boolean = true,
+    /** Horizontal drag scrubs through the video. */
+    val gestureHorizontalSeekDrag: Boolean = true,
+    val gestureVerticalDragMapping: VerticalDragMapping =
+        VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
 )
 
 @Singleton
@@ -51,6 +65,12 @@ class UserSettingsPreferences @Inject constructor(
             subtitleScalePercent = prefs[SUBTITLE_SCALE_KEY] ?: 100,
             subtitlePositionBottom = prefs[SUBTITLE_BOTTOM_KEY] ?: true,
             autoLoadExternalSubtitles = prefs[SUBTITLE_AUTOLOAD_KEY] ?: true,
+            decoderPreference = prefs[DECODER_PREF_KEY]?.let(DecoderPreference::valueOf) ?: DecoderPreference.AUTO,
+            gestureLongPressSpeedBoost = prefs[GESTURE_SPEED_BOOST_KEY] ?: true,
+            gestureHorizontalSeekDrag = prefs[GESTURE_H_SEEK_KEY] ?: true,
+            gestureVerticalDragMapping = prefs[GESTURE_V_DRAG_KEY]
+                ?.let(VerticalDragMapping::valueOf)
+                ?: VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
         )
     }
 
@@ -64,6 +84,17 @@ class UserSettingsPreferences @Inject constructor(
     suspend fun setSubtitlePositionBottom(bottom: Boolean) = dataStore.edit { it[SUBTITLE_BOTTOM_KEY] = bottom }
     suspend fun setAutoLoadExternalSubtitles(enabled: Boolean) = dataStore.edit { it[SUBTITLE_AUTOLOAD_KEY] = enabled }
 
+    // Phase 2
+    suspend fun setDecoderPreference(pref: DecoderPreference) = dataStore.edit { it[DECODER_PREF_KEY] = pref.name }
+    suspend fun setGestureLongPressSpeedBoost(enabled: Boolean) =
+        dataStore.edit { it[GESTURE_SPEED_BOOST_KEY] = enabled }
+
+    suspend fun setGestureHorizontalSeekDrag(enabled: Boolean) =
+        dataStore.edit { it[GESTURE_H_SEEK_KEY] = enabled }
+
+    suspend fun setGestureVerticalDragMapping(mapping: VerticalDragMapping) =
+        dataStore.edit { it[GESTURE_V_DRAG_KEY] = mapping.name }
+
     private companion object {
         val LANGUAGE_KEY = stringPreferencesKey("app_language")
         val AMOLED_KEY = booleanPreferencesKey("theme_amoled")
@@ -74,5 +105,10 @@ class UserSettingsPreferences @Inject constructor(
         val SUBTITLE_SCALE_KEY = intPreferencesKey("subtitle_scale_percent")
         val SUBTITLE_BOTTOM_KEY = booleanPreferencesKey("subtitle_position_bottom")
         val SUBTITLE_AUTOLOAD_KEY = booleanPreferencesKey("subtitle_autoload_external")
+        // Phase 2
+        val DECODER_PREF_KEY = stringPreferencesKey("decoder_preference")
+        val GESTURE_SPEED_BOOST_KEY = booleanPreferencesKey("gesture_speed_boost")
+        val GESTURE_H_SEEK_KEY = booleanPreferencesKey("gesture_h_seek_drag")
+        val GESTURE_V_DRAG_KEY = stringPreferencesKey("gesture_v_drag_mapping")
     }
 }

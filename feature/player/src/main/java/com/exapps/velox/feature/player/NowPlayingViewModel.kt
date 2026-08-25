@@ -3,6 +3,7 @@ package com.exapps.velox.feature.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.common.util.LrcParser
+import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.player.PlaybackState
 import com.exapps.velox.core.domain.player.PlayerController
 import com.exapps.velox.core.domain.player.RepeatMode
@@ -21,10 +22,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** SCREEN_NOW_PLAYING.md §7's sleep timer options; null = off. */
+/** §7 sleep timers — Phase 2 adds custom minutes, end-of-queue, and fade-out. */
 enum class SleepTimerOption(val minutes: Int?) {
     OFF(null),
     END_OF_TRACK(null),
+    END_OF_QUEUE(null),
+    CUSTOM(null),
     MINUTES_15(15),
     MINUTES_30(30),
     MINUTES_60(60),
@@ -35,6 +38,7 @@ class NowPlayingViewModel @Inject constructor(
     private val playerController: PlayerController,
     private val libraryRepository: MediaLibraryRepository,
     private val lyricsLoader: LyricsLoader,
+    private val chaptersLoader: ChaptersLoader,
 ) : ViewModel() {
 
     val state: StateFlow<PlaybackState> = playerController.state.stateIn(
@@ -69,20 +73,32 @@ class NowPlayingViewModel @Inject constructor(
     private var watchedTrackId: Long? = null
 
     init {
-        // "End of track": watch for the current item changing and pause before the
-        // next one starts (an exact end-of-media pause hook isn't observable through
-        // the domain seam — this is the standard approximation).
+        // Sleep-timer watch: end-of-track (current item changed) and end-of-queue
+        // (last item reached) both pause before anything new starts.
         viewModelScope.launch {
             state.collect { playback ->
-                val option = _sleepTimer.value
-                if (option == SleepTimerOption.END_OF_TRACK) {
-                    val currentId = playback.currentItem?.id
-                    if (watchedTrackId == null) {
-                        watchedTrackId = currentId
-                    } else if (currentId != null && currentId != watchedTrackId) {
-                        playerController.pause()
-                        setSleepTimer(SleepTimerOption.OFF)
+                when (_sleepTimer.value) {
+                    SleepTimerOption.END_OF_TRACK -> {
+                        val currentId = playback.currentItem?.id
+                        if (watchedTrackId == null) {
+                            watchedTrackId = currentId
+                        } else if (currentId != null && currentId != watchedTrackId) {
+                            playerController.pause()
+                            setSleepTimer(SleepTimerOption.OFF)
+                        }
                     }
+
+                    SleepTimerOption.END_OF_QUEUE -> {
+                        val last = playback.queue.lastOrNull()
+                        val atLast = playback.currentItem?.id == last?.id &&
+                            playback.currentIndex == playback.queue.lastIndex
+                        if (atLast && playback.status == com.exapps.velox.core.domain.player.PlaybackStatus.ENDED) {
+                            playerController.pause()
+                            setSleepTimer(SleepTimerOption.OFF)
+                        }
+                    }
+
+                    else -> Unit
                 }
             }
         }
@@ -134,15 +150,88 @@ class NowPlayingViewModel @Inject constructor(
         playerController.setRepeatMode(next)
     }
 
-    fun setSleepTimer(option: SleepTimerOption) {
+    fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
         _sleepTimer.value = option
         sleepTimerJob?.cancel()
         watchedTrackId = state.value.currentItem?.id
-        val minutes = option.minutes ?: return
+        playerController.setVolume(1f) // reset any in-progress fade
+
+        val minutes = when (option) {
+            SleepTimerOption.CUSTOM -> customMinutes?.takeIf { it > 0 } ?: return
+            else -> option.minutes ?: return
+        }
+
         sleepTimerJob = viewModelScope.launch {
-            delay(minutes * 60_000L)
+            val totalMs = minutes * 60_000L
+            val fadeMs = SLEEP_FADE_MS
+            if (totalMs > fadeMs) {
+                delay(totalMs - fadeMs)
+                // Fade-out: ramp session volume down across the final seconds so the
+                // stop isn't jarring (Phase 2 "Advanced sleep timer").
+                val steps = 10
+                repeat(steps) { step ->
+                    playerController.setVolume(1f * (steps - step - 1) / steps)
+                    delay(fadeMs / steps)
+                }
+            }
             playerController.pause()
+            playerController.setVolume(1f)
             _sleepTimer.value = SleepTimerOption.OFF
         }
     }
+
+    // --- Phase 2: A-B repeat -------------------------------------------------------
+
+    /** Cycles OFF → A armed → A-B loop → OFF using the current position. */
+    fun onCycleLoopRegion() {
+        val current = state.value
+        when {
+            current.loopStartMs == null ->
+                playerController.setLoopRegion(current.positionMs)
+
+            current.loopEndMs == null ->
+                playerController.setLoopRegion(current.loopStartMs!!, current.positionMs.coerceAtLeast(current.loopStartMs!! + 500))
+
+            else -> playerController.setLoopRegion(null, null)
+        }
+    }
+
+    // --- Phase 2: Bookmarks & chapters ---------------------------------------------
+
+    private var bookmarksJob: Job? = null
+
+    private val _bookmarks = MutableStateFlow<List<com.exapps.velox.core.domain.model.Bookmark>>(emptyList())
+    val bookmarks: StateFlow<List<com.exapps.velox.core.domain.model.Bookmark>> = _bookmarks.asStateFlow()
+
+    private val _chapters = MutableStateFlow<List<ChaptersLoader.Chapter>>(emptyList())
+    val chapters: StateFlow<List<ChaptersLoader.Chapter>> = _chapters.asStateFlow()
+
+    /** Call from the sheet when it opens — loads chapters + starts bookmark watching. */
+    fun loadMarkersFor(mediaItemId: Long, item: MediaItem?) {
+        bookmarksJob?.cancel()
+        bookmarksJob = launchBookmarks(mediaItemId)
+        _chapters.value = item?.let { chaptersLoader.load(it) }.orEmpty()
+    }
+
+    private fun launchBookmarks(mediaItemId: Long): Job = viewModelScope.launch {
+        libraryRepository.observeBookmarks(mediaItemId).collect { _bookmarks.value = it }
+    }
+
+    fun onAddBookmark(positionMs: Long) {
+        val id = state.value.currentItem?.id ?: return
+        viewModelScope.launch {
+            libraryRepository.addBookmark(id, positionMs, "Marker ${_bookmarks.value.size + 1}")
+        }
+    }
+
+    fun onDeleteBookmark(bookmarkId: Long) {
+        viewModelScope.launch { libraryRepository.deleteBookmark(bookmarkId) }
+    }
+
+    fun onSeekToBookmark(positionMs: Long) {
+        playerController.seekTo(positionMs)
+    }
 }
+
+
+private const val SLEEP_FADE_MS = 10_000L

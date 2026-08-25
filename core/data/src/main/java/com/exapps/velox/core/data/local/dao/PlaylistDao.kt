@@ -29,6 +29,10 @@ interface PlaylistDao {
     @Query("DELETE FROM playlists WHERE id = :id")
     suspend fun delete(id: Long)
 
+    /** Phase 2 backup/restore: merge-by-name support. */
+    @Query("SELECT * FROM playlists WHERE name = :name LIMIT 1")
+    suspend fun findByName(name: String): PlaylistEntity?
+
     @Query("SELECT * FROM playlist_items WHERE playlistId = :playlistId ORDER BY position ASC")
     fun observeItems(playlistId: Long): Flow<List<PlaylistItemEntity>>
 

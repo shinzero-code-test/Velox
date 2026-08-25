@@ -10,6 +10,7 @@
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_body">Velox looks for audio and video already on your device. Grant access to get started.</string>
     <string name="library_empty_action">Scan for media</string>
+    <string name="library_open_network">Browse network</string>
     <string name="library_rescan">Rescan library</string>
     <string name="library_error_body">Couldn\'t load your library.</string>
     <string name="library_error_retry">Retry</string>

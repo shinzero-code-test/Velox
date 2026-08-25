@@ -24,6 +24,12 @@ interface MediaLibraryRepository {
 
     fun observeGenres(): Flow<List<Genre>>
 
+    fun observeBookmarks(mediaItemId: Long): Flow<List<com.exapps.velox.core.domain.model.Bookmark>>
+
+    suspend fun addBookmark(mediaItemId: Long, positionMs: Long, label: String): Long
+
+    suspend fun deleteBookmark(bookmarkId: Long)
+
     fun observeGenreTracks(genre: String): Flow<List<MediaItem>>
     fun observeFolderContents(path: String): Flow<List<MediaItem>>
     fun observeAlbumTracks(albumId: Long): Flow<List<MediaItem>>

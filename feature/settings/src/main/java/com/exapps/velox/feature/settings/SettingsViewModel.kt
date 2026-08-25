@@ -23,6 +23,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val preferences: UserSettingsPreferences,
     private val localeManager: VeloxLocaleManager,
+    private val backupManager: com.exapps.velox.core.data.backup.BackupManager,
     private val libraryRepository: MediaLibraryRepository,
 ) : ViewModel() {
 
@@ -74,6 +75,39 @@ class SettingsViewModel @Inject constructor(
     fun setResumePlayback(enabled: Boolean) = viewModelScope.launch { preferences.setResumePlayback(enabled) }
     fun setSubtitleScalePercent(percent: Int) = viewModelScope.launch { preferences.setSubtitleScalePercent(percent) }
     fun setSubtitlePositionBottom(bottom: Boolean) = viewModelScope.launch { preferences.setSubtitlePositionBottom(bottom) }
+
+    // Phase 2
+    fun setDecoderPreference(pref: com.exapps.velox.core.data.preferences.DecoderPreference) =
+        viewModelScope.launch { preferences.setDecoderPreference(pref) }
+
+    fun setGestureLongPressSpeedBoost(enabled: Boolean) =
+        viewModelScope.launch { preferences.setGestureLongPressSpeedBoost(enabled) }
+
+    fun setGestureHorizontalSeekDrag(enabled: Boolean) =
+        viewModelScope.launch { preferences.setGestureHorizontalSeekDrag(enabled) }
+
+    fun setGestureVerticalDragMapping(mapping: com.exapps.velox.core.data.preferences.VerticalDragMapping) =
+        viewModelScope.launch { preferences.setGestureVerticalDragMapping(mapping) }
+
+    /** Phase 2 backup/restore — SAF transport handled by the screen; this wraps IO. */
+    fun exportBackup(uri: android.net.Uri, context: Context, onDone: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching {
+                val bytes = backupManager.exportTo(uri)
+                context.getString(com.exapps.velox.feature.settings.R.string.settings_backup_done_size, bytes)
+            }.getOrElse { it.message ?: "Failed" }
+            onDone(result)
+        }
+    }
+
+    fun restoreBackup(uri: android.net.Uri, context: Context, onDone: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching {
+                "Restored: " + backupManager.restoreFrom(uri)
+            }.getOrElse { it.message ?: "Failed" }
+            onDone(result)
+        }
+    }
     fun setAutoLoadExternalSubtitles(enabled: Boolean) = viewModelScope.launch { preferences.setAutoLoadExternalSubtitles(enabled) }
 
     fun clearPlayHistory() = viewModelScope.launch {

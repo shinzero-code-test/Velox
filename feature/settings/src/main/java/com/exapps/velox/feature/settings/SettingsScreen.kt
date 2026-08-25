@@ -19,6 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircle
@@ -68,12 +72,31 @@ private val SEEK_INTERVAL_CHOICES = listOf(5, 10, 15, 30)
 fun SettingsScreen(
     onLanguageChanged: () -> Unit,
     onShareCrashLog: (String) -> Unit = {},
+    onOpenStatistics: () -> Unit = {},
     onReplayIntro: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showClearHistoryDialog by remember { mutableStateOf(false) }
+    var backupMessage by remember { mutableStateOf<String?>(null) }
+
+    // Phase 2 "Backup / restore" — SAF pickers, no storage permissions.
+    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportBackup(uri, context) { backupMessage = it }
+        }
+    }
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.restoreBackup(uri, context) { backupMessage = it }
+        }
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -265,6 +288,95 @@ fun SettingsScreen(
                             text = stringResource(R.string.settings_clear_action),
                             onClick = { showClearHistoryDialog = true },
                         )
+                    }
+                }
+            }
+        }
+
+        // ---- Phase 2: Playback & video processing ----
+        item { SectionHeader(Icons.Filled.Tune, stringResource(R.string.settings_section_processing)) }
+        item {
+            GlassCard {
+                Column {
+                    ChoiceRow(
+                        title = stringResource(R.string.settings_decoder_auto),
+                        selected = settings.decoderPreference == com.exapps.velox.core.data.preferences.DecoderPreference.AUTO,
+                        onClick = { viewModel.setDecoderPreference(com.exapps.velox.core.data.preferences.DecoderPreference.AUTO) },
+                    )
+                    ChoiceRow(
+                        title = stringResource(R.string.settings_decoder_software),
+                        selected = settings.decoderPreference == com.exapps.velox.core.data.preferences.DecoderPreference.SOFTWARE,
+                        onClick = { viewModel.setDecoderPreference(com.exapps.velox.core.data.preferences.DecoderPreference.SOFTWARE) },
+                    )
+                }
+            }
+        }
+
+        // ---- Phase 2: Custom gesture configuration ----
+        item { SectionHeader(Icons.Filled.TouchApp, stringResource(R.string.settings_section_gestures)) }
+        item {
+            GlassCard {
+                Column {
+                    SwitchRow(
+                        title = stringResource(R.string.settings_gesture_long_press),
+                        checked = settings.gestureLongPressSpeedBoost,
+                        onCheckedChange = viewModel::setGestureLongPressSpeedBoost,
+                    )
+                    SwitchRow(
+                        title = stringResource(R.string.settings_gesture_h_seek),
+                        checked = settings.gestureHorizontalSeekDrag,
+                        onCheckedChange = viewModel::setGestureHorizontalSeekDrag,
+                    )
+                    ChoiceRow(
+                        title = stringResource(R.string.settings_gesture_v_default),
+                        selected = settings.gestureVerticalDragMapping ==
+                            com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
+                        onClick = {
+                            viewModel.setGestureVerticalDragMapping(
+                                com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
+                            )
+                        },
+                    )
+                    ChoiceRow(
+                        title = stringResource(R.string.settings_gesture_v_swapped),
+                        selected = settings.gestureVerticalDragMapping ==
+                            com.exapps.velox.core.data.preferences.VerticalDragMapping.VOLUME_LEFT_BRIGHTNESS_RIGHT,
+                        onClick = {
+                            viewModel.setGestureVerticalDragMapping(
+                                com.exapps.velox.core.data.preferences.VerticalDragMapping.VOLUME_LEFT_BRIGHTNESS_RIGHT,
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        // ---- Phase 2: Backup / restore + statistics ----
+        item { SectionHeader(Icons.Filled.Backup, stringResource(R.string.settings_section_data)) }
+        item {
+            GlassCard {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenStatistics),
+                    ) {
+                        Text(stringResource(R.string.statistics_title), style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
+                        Icon(Icons.Filled.BarChart, contentDescription = null, tint = VeloxColors.OnSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(VeloxSpacing.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+                        androidx.compose.material3.TextButton(onClick = { exportLauncher.launch("velox-backup.json") }) {
+                            Text(stringResource(R.string.settings_backup_export), color = accentColor())
+                        }
+                        androidx.compose.material3.TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
+                            Text(stringResource(R.string.settings_backup_import), color = accentColor())
+                        }
+                    }
+                    backupMessage?.let {
+                        Text(it, style = VeloxTheme.typography.bodyMedium, color = VeloxColors.OnSurfaceVariant)
                     }
                 }
             }

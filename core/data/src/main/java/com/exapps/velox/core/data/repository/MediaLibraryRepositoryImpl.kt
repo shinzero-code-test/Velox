@@ -35,6 +35,7 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     private val albumDao: AlbumDao,
     private val artistDao: ArtistDao,
     private val playHistoryDao: com.exapps.velox.core.data.local.dao.PlayHistoryDao,
+    private val bookmarkDao: com.exapps.velox.core.data.local.dao.BookmarkDao,
     private val scanner: MediaStoreScanner,
     private val preferencesDataStore: DataStore<Preferences>,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -76,6 +77,24 @@ class MediaLibraryRepositoryImpl @Inject constructor(
 
     override fun observeGenreTracks(genre: String): Flow<List<MediaItem>> =
         mediaItemDao.observeByGenre(genre).map { it.map { entity -> entity.toDomain() } }
+
+    // Phase 2 bookmarks
+    override fun observeBookmarks(mediaItemId: Long) =
+        bookmarkDao.observeForItem(mediaItemId).map { list ->
+            list.map { com.exapps.velox.core.domain.model.Bookmark(it.id, it.mediaItemId, it.positionMs, it.label) }
+        }
+
+    override suspend fun addBookmark(mediaItemId: Long, positionMs: Long, label: String): Long =
+        bookmarkDao.insert(
+            com.exapps.velox.core.data.local.entity.BookmarkEntity(
+                mediaItemId = mediaItemId,
+                positionMs = positionMs,
+                label = label,
+                createdAtEpochSeconds = System.currentTimeMillis() / 1000,
+            ),
+        )
+
+    override suspend fun deleteBookmark(bookmarkId: Long) = bookmarkDao.delete(bookmarkId)
 
     override fun observeAlbumTracks(albumId: Long): Flow<List<MediaItem>> =
         mediaItemDao.observeByAlbum(albumId).map { it.map { entity -> entity.toDomain() } }

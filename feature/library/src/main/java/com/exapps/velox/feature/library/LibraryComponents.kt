@@ -183,7 +183,8 @@ private fun TrackRow(
 @Composable
 private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifier: Modifier = Modifier) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        // Phase 2 large screens: 2 columns on phones, up to 4 on expanded widths.
+        columns = GridCells.Adaptive(minSize = 160.dp),
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(VeloxSpacing.lg),
         horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),

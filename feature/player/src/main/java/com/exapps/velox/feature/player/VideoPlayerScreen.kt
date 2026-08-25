@@ -144,6 +144,9 @@ fun VideoPlayerScreen(
     val seekIncrementSeconds by viewModel.seekIncrementSeconds.collectAsStateWithLifecycle()
     val subtitleScalePercent by viewModel.subtitleScalePercent.collectAsStateWithLifecycle()
     val subtitlePositionBottom by viewModel.subtitlePositionBottom.collectAsStateWithLifecycle()
+    val longPressBoostEnabled by viewModel.gestureLongPressSpeedBoost.collectAsStateWithLifecycle()
+    val horizontalSeekEnabled by viewModel.gestureHorizontalSeekDrag.collectAsStateWithLifecycle()
+    val verticalMapping by viewModel.gestureVerticalDragMapping.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val activity = context as? androidx.activity.ComponentActivity
@@ -295,11 +298,17 @@ fun VideoPlayerScreen(
                                 change.consume()
                                 if (mode == DragMode.NONE) {
                                     mode = if (abs(dragAmount.x) > abs(dragAmount.y)) {
-                                        DragMode.SEEK
-                                    } else if (startX < size.width / 2f) {
-                                        DragMode.BRIGHTNESS
+                                        if (horizontalSeekEnabled) DragMode.SEEK else DragMode.NONE
                                     } else {
-                                        DragMode.VOLUME
+                                        val leftIsBrightness =
+                                            verticalMapping == com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT
+                                        val startsLeft = startX < size.width / 2f
+                                        when {
+                                            startsLeft && leftIsBrightness -> DragMode.BRIGHTNESS
+                                            startsLeft && !leftIsBrightness -> DragMode.VOLUME
+                                            !startsLeft && leftIsBrightness -> DragMode.VOLUME
+                                            else -> DragMode.BRIGHTNESS
+                                        }
                                     }
                                 }
                                 when (mode) {
@@ -369,6 +378,8 @@ fun VideoPlayerScreen(
                                 val heldLongEnough = event.changes.maxOf { it.uptimeMillis } - down.uptimeMillis > 480L
                                 if (!boosted && !slopped && heldLongEnough) {
                                     boosted = true
+                                    // Phase 2: the boost gesture itself is user-toggleable.
+                                    if (!longPressBoostEnabled) return@awaitEachGesture
                                     speedBeforeBoost = viewModel.state.value.playbackSpeed.takeIf { it in 0.25f..2f } ?: 1f
                                     viewModel.onSetSpeed(2f)
                                     feedback = GestureFeedback.SpeedBoost

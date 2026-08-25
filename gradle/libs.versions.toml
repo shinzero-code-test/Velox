@@ -40,6 +40,11 @@ coil = "3.4.0"
 # Widgets (Phase 1 M4)
 glance = "1.1.1"
 
+# Phase 2 — network playback & browsing
+jcifsNg = "2.1.10"
+commonsNet = "3.11.0"
+okhttp = "4.12.0"
+
 # Async / serialization
 coroutines = "1.10.2"
 serialization = "1.9.0"
@@ -96,6 +101,14 @@ androidx-media3-session = { group = "androidx.media3", name = "media3-session", 
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
 androidx-media3-datasource = { group = "androidx.media3", name = "media3-datasource", version.ref = "media3" }
+androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
+androidx-media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-dash", version.ref = "media3" }
+androidx-media3-exoplayer-rtsp = { group = "androidx.media3", name = "media3-exoplayer-rtsp", version.ref = "media3" }
+
+# Phase 2 — network clients
+jcifs-ng = { group = "eu.agno3.jcifs", name = "jcifs-ng", version.ref = "jcifsNg" }
+commons-net = { group = "commons-net", name = "commons-net", version.ref = "commonsNet" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 # Images
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
+import com.exapps.velox.core.data.preferences.VerticalDragMapping
 import com.exapps.velox.core.domain.player.PlaybackState
 import com.exapps.velox.core.domain.player.PlayerController
 import com.exapps.velox.core.domain.player.PlayerTrack
@@ -64,6 +65,24 @@ class VideoPlayerViewModel @Inject constructor(
     val subtitlePositionBottom: StateFlow<Boolean> = userSettings.settings
         .map { it.subtitlePositionBottom }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    /** Phase 2 "Custom gesture configuration". */
+    val gestureLongPressSpeedBoost: StateFlow<Boolean> = userSettings.settings
+        .map { it.gestureLongPressSpeedBoost }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val gestureHorizontalSeekDrag: StateFlow<Boolean> = userSettings.settings
+        .map { it.gestureHorizontalSeekDrag }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val gestureVerticalDragMapping: StateFlow<com.exapps.velox.core.data.preferences.VerticalDragMapping> =
+        userSettings.settings
+            .map { it.gestureVerticalDragMapping }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
+            )
 
     init {
         viewModelScope.launch {

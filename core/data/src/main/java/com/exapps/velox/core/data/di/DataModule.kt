@@ -9,6 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Room
 import com.exapps.velox.core.data.local.VeloxDatabase
 import com.exapps.velox.core.data.local.dao.AlbumDao
+import com.exapps.velox.core.data.local.dao.BookmarkDao
+import com.exapps.velox.core.data.local.dao.StatsDao
 import com.exapps.velox.core.data.local.dao.ArtistDao
 import com.exapps.velox.core.data.local.dao.MediaItemDao
 import com.exapps.velox.core.data.local.dao.PlayHistoryDao
@@ -36,6 +38,21 @@ internal val ALL_DATABASE_MIGRATIONS: Array<Migration> = arrayOf(
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE media_items ADD COLUMN fileName TEXT DEFAULT NULL")
             db.execSQL("ALTER TABLE media_items ADD COLUMN genre TEXT DEFAULT NULL")
+        }
+    },
+    // Phase 2 bookmarks.
+    object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `bookmarks` (
+                   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                   `mediaItemId` INTEGER NOT NULL,
+                   `positionMs` INTEGER NOT NULL,
+                   `label` TEXT NOT NULL,
+                   `createdAtEpochSeconds` INTEGER NOT NULL)
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_mediaItemId ON bookmarks (mediaItemId)")
         }
     },
 )
@@ -69,6 +86,12 @@ object DatabaseModule {
 
     @Provides
     fun providePlayHistoryDao(database: VeloxDatabase): PlayHistoryDao = database.playHistoryDao()
+
+    @Provides
+    fun provideBookmarkDao(database: VeloxDatabase): BookmarkDao = database.bookmarkDao()
+
+    @Provides
+    fun provideStatsDao(database: VeloxDatabase): StatsDao = database.statsDao()
 
     @Provides
     @Singleton

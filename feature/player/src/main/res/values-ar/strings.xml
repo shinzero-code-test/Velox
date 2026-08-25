@@ -50,4 +50,11 @@
     <string name="sleep_timer_15">15 دقيقة</string>
     <string name="sleep_timer_30">30 دقيقة</string>
     <string name="sleep_timer_60">60 دقيقة</string>
+    <string name="sleep_timer_end_of_queue">نهاية قائمة التشغيل</string>
+    <string name="sleep_timer_custom">دقائق مخصصة</string>
+    <string name="cd_markers">العلامات</string>
+    <string name="markers_title">العلامات والفصول</string>
+    <string name="markers_chapters">الفصول</string>
+    <string name="markers_bookmarks">علاماتك</string>
+    <string name="markers_add">إضافة عند الموضع</string>
 </resources>

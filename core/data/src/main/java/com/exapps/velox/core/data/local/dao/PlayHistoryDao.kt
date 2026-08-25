@@ -4,11 +4,16 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.exapps.velox.core.data.local.entity.PlayHistoryEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlayHistoryDao {
     @Insert
     suspend fun insert(entry: PlayHistoryEntity)
+
+    /** Phase 2 backup/restore + statistics. */
+    @Query("SELECT * FROM play_history ORDER BY playedAtEpochSeconds DESC")
+    fun observeAll(): Flow<List<PlayHistoryEntity>>
 
     @Query("SELECT COUNT(*) FROM play_history WHERE mediaItemId = :mediaItemId")
     suspend fun countForItem(mediaItemId: Long): Int

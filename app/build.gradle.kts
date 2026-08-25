@@ -14,8 +14,8 @@ android {
         applicationId = "com.exapps.velox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.4.0"
+        versionCode = 7
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -101,6 +101,7 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:equalizer"))
     implementation(project(":feature:subtitles"))
+    implementation(project(":feature:network"))
 
     // Player
     implementation(project(":player:engine"))

@@ -260,3 +260,66 @@ Chromecast, online subtitle search.**
 - Chromecast, online subtitle search, Play Store release — excluded by decision.
 - Crossfade DSP, embedded lyrics/tags writing, widget artwork, folder-walk
   scanner for un-indexed files.
+
+---
+
+## v1.0.0 — Phase 2 complete (minus Android Auto)
+
+ROADMAP Phase 2 implemented end-to-end, except Android Auto (optional per
+product decision) and the Play Store release step. Every feature below is a
+full implementation wired into the app — no stubs.
+
+### Network streams (HTTP / HLS / DASH / RTSP)
+Media3's protocol modules (exoplayer-hls/dash/rtsp) are on the classpath so
+DefaultMediaSourceFactory resolves them by URL; "Network" (Library toolbar) has
+a URL field with recents (DataStore-persisted, capped at 10).
+
+### Network browsing (SMB / FTP / WebDAV)
+New `:core:network` module: `NetworkServer` records (DataStore JSON), blocking
+protocol clients (jcifs-ng SMB incl. share listing + auth; commons-net FTP in
+passive/binary mode with RETR restart offsets; minimal WebDAV over OkHttp with
+namespace-agnostic PROPFIND parsing and ranged GETs), and canonical URL builders
+(`smb:// ftp:// dav(s)://`). Playback rides a scheme-routing DataSource installed
+in VeloxExoPlayerFactory — browsed files stream through the same session player,
+queued exactly like local tracks. `:feature:network` provides server CRUD +
+test-connect, directory browsing with back-stack, and tap-to-play.
+
+### Advanced video processing
+Decoder priority (auto vs software-first MediaCodec selector with fallback) from
+Settings → Video processing; network-sized load buffers; resize modes and speed
+already existed.
+
+### A-B repeat · Bookmarks · Chapters
+- A-B repeat: controller-enforced loop region (poll wraps to A past B), cycled
+  OFF → A → A↔B from Now Playing; cleared when a new queue starts.
+- Bookmarks: Room v3 migration adds a `bookmarks` table; add/jump/delete via the
+  new Markers sheet.
+- Chapters: sidecar `<track>.chapters.txt` (YouTube-style timestamp lines) shown
+  read-only above your bookmarks in the same sheet (embedded-chapter extraction
+  isn't exposed by this Media3 version — documented).
+
+### Advanced sleep timer
+Custom minutes, end-of-track, **end-of-queue**, and a 10-second volume fade-out
+before stop (session volume ramps down then restores).
+
+### Playback statistics & history
+StatsDao aggregates over play_history: totals (plays / distinct tracks /
+listening time), last-N-days activity, top-tracks leaderboard; StatisticsScreen
+reachable from Settings → Data.
+
+### Backup / restore
+Single JSON document via SAF (CreateDocument/OpenDocument — no storage
+permissions): settings, playlists merged by name, favourites, play history,
+bookmarks, servers, recent streams. Restore re-applies only entries whose media
+still exists in the library.
+
+### Custom gesture configuration
+Settings → Gestures: long-press 2× boost toggle, horizontal-seek toggle, and
+vertical-drag mapping swap (brightness/volume sides) — honoured live by the
+video surface's gesture detectors.
+
+### Foldable / large screens
+Now Playing caps its width (~720dp) and centres on expanded widths; album grid
+switches from fixed 2 columns to adaptive 160dp cells (up to 4 across).
+
+versionCode 7. Android Auto: deferred by product decision.

@@ -58,6 +58,14 @@ data class Folder(
     val parentPath: String?,
 )
 
+/** Phase 2 "Bookmarks": named timestamped marker on a media item. */
+data class Bookmark(
+    val id: Long,
+    val mediaItemId: Long,
+    val positionMs: Long,
+    val label: String,
+)
+
 /** Genres tab entry — derived from the media_items genre column (GROUP BY). */
 data class Genre(
     val name: String,

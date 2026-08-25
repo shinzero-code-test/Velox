@@ -41,4 +41,27 @@
 
     <string name="cancel">إلغاء</string>
     <string name="settings_last_crash">آخر أعطال</string>
+    <string name="statistics_title">الإحصائيات</string>
+    <string name="stats_empty_title">لا شيء هنا بعد</string>
+    <string name="stats_empty_body">شغّل شيئًا وستظهر سجل استماعك هنا.</string>
+    <string name="stats_total_plays">إجمالي مرات التشغيل</string>
+    <string name="stats_distinct_tracks">مقاطع مختلفة</string>
+    <string name="stats_listening_time">وقت الاستماع</string>
+    <string name="stats_last_days">آخر %1$d يومًا</string>
+    <string name="stats_top_tracks">أكثر المقاطع تشغيلًا</string>
+    <string name="cd_back">رجوع</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_save">حفظ</string>
+    <string name="settings_section_processing">معالجة الفيديو</string>
+    <string name="settings_decoder_auto">اختيار تلقائي للفكّ</string>
+    <string name="settings_decoder_software">تفضيل الفك بالبرمجيات</string>
+    <string name="settings_section_gestures">الإيماءات</string>
+    <string name="settings_gesture_long_press">الضغط المطوّل لتسريع ×٢</string>
+    <string name="settings_gesture_h_seek">السحب الأفقي للتقديم</string>
+    <string name="settings_gesture_v_default">يسار السطوع · يمين الصوت</string>
+    <string name="settings_gesture_v_swapped">يسار الصوت · يمين السطوع</string>
+    <string name="settings_section_data">البيانات</string>
+    <string name="settings_backup_export">تصدير نسخة احتياطية</string>
+    <string name="settings_backup_import">استيراد نسخة احتياطية</string>
+    <string name="settings_backup_done_size">تم إنشاء النسخة (%1$d بايت)</string>
 </resources>

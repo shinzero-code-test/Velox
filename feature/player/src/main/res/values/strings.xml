@@ -53,4 +53,11 @@
     <string name="sleep_timer_15">15 minutes</string>
     <string name="sleep_timer_30">30 minutes</string>
     <string name="sleep_timer_60">60 minutes</string>
+    <string name="sleep_timer_end_of_queue">End of queue</string>
+    <string name="sleep_timer_custom">Custom minutes</string>
+    <string name="cd_markers">Markers</string>
+    <string name="markers_title">Bookmarks &amp; chapters</string>
+    <string name="markers_chapters">Chapters</string>
+    <string name="markers_bookmarks">Your bookmarks</string>
+    <string name="markers_add">Add at position</string>
 </resources>

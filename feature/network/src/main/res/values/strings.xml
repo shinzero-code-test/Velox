@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_title">Network</string>
+    <string name="network_browse_title">Browse</string>
+    <string name="network_back">Back</string>
+    <string name="network_servers">Servers</string>
+    <string name="network_empty">No servers yet — add one to browse its files.</string>
+    <string name="network_add_server">Add server</string>
+    <string name="network_edit">Edit server</string>
+    <string name="network_delete">Delete server</string>
+    <string name="network_test">Test connection</string>
+    <string name="network_recent">Recent streams</string>
+    <string name="network_stream_hint">Stream URL (http, HLS, DASH, RTSP…)</string>
+    <string name="network_play">Play</string>
+    <string name="network_secure">Use HTTPS</string>
+    <string name="network_field_name">Name</string>
+    <string name="network_field_protocol">Protocol</string>
+    <string name="network_field_host">Host</string>
+    <string name="network_field_user">Username (optional)</string>
+    <string name="network_field_password">Password (optional)</string>
+    <string name="network_field_basepath">Base path</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+</resources>

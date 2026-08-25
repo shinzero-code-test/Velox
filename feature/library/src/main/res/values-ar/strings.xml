@@ -10,6 +10,7 @@
     <string name="library_empty_title">مكتبتك فارغة</string>
     <string name="library_empty_body">يبحث Velox عن ملفات الصوت والفيديو الموجودة على جهازك بالفعل. امنح الإذن للبدء.</string>
     <string name="library_empty_action">فحص الوسائط</string>
+    <string name="library_open_network">تصفّح الشبكة</string>
     <string name="library_rescan">إعادة فحص المكتبة</string>
     <string name="library_error_body">تعذّر تحميل مكتبتك.</string>
     <string name="library_error_retry">إعادة المحاولة</string>
