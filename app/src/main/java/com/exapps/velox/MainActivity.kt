@@ -114,6 +114,7 @@ class MainActivity : ComponentActivity() {
                 uri = data.toString(),
                 title = title,
                 mediaType = if (isVideo) MediaType.VIDEO else MediaType.AUDIO,
+                durationMs = 0L, // resolved by the player itself
             )
             playerController.play(listOf(item))
             appViewModel.onExternalMediaStarted(item.id, isVideo)

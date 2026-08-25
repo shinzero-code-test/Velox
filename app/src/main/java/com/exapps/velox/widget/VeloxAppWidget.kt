@@ -29,8 +29,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
+import androidx.glance.layout.widthimport androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
@@ -125,7 +124,8 @@ object VeloxAppWidget : GlanceAppWidget() {
     private fun GlyphButton(glyph: String, onClick: Action) {
         Box(
             modifier = GlanceModifier
-                .size(40.dp)
+                .width(40.dp)
+                .height(40.dp)
                 .background(ColorProvider(Color(0x22FFFFFF)))
                 .cornerRadius(20.dp)
                 .clickable(onClick),
