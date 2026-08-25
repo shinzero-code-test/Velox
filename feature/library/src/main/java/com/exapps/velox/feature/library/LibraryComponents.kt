@@ -64,6 +64,7 @@ private fun trackArtworkModel(track: MediaItem): Any = if (track.mediaType == Me
     track.artworkUri ?: track.uri
 }
 
+@Composable
 fun LibraryTabChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

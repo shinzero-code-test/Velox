@@ -51,7 +51,7 @@ class SettingsViewModel @Inject constructor(
         java.io.File(context.filesDir, "last_crash.txt").readText().takeIf { it.isNotBlank() }
     }.getOrNull()
 
-    /** SCREEN_SETTINGS.md §9: app version + build, read from PackageManager. 
+    /** SCREEN_SETTINGS.md §9: app version + build, read from PackageManager. */
     val versionName: String = runCatching {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
         info.versionName ?: "?"
