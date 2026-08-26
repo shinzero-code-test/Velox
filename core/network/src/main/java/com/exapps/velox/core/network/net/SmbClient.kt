@@ -59,10 +59,9 @@ class SmbClient @javax.inject.Inject constructor() : NetworkClient {
         // SmbFileInputStream; skipping bytes keeps semantics correct for resume and
         // is bounded by the requested offset.
         if (positionMs > 0) {
-            // Rough byte-position estimate: assume ~128 kbit/s average bitrate when
-            // duration metadata is absent — ExoPlayer will correct via its own seeks.
-            val approxBytesPerMs = 16L * 1024L / 8L
-            var toSkip = positionMs * approxBytesPerMs
+            // H3 (data-layer review): 16 bytes/ms ≈ 128 kbps — matches the comment.
+            // The old 2048 B/ms value was a *1024 typo that overshot to EOF.
+            var toSkip = positionMs * BYTES_PER_MS
             while (toSkip > 0) {
                 val skipped = stream.skip(toSkip)
                 if (skipped <= 0) break
@@ -81,3 +80,5 @@ class SmbClient @javax.inject.Inject constructor() : NetworkClient {
         }
     }.getOrDefault(false)
 }
+
+private const val BYTES_PER_MS = 16L

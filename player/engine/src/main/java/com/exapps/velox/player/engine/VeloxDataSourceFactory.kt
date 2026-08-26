@@ -111,13 +111,17 @@ private class NetworkStreamDataSource(
         // DataSpec.position is a BYTE offset from Media3 (it manages ms↔bytes upstream).
         val stream = client.openStream(server, url, /* positionMs = */ 0L).also { this.stream = it }
 
-        // Honour byte-position via skip; length unknown unless bounded in the spec.
+        // Honour byte-position; throw loudly if skip can't reach the target so
+        // ExoPlayer surfaces a retryable error instead of decoding garbage.
+        // C1 (player-stack review): silent break here corrupted every seek.
         if (dataSpec.position > 0) {
-            var toSkip = dataSpec.position
-            while (toSkip > 0) {
-                val skipped = stream.skip(toSkip)
-                if (skipped <= 0) break
-                toSkip -= skipped
+            var skippedTotal = 0L
+            while (skippedTotal < dataSpec.position) {
+                val n = stream.skip(dataSpec.position - skippedTotal)
+                if (n <= 0) throw java.io.IOException(
+                    "Cannot honour DataSpec.position=${dataSpec.position} (stuck at $skippedTotal)"
+                )
+                skippedTotal += n
             }
         }
 

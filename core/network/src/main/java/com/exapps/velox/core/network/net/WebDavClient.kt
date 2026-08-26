@@ -78,7 +78,6 @@ class WebDavClient @javax.inject.Inject constructor() : NetworkClient {
             }
 
             val href = children.firstOrNull { it.nodeName.substringAfter(':') == "href" }?.textContent ?: continue
-            val decodedHref = java.net.URLDecoder.decode(href, "UTF-8")
 
             val resourceType = prop("resourcetype")
             val isDirectory = resourceType?.let { rt ->
@@ -86,7 +85,10 @@ class WebDavClient @javax.inject.Inject constructor() : NetworkClient {
             } ?: false
 
             val size = prop("getcontentlength")?.textContent?.toLongOrNull() ?: -1L
-            val name = decodedHref.trimEnd('/').substringAfterLast('/')
+            // M6 (data-layer review): decode only the final raw segment with
+            // android.net.Uri.decode — form-style URLDecoder on the whole href
+            // turned encoded %2F into '/' (splitting names) and '+' into spaces.
+            val name = android.net.Uri.decode(href.trimEnd('/').substringAfterLast('/'))
 
             entries += NetworkEntry(
                 name = name,
@@ -106,20 +108,40 @@ class WebDavClient @javax.inject.Inject constructor() : NetworkClient {
         ) {
             return href.trimEnd('/')
         }
-        // Path-only href ("/music/song.mp3") — graft onto our scheme + authority.
         val secure = directoryUrl.startsWith("davs")
-        val httpUrl = toHttpUrl(directoryUrl, secure).removeSuffix("/")
         val davScheme = if (secure) "davs" else "dav"
-        val authorityAndBase = httpUrl.substringAfter("://")
-        val path = if (href.startsWith("/")) href else "/$href"
-        return "$davScheme://$authorityAndBase$path"
+
+        // RFC 4918 §5.3 allows servers to answer with relative refs:
+        //  - "/music/song.mp3" → authority-absolute → graft onto scheme+authority
+        //  - "song.mp3"        → relative to the CURRENT directory (M7), not root.
+        val httpUrl = toHttpUrl(directoryUrl, secure).trimEnd('/')
+        val authority = httpUrl.substringBefore('/')
+        val currentPath = httpUrl.substringAfter(authority, "") // e.g. "/music/rock/"
+
+        val resolvedPath = if (href.startsWith("/")) {
+            href
+        } else {
+            val parentDir = currentPath.substringBeforeLast('/', missingDelimiterValue = "/")
+            parentDir.trimEnd('/') + "/" + href
+        }
+
+        // Collapse any "./" or "../" the server emitted.
+        val segments = mutableListOf<String>()
+        resolvedPath.split('/').forEach { segment ->
+            when (segment) {
+                "", "." -> Unit
+                ".." -> if (segments.isNotEmpty()) segments.removeAt(segments.lastIndex)
+                else -> segments += segment
+            }
+        }
+        return "$davScheme://$authority/" + segments.joinToString("/")
     }
 
     override fun openStream(server: NetworkServer, url: String, positionMs: Long): InputStream {
-        // Byte-offset heuristic consistent with SMB/FTP; DAV supports true ranges,
-        // but ms→bytes mapping without duration metadata is approximate either way.
-        val approxBytesPerMs = 16L * 1024L / 8L
-        val rangeStart = positionMs * approxBytesPerMs
+        // Byte-offset heuristic consistent with SMB/FTP (~128 kbps audio); DAV
+        // supports true ranges, but ms→bytes without duration metadata stays an
+        // approximation. ExoPlayer corrects via its own re-seeks.
+        val rangeStart = positionMs * APPROX_BYTES_PER_MS
 
         val builder = request(server, url)
         if (rangeStart > 0) builder.header("Range", "bytes=$rangeStart-")
@@ -167,3 +189,7 @@ class WebDavClient @javax.inject.Inject constructor() : NetworkClient {
 /** NodeList → List helper (org.w3c.dom lists aren't Kotlin iterables). */
 private fun nodeListToList(list: org.w3c.dom.NodeList): List<org.w3c.dom.Node> =
     (0 until list.length).map { list.item(it) }
+
+// Conservative ms→bytes estimate for range-request starts (~16 Mbps video).
+// ExoPlayer corrects via its own byte-precise re-seeks.
+private const val APPROX_BYTES_PER_MS = 2048L

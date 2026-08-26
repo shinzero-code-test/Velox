@@ -8,6 +8,7 @@ import com.exapps.velox.core.data.local.dao.MediaItemDao
 import com.exapps.velox.core.data.local.dao.PlaylistDao
 import com.exapps.velox.core.data.local.entity.PlaylistEntity
 import com.exapps.velox.core.data.local.mapper.toDomain
+import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.Playlist
 import com.exapps.velox.core.domain.model.PlaylistDetail
 import com.exapps.velox.core.domain.model.PlaylistType
@@ -139,9 +140,11 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
         }
 
-    private fun mediaItemFlow(mediaItemId: Long) = flow {
-        emit(mediaItemDao.getById(mediaItemId)?.toDomain())
-    }
+    /** M12 (data-layer review): emit from a live Room query so favourite toggles /
+     * tag edits / rescans refresh already-open playlist details instead of going
+     * stale until the item list itself mutates. */
+    private fun mediaItemFlow(mediaItemId: Long): Flow<MediaItem?> =
+        mediaItemDao.observeById(mediaItemId).map { it?.toDomain() }
 
     override suspend fun createPlaylist(name: String): Long = withContext(ioDispatcher) {
         playlistDao.insert(PlaylistEntity(name = name, createdAtEpochSeconds = System.currentTimeMillis() / 1000))
@@ -173,7 +176,11 @@ class PlaylistRepositoryImpl @Inject constructor(
                 .mapNotNull { mediaItemDao.getById(it.mediaItemId)?.toDomain() }
             val builder = StringBuilder("#EXTM3U\n")
             items.forEach { track ->
-                builder.append("#EXTINF:${track.durationMs / 1000},${track.artistName ?: ""} - ${track.title}\n")
+                // Low nit (data-layer review): strip newlines from metadata so a
+                // crafted tag can't inject fake EXTINF/URL lines into the export.
+                val safeArtist = (track.artistName ?: "").replace(NEWLINES, " ")
+                val safeTitle = track.title.replace(NEWLINES, " ")
+                builder.append("#EXTINF:${track.durationMs / 1000},$safeArtist - $safeTitle\n")
                 builder.append(track.uri).append('\n')
             }
             context.contentResolver.openOutputStream(Uri.parse(destinationPath))?.use { stream ->
@@ -232,3 +239,5 @@ class PlaylistRepositoryImpl @Inject constructor(
         const val SYSTEM_PLAYLIST_PREVIEW_LIMIT = 500
     }
 }
+
+private val NEWLINES = Regex("[\r\n]+")

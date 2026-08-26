@@ -62,6 +62,11 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items WHERE id = :id")
     suspend fun getById(id: Long): MediaItemEntity?
 
+    /** M12 (data-layer review): playlist-detail rows must refresh when a track's
+     * favourite flag/tag edits change — a one-shot getById left them stale. */
+    @Query("SELECT * FROM media_items WHERE id = :id")
+    fun observeById(id: Long): Flow<MediaItemEntity?>
+
     /** Phase 2 backup/restore: batch existence check. */
     @Query("SELECT * FROM media_items WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<Long>): List<MediaItemEntity>
@@ -75,7 +80,11 @@ interface MediaItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<MediaItemEntity>)
 
-    /** Removes library rows for files the scanner no longer finds (deleted/moved). */
+    /** Removes library rows for files the scanner no longer finds (deleted/moved).
+     * C2 (data-layer review): callers must skip this when [currentIds] is empty —
+     * `NOT IN ()` is invalid SQL. Skipping (rather than deleting everything) is
+     * deliberate: a scan that returns zero rows is more likely a transient
+     * MediaStore failure than a genuinely emptied device. */
     @Query("DELETE FROM media_items WHERE id NOT IN (:currentIds)")
     suspend fun deleteMissing(currentIds: List<Long>)
 
@@ -83,13 +92,14 @@ interface MediaItemDao {
     // upsertAll uses OnConflictStrategy.REPLACE, which rewrites the whole row from the
     // freshly scanned entity and would silently wipe everything the user owns —
     // favourites, play statistics, AND tag-editor edits — on every rescan (one runs at
-    // every app launch). Snapshot all of it before the upsert, re-apply row-by-row
-    // afterwards; UPDATEs against rows deleted since the snapshot affect zero rows.
+    // every app launch). H1 (data-layer review): snapshot EVERY row, not just rows
+    // with fav/play data — a track whose only user data is a tag-editor edit was
+    // previously excluded here and its override silently reverted. Re-apply
+    // row-by-row afterwards; UPDATEs against deleted ids affect zero rows.
 
     @Query(
         """SELECT id, title, artistName, albumTitle, isFavorite, playCount, lastPlayedEpochSeconds
-           FROM media_items
-           WHERE isFavorite = 1 OR playCount > 0 OR lastPlayedEpochSeconds IS NOT NULL"""
+           FROM media_items"""
     )
     suspend fun getUserMetadataSnapshot(): List<UserMetadataProjection>
 

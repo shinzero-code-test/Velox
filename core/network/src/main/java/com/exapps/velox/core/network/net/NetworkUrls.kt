@@ -33,23 +33,37 @@ object NetworkUrls {
         return "$directoryUrl$sep$encoded"
     }
 
-    /** Root URL for a server: scheme://host[:port] + basePath (normalised to end with '/'). */
+    /** Root URL for a server: scheme://host[:port] + basePath (normalised to end with '/').
+     * M1 (data-layer review): custom SMB ports are honoured too — jcifs accepts
+     * `smb://host:1445/share`. M8: each basePath segment is percent-encoded so
+     * values like `/my music` can't crash OkHttp's URL parser. */
     fun root(server: NetworkServer): String {
-        val defaultPort = server.protocol.defaultPort()
-        val explicitPort =
-            if (server.protocol == NetworkProtocol.SMB || server.port == defaultPort) "" else ":${server.port}"
+        val explicitPort = if (server.port == server.protocol.defaultPort()) "" else ":${server.port}"
         val base = server.basePath.trim().ifEmpty { "/" }
-        val baseNorm = if (base.endsWith("/")) base else "$base/"
-        return "${scheme(server)}://${server.host}$explicitPort$baseNorm"
+        val encodedBase = base.split('/')
+            .filter { it.isNotEmpty() }
+            .joinToString("/") { segment ->
+                java.net.URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
+            }
+            .let { if (it.isEmpty()) "" else "/$it/" }
+        return "${scheme(server)}://${server.host}$explicitPort$encodedBase"
     }
 
-    fun displayName(url: String): String =
-        url.trimEnd('/').substringAfterLast('/').ifEmpty { url }
-            .let { java.net.URLDecoder.decode(it, "UTF-8") }
+    fun displayName(url: String): String {
+        val raw = url.trimEnd('/').substringAfterLast('/').ifEmpty { url }
+        // Low nit (data-layer review): URLDecoder throws on malformed escapes
+        // (e.g. a pasted "...100%.mp3"); fall back to the raw segment instead.
+        return runCatching { java.net.URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw)
+    }
 
+    /** Parent directory URL, or null at the authority/share boundary — returning a
+     * bare `scheme://host` used to imply a workgroup listing (M9, data-layer review). */
     fun parentOf(url: String): String? {
         val trimmed = url.trimEnd('/')
-        val parent = trimmed.substringBeforeLast('/', missingDelimiterValue = "")
-        return parent.takeIf { it.isNotEmpty() && it.any { c -> c == '/' } }
+        val authorityAndPath = trimmed.substringAfter("://")
+        val path = authorityAndPath.substringAfter('/', missingDelimiterValue = "")
+        if (!path.contains('/')) return null // already at the share/root level
+        val parent = trimmed.substringBeforeLast('/')
+        return "$parent/"
     }
 }

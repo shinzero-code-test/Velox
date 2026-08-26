@@ -33,11 +33,18 @@ private val Context.veloxPreferencesDataStore: DataStore<Preferences> by prefere
 
 /** Ordered migration history. v2: genre + fileName on media_items (Phase 1 M2/M3:
  * Genres tab + sidecar lyrics lookups). */
+/** Ordered migration history.
+ *
+ * C1 (data-layer review): `ADD COLUMN ... DEFAULT NULL` is deliberately avoided —
+ * SQLite stores an explicit default of NULL which Room's TableInfo comparison
+ * reports as `"NULL"` vs the entity's absent default → post-migration validation
+ * crash. Bare ADD COLUMN matches the entity (Kotlin defaults are compile-time).
+ */
 internal val ALL_DATABASE_MIGRATIONS: Array<Migration> = arrayOf(
     object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE media_items ADD COLUMN fileName TEXT DEFAULT NULL")
-            db.execSQL("ALTER TABLE media_items ADD COLUMN genre TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE media_items ADD COLUMN fileName TEXT")
+            db.execSQL("ALTER TABLE media_items ADD COLUMN genre TEXT")
         }
     },
     // Phase 2 bookmarks.
@@ -66,10 +73,15 @@ object DatabaseModule {
     fun provideVeloxDatabase(@ApplicationContext context: Context): VeloxDatabase =
         Room.databaseBuilder(context, VeloxDatabase::class.java, VeloxDatabase.DATABASE_NAME)
             .addMigrations(*ALL_DATABASE_MIGRATIONS)
-            // Kept as a last-resort escape hatch for pre-release installs only — a
-            // destructive reset here means re-scanning, which is cheap; losing user
-            // data (playlists/favourites) is not. Remove before any public build.
-            .fallbackToDestructiveMigration(dropAllTables = false)
+            .apply {
+                // M14 (data-layer review): the destructive escape hatch is now
+                // debug-builds-only. All shipped schema versions have explicit
+                // migrations (1→2→3), so a missing path in release should crash
+                // loudly during development instead of wiping user data silently.
+                if (com.exapps.velox.core.data.BuildConfig.DEBUG) {
+                    fallbackToDestructiveMigration(dropAllTables = false)
+                }
+            }
             .build()
 
     @Provides

@@ -19,6 +19,7 @@ interface AlbumDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(albums: List<AlbumEntity>)
 
+    /** C2 (data-layer review): skip on empty list — `NOT IN ()` is invalid SQL. */
     @Query("DELETE FROM albums WHERE id NOT IN (:currentIds)")
     suspend fun deleteMissing(currentIds: List<Long>)
 }
@@ -34,6 +35,7 @@ interface ArtistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(artists: List<ArtistEntity>)
 
+    /** C2 (data-layer review): skip on empty list — `NOT IN ()` is invalid SQL. */
     @Query("DELETE FROM artists WHERE id NOT IN (:currentIds)")
     suspend fun deleteMissing(currentIds: List<Long>)
 }

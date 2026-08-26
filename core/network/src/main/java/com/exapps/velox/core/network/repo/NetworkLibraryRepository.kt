@@ -53,17 +53,28 @@ class NetworkLibraryRepository @Inject constructor(
         }
     }
 
-    /** Matches a playable URL back to its server record (engine DataSource routing). */
+    /** Matches a playable URL back to its server record (engine DataSource routing).
+     * M2 (data-layer review): match protocol (from scheme) AND host case-insensitively
+     * so two saved servers on the same NAS (SMB + WebDAV) can't cross-route. Port is
+     * matched only when the URL carries one explicitly. */
     suspend fun findServer(url: String): NetworkServer? {
-        val schemePrefixes = listOf("smb://", "ftp://", "dav://", "davs://")
-        if (schemePrefixes.none { url.startsWith(it) }) return null
-        val host = url.substringAfter("://").substringBefore('/').substringBefore(':')
-        return servers().firstOrNull { it.host == host }
+        val protocolByScheme = mapOf(
+            "smb" to com.exapps.velox.core.network.model.NetworkProtocol.SMB,
+            "ftp" to com.exapps.velox.core.network.model.NetworkProtocol.FTP,
+            "dav" to com.exapps.velox.core.network.model.NetworkProtocol.WEBDAV,
+            "davs" to com.exapps.velox.core.network.model.NetworkProtocol.WEBDAV,
+        )
+        val scheme = url.substringBefore("://", "").lowercase()
+        val protocol = protocolByScheme[scheme] ?: return null
+        val authority = url.substringAfter("://").substringBefore('/')
+        val host = authority.substringBefore(':').lowercase()
+        val port = authority.substringAfter(':', "").toIntOrNull()
+        return servers().firstOrNull {
+            it.protocol == protocol &&
+                it.host.equals(host, ignoreCase = true) &&
+                (port == null || it.port == port)
+        }
     }
-
-    /** Server for the engine's DataSource when only protocol+host are known. */
-    suspend fun findServerByHost(host: String): NetworkServer? =
-        servers().firstOrNull { it.host.equals(host, ignoreCase = true) }
 
     // ---- Recent streams ----------------------------------------------------------
 

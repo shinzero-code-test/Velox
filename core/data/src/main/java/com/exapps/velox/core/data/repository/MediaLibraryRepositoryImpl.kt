@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,6 +38,7 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     private val playHistoryDao: com.exapps.velox.core.data.local.dao.PlayHistoryDao,
     private val bookmarkDao: com.exapps.velox.core.data.local.dao.BookmarkDao,
     private val scanner: MediaStoreScanner,
+    private val database: com.exapps.velox.core.data.local.VeloxDatabase,
     private val preferencesDataStore: DataStore<Preferences>,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : MediaLibraryRepository {
@@ -139,44 +141,65 @@ class MediaLibraryRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis() / 1000
         mediaItemDao.recordPlayed(id, now)
         playHistoryDao.insert(PlayHistoryEntity(mediaItemId = id, playedAtEpochSeconds = now))
+        // M5 (data-layer review): the KDoc promised a cap; enforce it so the
+        // history table can't grow unbounded on heavy listeners.
+        playHistoryDao.trimTo(PLAY_HISTORY_KEEP_MOST_RECENT)
     }
 
     override suspend fun rescanLibrary() = withContext(ioDispatcher) {
-        // Snapshot everything the user owns first: upsertAll is REPLACE, so without
-        // this every rescan (including the one at each app launch) would reset
-        // favourites, play statistics AND tag-editor edits for surviving tracks.
-        val userMetadata = mediaItemDao.getUserMetadataSnapshot()
+        // M3 (data-layer review): snapshot → upsert → delete → restore spans many
+        // statements. A concurrent recordPlayed between snapshot and restore used to
+        // be overwritten by the stale snapshot, and a mid-way crash left the tables
+        // torn — run the whole DB portion as one transaction.
+        database.withTransaction {
+            // H1 (data-layer review): snapshot EVERY row (see getUserMetadataSnapshot)
+            // so tag-editor-only overrides survive the REPLACE-upsert too.
+            val userMetadata = mediaItemDao.getUserMetadataSnapshot()
 
-        val result = scanner.scan()
-        mediaItemDao.upsertAll(result.mediaItems)
-        mediaItemDao.deleteMissing(result.mediaItems.map { it.id })
+            val result = scanner.scan()
+            mediaItemDao.upsertAll(result.mediaItems)
 
-        // Re-apply row-by-row — UPDATEs against deleted ids affect zero rows.
-        userMetadata.forEach { meta ->
-            mediaItemDao.restoreUserMetadata(
-                id = meta.id,
-                title = meta.title,
-                artistName = meta.artistName,
-                albumTitle = meta.albumTitle,
-                isFavorite = meta.isFavorite,
-                playCount = meta.playCount,
-                lastPlayedEpochSeconds = meta.lastPlayedEpochSeconds,
-            )
+            // C2 (data-layer review): empty scan results previously produced invalid
+            // `NOT IN ()` SQL and silently aborted the whole rescan. Skip deletion on
+            // an empty result set — that's protective against transient MediaStore
+            // failures rather than destructive.
+            val mediaIds = result.mediaItems.map { it.id }
+            if (mediaIds.isNotEmpty()) mediaItemDao.deleteMissing(mediaIds)
+
+            userMetadata.forEach { meta ->
+                if (mediaIds.isEmpty() || mediaIds.contains(meta.id)) {
+                    mediaItemDao.restoreUserMetadata(
+                        id = meta.id,
+                        title = meta.title,
+                        artistName = meta.artistName,
+                        albumTitle = meta.albumTitle,
+                        isFavorite = meta.isFavorite,
+                        playCount = meta.playCount,
+                        lastPlayedEpochSeconds = meta.lastPlayedEpochSeconds,
+                    )
+                }
+            }
+
+            albumDao.upsertAll(result.albums)
+            val albumIds = result.albums.map { it.id }
+            if (albumIds.isNotEmpty()) albumDao.deleteMissing(albumIds)
+
+            artistDao.upsertAll(result.artists)
+            val artistIds = result.artists.map { it.id }
+            if (artistIds.isNotEmpty()) artistDao.deleteMissing(artistIds)
         }
-
-        albumDao.upsertAll(result.albums)
-        albumDao.deleteMissing(result.albums.map { it.id })
-        artistDao.upsertAll(result.artists)
-        artistDao.deleteMissing(result.artists.map { it.id })
         preferencesDataStore.edit { it[HAS_SCANNED_KEY] = true }
         Unit
     }
 
     /** Settings → Storage (SCREEN_SETTINGS.md §8). Also zeroes the denormalized
-     * play statistics so Recently/Most Played reset along with the raw log. */
+     * play statistics so Recently/Most Played reset along with the raw log.
+     * M3: paired writes run atomically. */
     override suspend fun clearPlayHistory() = withContext(ioDispatcher) {
-        playHistoryDao.clearAll()
-        mediaItemDao.resetPlayStatistics()
+        database.withTransaction {
+            playHistoryDao.clearAll()
+            mediaItemDao.resetPlayStatistics()
+        }
     }
 
     override fun hasScannedBefore(): Flow<Boolean> =
@@ -184,6 +207,9 @@ class MediaLibraryRepositoryImpl @Inject constructor(
 
     private companion object {
         val HAS_SCANNED_KEY = booleanPreferencesKey("has_scanned_library")
+
+        /** M5: cap for play_history table (enforced after each insert). */
+        const val PLAY_HISTORY_KEEP_MOST_RECENT = 500
     }
 }
 

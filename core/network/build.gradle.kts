@@ -29,10 +29,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 
-    // Phase 2 network protocols: SMB (jcifs-ng), FTP (commons-net), WebDAV (OkHttp).
-    api(libs.jcifs.ng)
-    api(libs.commons.net)
-    api(libs.okhttp)
+    // Phase 2 network protocols. `implementation` (not `api`): consumers reference
+    // only core:network's own types — leaking the stacks to every feature module
+    // was flagged by the data-layer review.
+    implementation(libs.jcifs.ng)
+    implementation(libs.commons.net)
+    implementation(libs.okhttp)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

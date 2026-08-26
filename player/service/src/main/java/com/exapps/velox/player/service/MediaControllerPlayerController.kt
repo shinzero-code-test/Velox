@@ -92,15 +92,23 @@ class MediaControllerPlayerController @Inject constructor(
         val future = MediaController.Builder(context, sessionToken).buildAsync()
         future.addListener(
             {
-                controller = future.get().also { it.addListener(playerListener) }
-                syncStateFromController()
-                publishTracks(controller?.currentTracks)
+                try {
+                    controller = future.get().also { it.addListener(playerListener) }
+                    syncStateFromController()
+                    publishTracks(controller?.currentTracks)
+                } catch (e: Exception) {
+                    // H1 (player-stack review): unhandled connect failure crashed the
+                    // main thread; log and leave controller null so awaitController()
+                    // can time out cleanly instead of crashing the process.
+                    android.util.Log.w("VeloxPlayer", "MediaController connect failed", e)
+                }
             },
             ContextCompat.getMainExecutor(context),
         )
     }
 
     override fun play(queue: List<MediaItem>, startIndex: Int) {
+        if (queue.isEmpty()) return
         mainScope.launch {
             queueById = queue.associateBy { it.id.toString() }
             val media3Items = queue.map(MediaItem::toMedia3MediaItem)
@@ -196,13 +204,15 @@ class MediaControllerPlayerController @Inject constructor(
     }
 
     override fun addToQueue(item: MediaItem) {
-        queueById = queueById + (item.id.toString() to item)
-        mainScope.launch { controller?.addMediaItem(item.toMedia3MediaItem()) }
+        mainScope.launch {
+            queueById = queueById + (item.id.toString() to item)
+            controller?.addMediaItem(item.toMedia3MediaItem())
+        }
     }
 
     override fun playNext(item: MediaItem) {
-        queueById = queueById + (item.id.toString() to item)
         mainScope.launch {
+            queueById = queueById + (item.id.toString() to item)
             val c = controller ?: return@launch
             val insertAt = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
             c.addMediaItem(insertAt, item.toMedia3MediaItem())
@@ -211,7 +221,12 @@ class MediaControllerPlayerController @Inject constructor(
 
     override fun removeFromQueue(index: Int) { mainScope.launch { controller?.removeMediaItem(index) } }
     override fun moveQueueItem(fromIndex: Int, toIndex: Int) { mainScope.launch { controller?.moveMediaItem(fromIndex, toIndex) } }
-    override fun clearQueue() { mainScope.launch { controller?.clearMediaItems() } }
+    override fun clearQueue() {
+        mainScope.launch {
+            queueById = emptyMap()
+            controller?.clearMediaItems()
+        }
+    }
 
     override fun selectTrack(type: TrackType, trackId: String?) {
         mainScope.launch {
@@ -293,10 +308,12 @@ class MediaControllerPlayerController @Inject constructor(
         val resumeEnabled = runCatching { userSettings.settings.first().resumePlayback }.getOrDefault(true)
         if (!resumeEnabled) return
         val saved = runCatching { positionStore.get(item.id) }.getOrNull() ?: return
-        // Skip trivial positions (just-started) and near-end positions (auto-advance
-        // territory) — resuming 2s into a song or at the last second is worse than
-        // starting clean.
-        val maxResume = item.durationMs - END_RESUME_GUARD_MS
+        // M3 (data-layer review): fall back to the live controller duration when the
+        // domain item's durationMs is 0 (common for network streams where metadata
+        // isn't known until after prepare). Skip trivial/near-end positions.
+        val liveDuration = controller?.duration?.takeIf { it > 0 } ?: 0L
+        val effectiveDuration = maxOf(item.durationMs, liveDuration)
+        val maxResume = effectiveDuration - END_RESUME_GUARD_MS
         if (saved > START_RESUME_GUARD_MS && saved < maxResume) {
             controller?.seekTo(startIndex, saved)
         }
@@ -321,6 +338,16 @@ class MediaControllerPlayerController @Inject constructor(
                 // progress bar pinned at max while both time labels read zero until
                 // the first track change happened to fire a transition event.
                 syncStateFromController()
+            } else if (playbackState == Player.STATE_IDLE) {
+                // M2: stop()/clearMediaItems leaves stale currentItem/positionMs/
+                // durationMs in state; reset so the UI doesn't render a dead session
+                // as paused-ish. Shuffle/repeat/speed prefs survive.
+                _state.update {
+                    it.copy(
+                        currentItem = null, queue = emptyList(), currentIndex = -1,
+                        positionMs = 0, bufferedPositionMs = 0, durationMs = 0,
+                    )
+                }
             }
         }
 
@@ -329,6 +356,13 @@ class MediaControllerPlayerController @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
+            // C2 (player-stack review): clear the A-B loop on every track change so
+            // it doesn't hijack subsequent queue items.
+            _state.update {
+                if (it.loopStartMs != null || it.loopEndMs != null)
+                    it.copy(loopStartMs = null, loopEndMs = null)
+                else it
+            }
             syncStateFromController()
         }
 
@@ -346,6 +380,21 @@ class MediaControllerPlayerController @Inject constructor(
 
         override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
             _state.update { it.copy(playbackSpeed = playbackParameters.speed) }
+        }
+
+        /** H2 (player-stack review): a paused seekTo fires this but not the poll —
+         * without the override the scrubber snaps back to its pre-seek position. */
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            _state.update {
+                it.copy(
+                    positionMs = newPosition.positionMs.coerceAtLeast(0),
+                    currentIndex = newPosition.mediaItemIndex,
+                )
+            }
         }
     }
 

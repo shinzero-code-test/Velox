@@ -4,7 +4,10 @@ import android.content.Context
 import com.exapps.velox.core.data.local.dao.BookmarkDao
 import com.exapps.velox.core.data.local.dao.MediaItemDao
 import com.exapps.velox.core.data.local.dao.PlayHistoryDao
+import androidx.room.withTransaction
+import com.exapps.velox.core.data.local.VeloxDatabase
 import com.exapps.velox.core.data.local.dao.PlaylistDao
+import com.exapps.velox.core.common.di.IoDispatcher
 import com.exapps.velox.core.data.preferences.AppLanguage
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.network.model.NetworkProtocol
@@ -12,6 +15,7 @@ import com.exapps.velox.core.network.model.NetworkServer
 import com.exapps.velox.core.network.repo.NetworkLibraryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -31,6 +35,8 @@ import javax.inject.Singleton
 @Singleton
 class BackupManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher,
+    private val database: VeloxDatabase,
     private val userSettingsPreferences: UserSettingsPreferences,
     private val playlistDao: PlaylistDao,
     private val mediaItemDao: MediaItemDao,
@@ -146,50 +152,75 @@ class BackupManager @Inject constructor(
         )
     }
 
-    /** Writes the backup to a SAF uri; returns the byte count written. */
-    suspend fun exportTo(uri: android.net.Uri): Int {
+    /** Writes the backup to a SAF uri; returns the byte count written.
+     * H2 (data-layer review): SAF IO + JSON encoding hop to IO — callers launch on
+     * viewModelScope (Main). */
+    suspend fun exportTo(uri: android.net.Uri): Int = withContext(ioDispatcher) {
         val payload = buildPayload()
         val text = json.encodeToString(payload)
+        val bytes = text.toByteArray(Charsets.UTF_8)
         (context.contentResolver.openOutputStream(uri) ?: throw java.io.IOException("Cannot open $uri")).use { out ->
-            out.write(text.toByteArray())
+            out.write(bytes)
         }
-        return text.toByteArray().size
+        bytes.size
     }
 
     // ---- Import -------------------------------------------------------------------
 
-    /** Reads + applies a backup; returns a short human summary of what was applied. */
-    suspend fun restoreFrom(uri: android.net.Uri): String {
+    /** Reads + applies a backup; returns a short human summary of what was applied
+     * (H2: IO + parse off-main; M4-partial: library mutations are transactional and
+     * settings apply last so a throw can't leave half-restored state behind). */
+    suspend fun restoreFrom(uri: android.net.Uri): String = withContext(ioDispatcher) {
         val text = (context.contentResolver.openInputStream(uri)
             ?: throw java.io.IOException("Cannot read $uri")).use { it.readBytes().decodeToString() }
         val payload = json.decodeFromString<BackupPayload>(text)
-
-        applySettings(payload.settings)
-
-        val knownTrackIds = mediaItemDao.getByIds(payload.favoriteIds + payload.playHistory.map { it.first } + payload.bookmarks.map { it.mediaItemId })
-            .map { it.id }.toSet()
-
-        // Favourites — only for tracks that still exist.
-        payload.favoriteIds.filter { it in knownTrackIds }.forEach { mediaItemDao.setFavorite(it, true) }
-
-        // Play history rows re-inserted as-is for surviving tracks.
-        payload.playHistory.filter { it.first in knownTrackIds }.forEach { (id, at) ->
-            playHistoryDao.insert(com.exapps.velox.core.data.local.entity.PlayHistoryEntity(mediaItemId = id, playedAtEpochSeconds = at))
+        if (payload.formatVersion > BackupPayload.FORMAT_VERSION) {
+            throw IllegalStateException("Backup format v${payload.formatVersion} is newer than this app supports")
         }
 
-        // Bookmarks likewise.
-        payload.bookmarks.filter { it.mediaItemId in knownTrackIds }.forEach { b ->
-            bookmarkDao.insert(
-                com.exapps.velox.core.data.local.entity.BookmarkEntity(
-                    mediaItemId = b.mediaItemId,
-                    positionMs = b.positionMs,
-                    label = b.label,
-                    createdAtEpochSeconds = b.createdAtEpochSeconds,
-                ),
-            )
+        val knownTrackIds = payload.favoriteIds
+            .plus(payload.playHistory.map { it.first })
+            .plus(payload.bookmarks.map { it.mediaItemId })
+            .distinct()
+            // C2 (data-layer review): chunk to stay under SQLite's bind-variable cap
+            // and skip the query entirely for empty payloads (`IN ()` is invalid SQL).
+            .chunked(900)
+            .flatMap { mediaItemDao.getByIds(it) }
+            .map { it.id }
+            .toSet()
+
+        var favouritesApplied = 0
+        var historyApplied = 0
+        var bookmarksApplied = 0
+        var playlistsApplied = 0
+
+        val favIdsToApply = payload.favoriteIds.filter { it in knownTrackIds }
+        val historyToApply = payload.playHistory.filter { it.first in knownTrackIds }
+        val bookmarksToApply = payload.bookmarks.filter { it.mediaItemId in knownTrackIds }
+
+        database.withTransaction {
+            favIdsToApply.forEach { mediaItemDao.setFavorite(it, true) }
+            favouritesApplied = favIdsToApply.size
+
+            historyToApply.forEach { (id, at) ->
+                playHistoryDao.insert(com.exapps.velox.core.data.local.entity.PlayHistoryEntity(mediaItemId = id, playedAtEpochSeconds = at))
+                historyApplied++
+            }
+
+            bookmarksToApply.forEach { b ->
+                bookmarkDao.insert(
+                    com.exapps.velox.core.data.local.entity.BookmarkEntity(
+                        mediaItemId = b.mediaItemId,
+                        positionMs = b.positionMs,
+                        label = b.label,
+                        createdAtEpochSeconds = b.createdAtEpochSeconds,
+                    ),
+                )
+                bookmarksApplied++
+            }
         }
 
-        // Playlists merged by name (existing → items appended if missing).
+        // Playlists need cross-table work; done after the bookmark/media transaction.
         payload.playlists.forEach { backup ->
             val playlistId = playlistDao.findByName(backup.name)?.id
                 ?: playlistDao.insert(
@@ -201,9 +232,13 @@ class BackupManager @Inject constructor(
             val currentIds = playlistDao.observeItemsSnapshot(playlistId).map { it.mediaItemId }.toSet()
             val toAdd = backup.mediaItemIds.filter { it in knownTrackIds && it !in currentIds }
             if (toAdd.isNotEmpty()) playlistDao.addTracksAtEnd(playlistId, toAdd)
+            playlistsApplied++
         }
 
-        // Network servers + recents overwrite (pure preference-shaped).
+        // Settings last (M4): preferences overwrite only after all library work
+        // succeeded — a throw above leaves settings untouched.
+        applySettings(payload.settings)
+
         networkRepository.importState(
             payload.servers.map {
                 NetworkServer(
@@ -221,29 +256,32 @@ class BackupManager @Inject constructor(
             payload.recentStreams,
         )
 
-        return "settings · ${payload.playlists.size} playlists · ${payload.favoriteIds.size} favourites · " +
-            "${payload.bookmarks.size} bookmarks · ${payload.servers.size} servers"
+        "settings · $playlistsApplied playlists · $favouritesApplied favourites · " +
+            "$historyApplied history rows · $bookmarksApplied bookmarks · ${payload.servers.size} servers"
     }
 
     private suspend fun applySettings(s: SettingsPayload) {
-        userSettingsPreferences.setLanguage(runCatching { AppLanguage.valueOf(s.language) }.getOrDefault(AppLanguage.SYSTEM))
-        userSettingsPreferences.setAmoled(s.amoled)
-        userSettingsPreferences.setAccentIndex(s.accentIndex)
-        userSettingsPreferences.setSeekIncrementSeconds(s.seekIncrementSeconds)
-        userSettingsPreferences.setAutoPipOnLeave(s.autoPipOnLeave)
-        userSettingsPreferences.setResumePlayback(s.resumePlayback)
-        userSettingsPreferences.setSubtitleScalePercent(s.subtitleScalePercent)
-        userSettingsPreferences.setSubtitlePositionBottom(s.subtitlePositionBottom)
-        userSettingsPreferences.setAutoLoadExternalSubtitles(s.autoLoadExternalSubtitles)
-        userSettingsPreferences.setDecoderPreference(
-            runCatching { com.exapps.velox.core.data.preferences.DecoderPreference.valueOf(s.decoderPreference) }
-                .getOrDefault(com.exapps.velox.core.data.preferences.DecoderPreference.AUTO),
-        )
-        userSettingsPreferences.setGestureLongPressSpeedBoost(s.gestureLongPressSpeedBoost)
-        userSettingsPreferences.setGestureHorizontalSeekDrag(s.gestureHorizontalSeekDrag)
-        userSettingsPreferences.setGestureVerticalDragMapping(
-            runCatching { com.exapps.velox.core.data.preferences.VerticalDragMapping.valueOf(s.gestureVerticalDragMapping) }
-                .getOrDefault(com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT),
+        // M4-partial (data-layer review): coalesce 13 separate DataStore edits into
+        // one atomic write so readers can't observe a half-restored settings state.
+        val language = runCatching { AppLanguage.valueOf(s.language) }.getOrDefault(AppLanguage.SYSTEM)
+        val decoder = runCatching { com.exapps.velox.core.data.preferences.DecoderPreference.valueOf(s.decoderPreference) }
+            .getOrDefault(com.exapps.velox.core.data.preferences.DecoderPreference.AUTO)
+        val dragMapping = runCatching { com.exapps.velox.core.data.preferences.VerticalDragMapping.valueOf(s.gestureVerticalDragMapping) }
+            .getOrDefault(com.exapps.velox.core.data.preferences.VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT)
+        userSettingsPreferences.applyAll(
+            language = language,
+            amoled = s.amoled,
+            accentIndex = s.accentIndex,
+            seekIncrementSeconds = s.seekIncrementSeconds,
+            autoPipOnLeave = s.autoPipOnLeave,
+            resumePlayback = s.resumePlayback,
+            subtitleScalePercent = s.subtitleScalePercent,
+            subtitlePositionBottom = s.subtitlePositionBottom,
+            autoLoadExternalSubtitles = s.autoLoadExternalSubtitles,
+            decoderPreference = decoder,
+            gestureLongPressSpeedBoost = s.gestureLongPressSpeedBoost,
+            gestureHorizontalSeekDrag = s.gestureHorizontalSeekDrag,
+            gestureVerticalDragMapping = dragMapping,
         )
     }
 

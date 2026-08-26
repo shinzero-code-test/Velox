@@ -56,7 +56,7 @@ class UserSettingsPreferences @Inject constructor(
 
     val settings: Flow<UserSettings> = dataStore.data.map { prefs ->
         UserSettings(
-            language = prefs[LANGUAGE_KEY]?.let(AppLanguage::valueOf) ?: AppLanguage.SYSTEM,
+            language = prefs[LANGUAGE_KEY]?.let { runCatching { AppLanguage.valueOf(it) }.getOrNull() } ?: AppLanguage.SYSTEM,
             amoled = prefs[AMOLED_KEY] ?: false,
             accentIndex = prefs[ACCENT_KEY] ?: 0,
             seekIncrementSeconds = prefs[SEEK_INCREMENT_KEY] ?: 10,
@@ -65,11 +65,12 @@ class UserSettingsPreferences @Inject constructor(
             subtitleScalePercent = prefs[SUBTITLE_SCALE_KEY] ?: 100,
             subtitlePositionBottom = prefs[SUBTITLE_BOTTOM_KEY] ?: true,
             autoLoadExternalSubtitles = prefs[SUBTITLE_AUTOLOAD_KEY] ?: true,
-            decoderPreference = prefs[DECODER_PREF_KEY]?.let(DecoderPreference::valueOf) ?: DecoderPreference.AUTO,
+            decoderPreference = prefs[DECODER_PREF_KEY]
+                ?.let { runCatching { DecoderPreference.valueOf(it) }.getOrNull() } ?: DecoderPreference.AUTO,
             gestureLongPressSpeedBoost = prefs[GESTURE_SPEED_BOOST_KEY] ?: true,
             gestureHorizontalSeekDrag = prefs[GESTURE_H_SEEK_KEY] ?: true,
             gestureVerticalDragMapping = prefs[GESTURE_V_DRAG_KEY]
-                ?.let(VerticalDragMapping::valueOf)
+                ?.let { runCatching { VerticalDragMapping.valueOf(it) }.getOrNull() }
                 ?: VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
         )
     }
@@ -94,6 +95,38 @@ class UserSettingsPreferences @Inject constructor(
 
     suspend fun setGestureVerticalDragMapping(mapping: VerticalDragMapping) =
         dataStore.edit { it[GESTURE_V_DRAG_KEY] = mapping.name }
+
+    /** M4-partial (data-layer review): one atomic DataStore write for a full
+     * settings restore, so readers never observe a half-applied backup. */
+    suspend fun applyAll(
+        language: AppLanguage,
+        amoled: Boolean,
+        accentIndex: Int,
+        seekIncrementSeconds: Int,
+        autoPipOnLeave: Boolean,
+        resumePlayback: Boolean,
+        subtitleScalePercent: Int,
+        subtitlePositionBottom: Boolean,
+        autoLoadExternalSubtitles: Boolean,
+        decoderPreference: DecoderPreference,
+        gestureLongPressSpeedBoost: Boolean,
+        gestureHorizontalSeekDrag: Boolean,
+        gestureVerticalDragMapping: VerticalDragMapping,
+    ) = dataStore.edit { prefs ->
+        prefs[LANGUAGE_KEY] = language.name
+        prefs[AMOLED_KEY] = amoled
+        prefs[ACCENT_KEY] = accentIndex
+        prefs[SEEK_INCREMENT_KEY] = seekIncrementSeconds
+        prefs[AUTO_PIP_KEY] = autoPipOnLeave
+        prefs[RESUME_KEY] = resumePlayback
+        prefs[SUBTITLE_SCALE_KEY] = subtitleScalePercent
+        prefs[SUBTITLE_BOTTOM_KEY] = subtitlePositionBottom
+        prefs[SUBTITLE_AUTOLOAD_KEY] = autoLoadExternalSubtitles
+        prefs[DECODER_PREF_KEY] = decoderPreference.name
+        prefs[GESTURE_SPEED_BOOST_KEY] = gestureLongPressSpeedBoost
+        prefs[GESTURE_H_SEEK_KEY] = gestureHorizontalSeekDrag
+        prefs[GESTURE_V_DRAG_KEY] = gestureVerticalDragMapping.name
+    }
 
     private companion object {
         val LANGUAGE_KEY = stringPreferencesKey("app_language")

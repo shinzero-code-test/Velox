@@ -92,7 +92,13 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.GENRE,
         )
         // IS_MUSIC filters out notification tones / ringtones MediaStore also indexes.
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val baseSelection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        // Low nit (data-layer review): exclude pending/trashed on API 29+.
+        val selection = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            "$baseSelection AND (${MediaStore.MediaColumns.IS_PENDING} = 0) AND (${MediaStore.MediaColumns.IS_TRASHED} = 0)"
+        } else {
+            baseSelection
+        }
 
         context.contentResolver.query(collection, projection, selection, null, null)?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
@@ -150,7 +156,7 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Video.Media.SIZE,
         )
 
-        context.contentResolver.query(collection, projection, null, null, null)?.use { cursor ->
+        context.contentResolver.query(collection, projection, pendingTrashSelection(), null, null)?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
             val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.TITLE)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
@@ -188,3 +194,16 @@ class MediaStoreScanner @Inject constructor(
         private val ALBUM_ART_URI: Uri = Uri.parse("content://media/external/audio/albumart")
     }
 }
+
+/**
+ * Low nit (data-layer review): exclude not-yet-committed camera captures and
+ * trashed items (API 29+ columns). On older devices the extra predicate is
+ * simply absent — those OS versions never set the flags in the first place.
+ */
+private fun pendingTrashSelection(): String? =
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        "(" + MediaStore.MediaColumns.IS_PENDING + " = 0)" +
+            " AND (" + MediaStore.MediaColumns.IS_TRASHED + " = 0)"
+    } else {
+        null
+    }

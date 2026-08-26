@@ -16,6 +16,9 @@ class FtpClientHolder @javax.inject.Inject constructor() : NetworkClient {
         connectTimeout = 10_000
         defaultTimeout = 15_000
         connect(server.host, server.port)
+        // M10 (data-layer review): without UTF-8 control encoding, non-ASCII
+        // filenames mangle in listings and RETR paths.
+        setControlEncoding("UTF-8")
         enterLocalPassiveMode()
         soTimeout = 15_000
         val user = server.username.ifBlank { "anonymous" }
@@ -56,9 +59,9 @@ class FtpClientHolder @javax.inject.Inject constructor() : NetworkClient {
 
     override fun openStream(server: NetworkServer, url: String, positionMs: Long): InputStream {
         val client = connect(server)
-        // RETR supports a byte restart offset — map ms→bytes with the same bitrate
-        // heuristic as SMB; ExoPlayer re-seeks through the DataSource as needed.
-        val approxBytesPerMs = 16L * 1024L / 8L
+        // RETR supports a byte restart offset — same ~128 kbps audio estimate as
+        // SMB; ExoPlayer corrects via its own re-seeks through the DataSource.
+        val approxBytesPerMs = BYTES_PER_MS
         val offset = positionMs * approxBytesPerMs
         if (offset > 0) client.setRestartOffset(offset)
         val stream = client.retrieveFileStream(ftpPath(url))
@@ -85,4 +88,10 @@ class FtpClientHolder @javax.inject.Inject constructor() : NetworkClient {
         }
         true
     }.getOrDefault(false)
+
+    private companion object {
+        /** H3 (data-layer review): 16 bytes/ms ≈ 128 kbps audio. The old 2048 B/ms
+         * value was a ×1024 typo that overshot past EOF on every audio resume. */
+        const val BYTES_PER_MS = 16L
+    }
 }

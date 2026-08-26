@@ -19,6 +19,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    buildFeatures {
+        // M14: BuildConfig.DEBUG gates the destructive-migration escape hatch.
+        buildConfig = true
+    }
 }
 
 room {

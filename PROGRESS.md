@@ -372,3 +372,45 @@ Applied:
 - **CI** `concurrency:` group so rapid tag pushes don't race releases.
 
 versionCode 9.
+
+---
+
+## v1.0.3 — data-layer review fixes (verified findings only)
+
+Every finding from `tmp/review/data-layer.md` was re-checked against the code.
+All Critical/High items confirmed real and fixed. Deferred: H4 (Room schema
+exports + migration-test infra — needs a CI build to generate schemas first),
+M4 settings-write coalescing (partially done via `applyAll`), M13 playlist PK
+race, and several documented nits.
+
+- **C1** Migration 1→2: dropped `DEFAULT NULL` from both ADD COLUMN statements —
+  SQLite stores an explicit default that Room's TableInfo comparison rejects,
+  crashing every v1→v3 upgrade at runtime.
+- **C2** Empty-list `NOT IN ()`: rescan now skips deletion when the scan returns
+  zero rows (protective against transient MediaStore failures); BackupManager
+  chunks `getByIds` by ≤900 ids and skips empty payloads entirely.
+- **H1** Snapshot now covers EVERY row — tag-editor-only overrides previously
+  fell outside the WHERE clause and were silently reverted by rescans.
+- **M1** Custom SMB ports honoured in NetworkUrls.root().
+- **M2** findServer matches protocol + host (case-insensitive) + explicit port.
+- **M3** Rescan DB portion wrapped in withTransaction; clearPlayHistory too.
+- **M5** playHistoryDao.trimTo(500) called after each insert (was never called).
+- **M6** WebDAV display names decode only the final raw path segment via
+  android.net.Uri.decode (no %2F splitting, no '+'→space mangling).
+- **M7** Relative WebDAV hrefs resolve against the current directory with
+  dot-segment collapsing, not against the server root.
+- **M8** basePath segments percent-encoded before OkHttp URL construction.
+- **M9** parentOf() clamps at the authority/share boundary, appends trailing '/'.
+- **M10** FTP control encoding set to UTF-8.
+- **M11** Enum valueOf calls in the settings flow wrapped in runCatching with
+  fallbacks — no more collector crashes after enum renames.
+- **M12** Playlist detail track rows emit from observeById (live Room query) —
+  favourite/tag edits propagate without re-entering the playlist.
+- **M14** Destructive-migration fallback gated behind BuildConfig.DEBUG
+  (buildConfig feature enabled in core:data).
+- Lows: pending/trashed filter for audio+video scans (API 29+), EXTINF newline
+  sanitisation on M3U export, URLDecoder guard in NetworkUrls.displayName,
+  backup format-version gate (>supported → clear error), UTF-8 single
+  computation for export bytes, api→implementation for jcifs/commons-net/okhttp.
+
+versionCode 10.
