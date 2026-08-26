@@ -1,5 +1,6 @@
 package com.exapps.velox.feature.network
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,12 @@ fun NetworkScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<com.exapps.velox.core.network.model.NetworkServer?>(null) }
+
+    // H4 (features review): system back while browsing goes up one directory
+    // instead of exiting the entire destination.
+    if (viewModel.isBrowsing) {
+        BackHandler(enabled = true) { viewModel.goUp() }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(

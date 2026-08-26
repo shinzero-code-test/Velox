@@ -122,28 +122,32 @@ fun PlaylistDetailScreen(
             }
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.sm),
-        ) {
-            VeloxPrimaryButton(
-                text = stringResource(R.string.playlist_play_all),
-                onClick = {
-                    viewModel.onPlayAll(shuffle = false)
-                    current.tracks.firstOrNull()?.let(onMediaItemClick)
-                },
-                modifier = Modifier.weight(1f),
-            )
-            VeloxSecondaryButton(
-                text = stringResource(R.string.playlist_shuffle),
-                onClick = {
-                    viewModel.onPlayAll(shuffle = true)
-                    current.tracks.firstOrNull()?.let(onMediaItemClick)
-                },
-                modifier = Modifier.weight(1f),
-            )
+        // H1 (features review): hide play/shuffle when empty — they used to
+        // navigate to a dead Now Playing with nothing playing.
+        if (current.tracks.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.sm),
+            ) {
+                VeloxPrimaryButton(
+                    text = stringResource(R.string.playlist_play_all),
+                    onClick = {
+                        viewModel.onPlayAll(shuffle = false)
+                        current.tracks.firstOrNull()?.let(onMediaItemClick)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                VeloxSecondaryButton(
+                    text = stringResource(R.string.playlist_shuffle),
+                    onClick = {
+                        viewModel.onPlayAll(shuffle = true)
+                        current.tracks.randomOrNull()?.let(onMediaItemClick)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
         if (current.tracks.isEmpty()) {

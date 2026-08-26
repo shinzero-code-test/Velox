@@ -44,4 +44,6 @@
     <string name="search_prompt_title">ابحث عمّا تريد تشغيله</string>
     <string name="search_prompt_body">ابدأ بالكتابة للبحث في مكتبتك.</string>
     <string name="cd_video_result">فيديو</string>
+    <string name="cd_favorite_add">إضافة إلى المفضلة</string>
+    <string name="cd_favorite_remove">إزالة من المفضلة</string>
 </resources>

@@ -42,4 +42,6 @@
     <string name="search_prompt_title">Find something to play</string>
     <string name="search_prompt_body">Start typing to search your library.</string>
     <string name="cd_video_result">Video</string>
+    <string name="cd_favorite_add">Add to favourites</string>
+    <string name="cd_favorite_remove">Remove from favourites</string>
 </resources>

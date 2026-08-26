@@ -172,7 +172,9 @@ private fun TrackRow(
             ) {
                 Icon(
                     imageVector = if (track.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = null,
+                    contentDescription = stringResource(
+                        if (track.isFavorite) R.string.cd_favorite_remove else R.string.cd_favorite_add,
+                    ),
                     tint = if (track.isFavorite) accentColor() else VeloxColors.OnSurfaceVariant,
                 )
             }

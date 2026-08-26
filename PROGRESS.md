@@ -414,3 +414,21 @@ race, and several documented nits.
   computation for export bytes, api→implementation for jcifs/commons-net/okhttp.
 
 versionCode 10.
+
+---
+
+## v1.0.4 — features review fixes (verified findings only)
+
+From `tmp/review/features-library-playlists-network.md`. C1 root-cause analysis
+of the "no navigation" live bug is moot (user confirmed the symptom was a
+testing artifact); C2 empty-queue crash already fixed in v1.0.0 (H6).
+
+- **H1** Empty playlist Play-All/Shuffle no longer navigates to dead Now Playing;
+  Shuffle navigates by the actually-played (shuffled) track.
+- **H3** Favourite hearts in LibraryComponents and CollectionDetailScreen carry
+  contentDescription strings (cd_favorite_add/cd_favorite_remove/
+  cd_favorite_toggle) for TalkBack.
+- **H4** Network browser: system back goes up one directory while browsing
+  instead of exiting the destination.
+
+versionCode 11.
