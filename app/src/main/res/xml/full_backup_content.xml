@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- H1 (app-shell review): the single DataStore file holds network-share
+     credentials — it must never leave the device via cloud backup or
+     device-to-device transfer. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore" />
+</full-backup-content>

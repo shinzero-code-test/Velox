@@ -63,13 +63,3 @@ sealed interface VeloxRoute {
     @Serializable
     data object Statistics : VeloxRoute
 }
-
-/** The four tabs that share the bottom navigation bar + persistent Mini Player chrome
- * (SCREEN_PATTERNS.md: "Mini Player: Global — persists across all screens except
- * Now Playing, Video Player (fullscreen), and Onboarding"). */
-val BOTTOM_NAV_ROUTES: List<VeloxRoute> = listOf(
-    VeloxRoute.Library,
-    VeloxRoute.Playlists,
-    VeloxRoute.Search,
-    VeloxRoute.Settings,
-)

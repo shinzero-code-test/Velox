@@ -25,4 +25,8 @@
     <string name="onboarding_permissions_skip">Skip for now</string>
     <string name="widget_label">Velox now playing</string>
     <string name="widget_description">Playback controls and the current track</string>
+    <string name="cd_previous">Previous</string>
+    <string name="cd_next">Next</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
 </resources>

@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,9 +30,12 @@ import com.exapps.velox.ui.OnboardingScreen
 import kotlinx.coroutines.launch
 
 @Composable
-fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
+fun VeloxNavHost(
+    startDestination: VeloxRoute,
+    appViewModel: AppViewModel,
+    modifier: Modifier = Modifier,
+) {
     val navController = rememberNavController()
-    val appViewModel: AppViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     val activity = LocalContext.current.findActivity()
 
@@ -48,19 +50,13 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
     }
 
     // Phase 1 M4 "File association": an externally-opened file already started
-    // playing in MainActivity — surface the matching player chrome once the graph
+    // playing in MainActivity — surface the Now Playing chrome once the graph
     // exists, then clear the one-shot request.
     LaunchedEffect(Unit) {
-        appViewModel.externalPlayback.collect { request ->
-            when (request) {
-                null -> Unit
-                is com.exapps.velox.ExternalPlayback -> {
-                    // v0.4.0: always the Now Playing chrome — the fullscreen video
-                    // route resolves its item through the library database, which
-                    // externally-opened files aren't in. Documented in PROGRESS.md.
-                    navController.navigate(VeloxRoute.NowPlaying)
-                    appViewModel.consumeExternalPlayback()
-                }
+        appViewModel.externalPlayback.collect { itemId ->
+            if (itemId != null) {
+                navController.navigate(VeloxRoute.NowPlaying)
+                appViewModel.consumeExternalPlayback()
             }
         }
     }
@@ -73,7 +69,10 @@ fun VeloxNavHost(startDestination: VeloxRoute, modifier: Modifier = Modifier) {
                     scope.launch {
                         appViewModel.onOnboardingComplete()
                         navController.navigate(VeloxRoute.Library) {
+                            // H2 (app-shell review): replay-intro from Settings must
+                            // not stack a second Library destination on top.
                             popUpTo(VeloxRoute.Onboarding) { inclusive = true }
+                            launchSingleTop = true
                         }
                     }
                 },

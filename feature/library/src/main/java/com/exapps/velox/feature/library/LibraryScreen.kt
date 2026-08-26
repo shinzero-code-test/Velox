@@ -79,14 +79,23 @@ fun LibraryScreen(
     val permissionsToRequest = rememberMediaPermissions()
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { results -> viewModel.onMediaPermissionResult(results.values.any { it }) }
+    ) { results ->
+        // Notification grant/denial must never gate library access — only the
+        // media permissions decide (POST_NOTIFICATIONS rides along in the request).
+        val mediaGranted = results
+            .filterKeys { it != Manifest.permission.POST_NOTIFICATIONS }
+            .values.any { it }
+        viewModel.onMediaPermissionResult(mediaGranted)
+    }
 
     // Check on first composition too — covers the case where permission was
     // already granted in a previous session (no dialog should flash on launch).
     LaunchedEffect(Unit) {
-        val alreadyGranted = permissionsToRequest.any { permission ->
-            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-        }
+        val alreadyGranted = permissionsToRequest
+            .filter { it != Manifest.permission.POST_NOTIFICATIONS }
+            .any { permission ->
+                ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+            }
         viewModel.onMediaPermissionResult(alreadyGranted)
     }
 
@@ -235,7 +244,13 @@ private fun LibraryTabRow(selected: LibraryGroup, onSelect: (LibraryGroup) -> Un
 @Composable
 private fun rememberMediaPermissions(): Array<String> = remember {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
+        arrayOf(
+            Manifest.permission.READ_MEDIA_AUDIO,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            // C3 (app-shell review): include so re-prompt flows can also recover the
+            // playback notification on 13+. Denial here must never block media access.
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
     } else {
         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     }

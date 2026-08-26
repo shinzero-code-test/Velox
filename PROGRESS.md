@@ -338,3 +338,37 @@ actual SMB use, which runs on ExoPlayer's loader thread instead of main. FTP
 and WebDAV clients were audited and confirmed offline at construction.
 
 versionCode 8.
+
+---
+
+## v1.0.2 — app-shell review fixes (verified findings only)
+
+Every finding from `tmp/review/app-shell.md` was re-checked against the code
+before fixing. **C2 ("compileSdk 37 unavailable") dismissed** — releases have
+built green against `platforms;android-37.0` since v0.4.0. **M1 (runBlocking
+locale load at startup) verified but deliberately kept** — attachBaseContext
+needs the value synchronously; a single small file read, documented tradeoff.
+
+Applied:
+- **C3** POST_NOTIFICATIONS now requested on API 33+ from onboarding *and* the
+  Library permission flow; notification grant/denial explicitly never gates
+  library access.
+- **H1** `data_extraction_rules.xml` + `full_backup_content.xml` exclude the
+  credential-bearing DataStore from cloud backup and device-transfer.
+- **H2** replay-intro → Library navigate gains `launchSingleTop` (no duplicate
+  Library destinations).
+- **M2** bottom chrome height measured via `onGloballyPositioned`; fixed 140dp
+  constant removed (content no longer floats or scrolls under the bar).
+- **M3/M9** widget text/buttons use GlanceTheme colors; transport glyphs carry
+  real contentDescriptions.
+- **M4** widget receiver `exported="false"` (system still delivers updates).
+- **M5** ACTION_VIEW: extension-based MIME sniff fallback when pickers send
+  null/octet-stream; manifest adds x-matroska/ogg/x-flac types.
+- **M6** PiP params: 16:9 aspect + `setAutoEnterEnabled` on S+.
+- **M7** AppViewModel now passed into VeloxNavHost explicitly (no dual lookup).
+- **L1/L2/L5/L8** dead code removed (BOTTOM_NAV_ROUTES, ExternalPlayback.isVideo,
+  tools:targetApi, vectorDrawables.useSupportLibrary).
+- **L10** crash log rotates: previous report preserved as `_prev`.
+- **CI** `concurrency:` group so rapid tag pushes don't race releases.
+
+versionCode 9.

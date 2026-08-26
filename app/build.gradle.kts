@@ -14,14 +14,10 @@ android {
         applicationId = "com.exapps.velox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.1"
+        versionCode = 9
+        versionName = "1.0.2"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
-    }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"    }
 
     // Release signing is driven by env vars (CI). Falls back to debug signing
     // locally so `assembleRelease` always produces an installable APK.

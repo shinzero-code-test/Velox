@@ -15,4 +15,5 @@
 !.idea/runConfigurations
 *.hprof
 .navigation/
+tmp/
 /gradle/wrapper/gradle-wrapper.jar

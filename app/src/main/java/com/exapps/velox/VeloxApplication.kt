@@ -14,6 +14,7 @@ class VeloxApplication : Application() {
 
     companion object {
         const val LAST_CRASH_FILE = "last_crash.txt"
+        const val PREV_CRASH_FILE = "last_crash_prev.txt"
     }
 
     override fun onCreate() {
@@ -21,9 +22,15 @@ class VeloxApplication : Application() {
 
         // Phase 1.1 "Crash & ANR hardening": persist the last crash so it can be
         // inspected/shared from Settings → About even after the process is gone.
+        // L10 (app-shell review): keep one previous report so consecutive crashes
+        // don't erase each other before the About screen can read them.
         val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching {
+                val current = File(filesDir, LAST_CRASH_FILE)
+                if (current.isFile) {
+                    current.renameTo(File(filesDir, PREV_CRASH_FILE))
+                }
                 File(filesDir, LAST_CRASH_FILE).writeText(
                     buildString {
                         appendLine("time_epoch_ms=" + System.currentTimeMillis())

@@ -37,11 +37,11 @@ class AppViewModel @Inject constructor(
     /** Phase 1 M4 "File association": set after an externally-opened file starts
      * playing; the nav host consumes it once the graph is up and pushes the right
      * player screen on top. */
-    private val _externalPlayback = MutableStateFlow<ExternalPlayback?>(null)
-    val externalPlayback: StateFlow<ExternalPlayback?> = _externalPlayback.asStateFlow()
+    private val _externalPlayback = MutableStateFlow<Long?>(null)
+    val externalPlayback: StateFlow<Long?> = _externalPlayback.asStateFlow()
 
-    fun onExternalMediaStarted(itemId: Long, isVideo: Boolean) {
-        _externalPlayback.value = ExternalPlayback(itemId, isVideo)
+    fun onExternalMediaStarted(itemId: Long) {
+        _externalPlayback.value = itemId
     }
 
     fun consumeExternalPlayback() {
@@ -59,6 +59,3 @@ class AppViewModel @Inject constructor(
         onboardingPreferences.setOnboardingComplete(true)
     }
 }
-
-/** One-shot descriptor for a file opened through ACTION_VIEW (Phase 1 M4). */
-data class ExternalPlayback(val itemId: Long, val isVideo: Boolean)

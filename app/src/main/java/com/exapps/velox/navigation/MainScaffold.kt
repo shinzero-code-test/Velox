@@ -1,6 +1,7 @@
 package com.exapps.velox.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,13 +22,21 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.exapps.velox.R
 import com.exapps.velox.core.ui.theme.VeloxColors
+import com.exapps.velox.core.ui.theme.VeloxShapes
 import com.exapps.velox.core.ui.theme.VeloxSpacing
 import com.exapps.velox.core.ui.theme.VeloxTheme
 import com.exapps.velox.core.ui.theme.accentColor
@@ -50,16 +60,30 @@ fun MainScaffold(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    // M2 (app-shell review): measure the real chrome column (mini player + nav bar
+    // + insets) instead of reserving a fixed 140dp — the old constant floated
+    // content above the bar when the mini player was hidden and let it scroll
+    // under the bar when visible.
+    var chromeHeightPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val chromePadding = with(androidx.compose.ui.platform.LocalDensity.current) {
+        chromeHeightPx.toDp()
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = BOTTOM_CHROME_RESERVED_HEIGHT),
+                .padding(bottom = chromePadding),
         ) {
             content()
         }
 
-        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .onGloballyPositioned { chromeHeightPx = it.size.height },
+        ) {
             MiniPlayer(
                 onExpand = onExpandPlayer,
                 modifier = Modifier.padding(bottom = VeloxSpacing.sm),
@@ -96,6 +120,10 @@ private fun RowScope.BottomNavEntry(item: BottomNavItem, selected: Boolean, onCl
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .weight(1f)
+            .heightIn(min = 48.dp)
+            // L3 (app-shell review): visible selected affordance + a11y-min height.
+            .clip(VeloxShapes.md)
+            .background(if (selected) glassSurfaceColor(elevated = true) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = VeloxSpacing.xxs),
     ) {
@@ -111,10 +139,3 @@ private fun RowScope.BottomNavEntry(item: BottomNavItem, selected: Boolean, onCl
         )
     }
 }
-
-/** Approximate combined height of the bottom nav bar + the mini player's own
- * reserved space, so scrollable content never sits underneath either — see the
- * SCREEN_PATTERNS.md requirement quoted in this file's header. A precise version
- * would measure this at runtime (WindowInsets + onGloballyPositioned); this fixed
- * value is a deliberate Phase 0 simplification — see PROGRESS.md. */
-private val BOTTOM_CHROME_RESERVED_HEIGHT = 140.dp

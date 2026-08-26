@@ -20,6 +20,7 @@ import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlayerController
 import androidx.compose.ui.Modifier
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
                     startDestination?.let { destination ->
-                        VeloxNavHost(startDestination = destination)
+                        VeloxNavHost(startDestination = destination, appViewModel = appViewModel)
                     }
                 }
             }
@@ -106,9 +107,19 @@ class MainActivity : ComponentActivity() {
     private fun handleViewIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val data = intent.data ?: return
-        val isVideo = (intent.type ?: dataMimeType(data)).startsWith("video")
         lifecycleScope.launch {
             val title = resolveDisplayName(data) ?: data.lastPathSegment ?: "Unknown"
+            // M5 (app-shell review): many pickers send null/octet-stream — fall back
+            // to an extension-based sniff before defaulting to audio.
+            val mime = intent.type ?: dataMimeType(data)
+            val resolvedMime = if (mime.startsWith("audio") || mime.startsWith("video")) {
+                mime
+            } else {
+                MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                    title.substringAfterLast('.', "").lowercase(),
+                ) ?: mime
+            }
+            val isVideo = resolvedMime.startsWith("video")
             val item = com.exapps.velox.core.domain.model.MediaItem(
                 id = -(System.currentTimeMillis()),
                 uri = data.toString(),
@@ -117,7 +128,7 @@ class MainActivity : ComponentActivity() {
                 durationMs = 0L, // resolved by the player itself
             )
             playerController.play(listOf(item))
-            appViewModel.onExternalMediaStarted(item.id, isVideo)
+            appViewModel.onExternalMediaStarted(item.id)
         }
     }
 
@@ -130,14 +141,22 @@ class MainActivity : ComponentActivity() {
     }.getOrNull()
 
     /** SCREEN_VIDEO_PLAYER.md §9 / Settings → Playback → "Auto PiP on leave":
-     * leaving the app while a video plays minimizes to picture-in-picture. */
+     * leaving the app while a video plays minimizes to picture-in-picture.
+     * M6 (app-shell review): fixed 16:9 aspect + auto-enter on S+ so the system
+     * transition doesn't letterbox; onUserLeaveHint remains the pre-S fallback. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         val settings = latestSettings.value
         val playback = playerController.state.value
         val playingVideo = playback.isPlaying && playback.currentItem?.mediaType == MediaType.VIDEO
         if (settings.autoPipOnLeave && playingVideo) {
-            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+            enterPictureInPictureMode(buildPipParams())
         }
     }
+
+    private fun buildPipParams(): PictureInPictureParams =
+        PictureInPictureParams.Builder()
+            .setAspectRatio(android.util.Rational(16, 9))
+            .apply { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) setAutoEnterEnabled(true) }
+            .build()
 }

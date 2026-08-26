@@ -34,6 +34,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import com.exapps.velox.MainActivity
 import com.exapps.velox.core.domain.player.PlayerController
 import dagger.hilt.EntryPoint
@@ -92,7 +94,7 @@ object VeloxAppWidget : GlanceAppWidget() {
                             Text(
                                 text = state.currentItem?.title ?: "Velox",
                                 style = TextStyle(
-                                    color = ColorProvider(Color.White),
+                                    color = GlanceTheme.colors.onSurface,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium,
                                 ),
@@ -101,18 +103,22 @@ object VeloxAppWidget : GlanceAppWidget() {
                             Spacer(modifier = GlanceModifier.height(2.dp))
                             Text(
                                 text = state.currentItem?.artistName ?: "",
-                                style = TextStyle(color = ColorProvider(Color(0xFF9AA0A6)), fontSize = 12.sp),
+                                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp),
                                 maxLines = 1,
                             )
                         }
 
                         Spacer(modifier = GlanceModifier.width(8.dp))
 
-                        GlyphButton("\u23EE", actionRunCallback<PreviousAction>())
+                        GlyphButton("\u23EE", context.getString(com.exapps.velox.R.string.cd_previous), actionRunCallback<PreviousAction>())
                         Spacer(modifier = GlanceModifier.width(4.dp))
-                        GlyphButton(if (state.isPlaying) "\u23F8" else "\u25B6", actionRunCallback<PlayPauseAction>())
+                        GlyphButton(
+                            if (state.isPlaying) "\u23F8" else "\u25B6",
+                            context.getString(if (state.isPlaying) com.exapps.velox.R.string.cd_pause else com.exapps.velox.R.string.cd_play),
+                            actionRunCallback<PlayPauseAction>(),
+                        )
                         Spacer(modifier = GlanceModifier.width(4.dp))
-                        GlyphButton("\u23ED", actionRunCallback<NextAction>())
+                        GlyphButton("\u23ED", context.getString(com.exapps.velox.R.string.cd_next), actionRunCallback<NextAction>())
                         Spacer(modifier = GlanceModifier.width(10.dp))
                     }
                 }
@@ -120,19 +126,22 @@ object VeloxAppWidget : GlanceAppWidget() {
         }
     }
 
-    /** Round translucent glyph button — unicode glyphs avoid shipping extra drawables. */
+    /** Round translucent glyph button — unicode glyphs avoid shipping extra drawables.
+     * L9 (app-shell review): the glyph itself is meaningless to TalkBack, so the box
+     * carries a real contentDescription. */
     @androidx.compose.runtime.Composable
-    private fun GlyphButton(glyph: String, onClick: Action) {
+    private fun GlyphButton(glyph: String, contentDescription: String, onClick: Action) {
         Box(
             modifier = GlanceModifier
                 .width(40.dp)
                 .height(40.dp)
                 .background(ColorProvider(Color(0x22FFFFFF)))
                 .cornerRadius(20.dp)
-                .clickable(onClick),
+                .clickable(onClick)
+                .semantics { this.contentDescription = contentDescription },
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = glyph, style = TextStyle(color = ColorProvider(Color.White), fontSize = 18.sp))
+            Text(glyph, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 18.sp))
         }
     }
 

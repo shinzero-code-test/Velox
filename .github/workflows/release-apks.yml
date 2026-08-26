@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# L7 (app-shell review, partial): rapid tag pushes must not race two releases.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-release:
     name: Build signed APKs (all ABIs) & publish release

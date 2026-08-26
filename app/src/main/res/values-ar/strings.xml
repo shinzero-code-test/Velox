@@ -22,4 +22,8 @@
     <string name="onboarding_permissions_skip">تخطي الآن</string>
     <string name="widget_label">Velox قيد التشغيل</string>
     <string name="widget_description">عناصر التحكم في التشغيل والمقطع الحالي</string>
+    <string name="cd_previous">السابق</string>
+    <string name="cd_next">التالي</string>
+    <string name="cd_play">تشغيل</string>
+    <string name="cd_pause">إيقاف مؤقت</string>
 </resources>
