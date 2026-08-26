@@ -323,3 +323,18 @@ Now Playing caps its width (~720dp) and centres on expanded widths; album grid
 switches from fixed 2 columns to adaptive 160dp cells (up to 4 across).
 
 versionCode 7. Android Auto: deferred by product decision.
+
+---
+
+## v1.0.1 — launch crash fix (device-reported)
+
+**Symptom:** instant `NetworkOnMainThreadException` crash on every app start —
+`VeloxPlaybackService.onCreate` → Dagger builds `SmbClient` → jcifs-ng's
+`BaseContext` constructor initialises the NetBIOS name-service cache, which
+performs hostname lookups. StrictMode (correctly) kills it.
+
+**Fix:** `baseContext` in `SmbClient` is now `by lazy` — jCIFS boots on first
+actual SMB use, which runs on ExoPlayer's loader thread instead of main. FTP
+and WebDAV clients were audited and confirmed offline at construction.
+
+versionCode 8.

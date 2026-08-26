@@ -17,7 +17,15 @@ class SmbClient @javax.inject.Inject constructor() : NetworkClient {
 
     // jcifs-ng 2.1.x: BaseContext takes a Configuration; the public BaseConfiguration
     // ctor builds the full default property set.
-    private val baseContext: CIFSContext = BaseContext(BaseConfiguration(true))
+    //
+    // CRITICAL: BaseContext's constructor initialises jcifs' NetBIOS name-service
+    // cache, which performs DNS/localhost lookups. Constructing it eagerly used to
+    // crash every app launch with NetworkOnMainThreadException, because the DI graph
+    // builds this singleton inside VeloxPlaybackService.onCreate (main thread).
+    // Lazy keeps that work off main — first touch is an ExoPlayer loader thread.
+    private val baseContext: CIFSContext by lazy {
+        BaseContext(BaseConfiguration(true))
+    }
 
     private fun contextFor(server: NetworkServer): CIFSContext = if (server.username.isBlank()) {
         baseContext.withAnonymousCredentials()
