@@ -58,4 +58,5 @@
     <string name="markers_bookmarks">علاماتك</string>
     <string name="markers_add">إضافة عند الموضع</string>
     <string name="cd_favorite_toggle">تبديل المفضلة</string>
+    <string name="cd_delete_marker">حذف العلامة</string>
 </resources>

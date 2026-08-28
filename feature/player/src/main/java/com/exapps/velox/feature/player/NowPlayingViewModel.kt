@@ -207,10 +207,14 @@ class NowPlayingViewModel @Inject constructor(
     val chapters: StateFlow<List<ChaptersLoader.Chapter>> = _chapters.asStateFlow()
 
     /** Call from the sheet when it opens — loads chapters + starts bookmark watching. */
+    /** Called from the sheet when it opens — bookmarks arrive via the existing flow
+     * collector; chapters read once from the sidecar file (now suspend → IO). */
     fun loadMarkersFor(mediaItemId: Long, item: MediaItem?) {
         bookmarksJob?.cancel()
         bookmarksJob = launchBookmarks(mediaItemId)
-        _chapters.value = item?.let { chaptersLoader.load(it) }.orEmpty()
+        viewModelScope.launch {
+            _chapters.value = item?.let { chaptersLoader.load(it) }.orEmpty()
+        }
     }
 
     private fun launchBookmarks(mediaItemId: Long): Job = viewModelScope.launch {

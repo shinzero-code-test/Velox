@@ -4,6 +4,8 @@ import com.exapps.velox.core.domain.model.MediaItem
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Phase 2 "Chapters": sidecar chapter lists next to the media file —
@@ -24,7 +26,7 @@ class ChaptersLoader @Inject constructor() {
 
     data class Chapter(val timeMs: Long, val title: String)
 
-    fun load(item: MediaItem): List<Chapter> = runCatching { loadUnsafe(item) }.getOrDefault(emptyList())
+    suspend fun load(item: MediaItem): List<Chapter> = withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { loadUnsafe(item) }.getOrDefault(emptyList()) }
 
     private fun loadUnsafe(item: MediaItem): List<Chapter> {
         val folder = item.folderPath ?: return emptyList()

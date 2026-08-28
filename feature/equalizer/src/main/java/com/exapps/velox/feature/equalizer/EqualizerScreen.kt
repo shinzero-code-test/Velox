@@ -204,12 +204,14 @@ fun EqualizerScreen(
                     value = (state?.bassBoostStrength ?: 0) / 10f,
                     enabled = state?.enabled == true,
                     onChange = { viewModel.onBassBoostChange((it * 10).toInt()) },
+                    onChangeFinished = viewModel::onBassBoostChangeFinished,
                 )
                 EffectSliderRow(
                     label = stringResource(R.string.equalizer_virtualizer),
                     value = (state?.virtualizerStrength ?: 0) / 10f,
                     enabled = state?.enabled == true,
                     onChange = { viewModel.onVirtualizerChange((it * 10).toInt()) },
+                    onChangeFinished = viewModel::onVirtualizerChangeFinished,
                 )
             }
         }
@@ -250,6 +252,7 @@ private fun EffectSliderRow(
     value: Float,
     enabled: Boolean,
     onChange: (Float) -> Unit,
+    onChangeFinished: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -263,6 +266,7 @@ private fun EffectSliderRow(
         Slider(
             value = value.coerceIn(0f, 100f),
             onValueChange = { if (enabled) onChange(it) },
+            onValueChangeFinished = onChangeFinished,
             valueRange = 0f..100f,
             enabled = enabled,
             colors = SliderDefaults.colors(

@@ -120,9 +120,16 @@ class AndroidAudioEffectsController @Inject constructor(
             bassStrength = saved.bassBoostStrength
             virtualizerStrength = saved.virtualizerStrength
             activePresetId = saved.presetId
+            // M9 (features review): ≤6-band devices collapse several canonical
+            // frequencies onto the same physical band — first canonical wins
+            // (don't overwrite an already-populated band), giving a deterministic
+            // result independent of map iteration order.
             EqualizerPreset.NORMAL.frequenciesHz.forEachIndexed { canonicalIndex, freqHz ->
                 val target = bands.minBy { abs(it.centerFrequencyMilliHz / 1000.0 - freqHz) }
-                desiredBandLevels[target.index] = saved.bandGainsMillibel.getOrNull(canonicalIndex) ?: 0
+                val savedLevel = saved.bandGainsMillibel.getOrNull(canonicalIndex) ?: 0
+                if (desiredBandLevels[target.index] == null) {
+                    desiredBandLevels[target.index] = savedLevel
+                }
             }
             applyDesiredToHardware()
             publishState()

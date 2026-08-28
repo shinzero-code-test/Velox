@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -202,11 +203,21 @@ fun VideoPlayerScreen(
         }
         onDispose { }
     }
+    // M4 (features review): capture the brightness the activity launched with so a
+    // user-driven override doesn't stick after the player is closed.
+    val initialBrightness = rememberSaveable {
+        activity?.window?.attributes?.screenBrightness ?: -1f
+    }
     DisposableEffect(Unit) {
         onDispose {
             activity?.window?.let { window ->
                 WindowCompat.getInsetsController(window, view)
                     .show(WindowInsetsCompat.Type.systemBars())
+                // Restore the activity's pre-player brightness — BRIGHTNESS_OVERRIDE_NONE
+                // drops any override the player set.
+                val attrs = window.attributes
+                attrs.screenBrightness = initialBrightness
+                window.attributes = attrs
             }
             // Leaving the fullscreen player stops the video's audio too — a video
             // never becomes background audio (SCREEN_VIDEO_PLAYER.md §2). Rotation /

@@ -67,8 +67,11 @@ class SettingsViewModel @Inject constructor(
         // Update the in-memory locale BEFORE persisting so the recreate() triggered by
         // onLanguageChanged attaches the new locale synchronously (SCREEN_SETTINGS.md
         // §7 "Immediate apply") instead of only after a full process restart.
+        // H1 (features review): wrap the persist in NonCancellable — recreation
+        // tears down the viewModelScope before the DataStore write commits, so the
+        // previous language silently returns on next process start.
         localeManager.applyNow(language)
-        viewModelScope.launch { preferences.setLanguage(language) }
+        viewModelScope.launch(kotlinx.coroutines.NonCancellable) { preferences.setLanguage(language) }
     }
     fun setSeekIncrementSeconds(seconds: Int) = viewModelScope.launch { preferences.setSeekIncrementSeconds(seconds) }
     fun setAutoPip(enabled: Boolean) = viewModelScope.launch { preferences.setAutoPipOnLeave(enabled) }

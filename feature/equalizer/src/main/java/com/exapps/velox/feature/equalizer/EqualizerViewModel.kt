@@ -52,14 +52,18 @@ class EqualizerViewModel @Inject constructor(
     fun onBandLevelChangeFinished() = persist()
 
     fun onBassBoostChange(strength: Int) {
+        // H4 (features review): during a drag we update hardware live, but defer the
+        // DataStore persist until release — matches the band-slider contract.
         effects.setBassBoostStrength(strength)
-        persist()
     }
+
+    fun onBassBoostChangeFinished() = persist()
 
     fun onVirtualizerChange(strength: Int) {
         effects.setVirtualizerStrength(strength)
-        persist()
     }
+
+    fun onVirtualizerChangeFinished() = persist()
 
     fun onPresetSelected(preset: EqualizerPreset) {
         effects.applyPreset(preset)

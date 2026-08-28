@@ -432,3 +432,31 @@ testing artifact); C2 empty-queue crash already fixed in v1.0.0 (H6).
   instead of exiting the destination.
 
 versionCode 11.
+
+---
+
+## v1.0.5 — features(player+settings+eq+uicore) review fixes (verified findings only)
+
+- **H1** Language-change persist wrapped in `NonCancellable` so the recreate()
+  can't cancel the DataStore write that the new locale depends on.
+- **H3** LyricsLoader.load and ChaptersLoader.load hop to `Dispatchers.IO`
+  (both were `runCatching { File.readText() }` on main; Chapters wasn't even
+  suspend).
+- **H4** Bass/virtualizer sliders now call VM `on*ChangeFinished` once on release
+  instead of hammering DataStore ~60×/s during a drag — matches the band-slider
+  contract.
+- **M1** Edit-info dialog captures the editing id at open time; Save can't NPE
+  if the queue clears mid-dialog.
+- **M4** Brightness override is restored to its initial value on player dispose.
+- **M8** EQ switch is disabled when no audio session exists.
+- **M9** ≤6-band canonical mapping now first-wins instead of last-write (deterministic
+  regardless of map iteration order).
+- **M12** Backup import picker accepts `application/json`, `application/octet-stream`,
+  and `text/plain` (many SAF providers tag .json with the latter two).
+- **M14** Bookmark delete IconButton carries the new `cd_delete_marker` string
+  (TalkBack no longer says "Cancel" for a destructive action).
+- **L1** Dead `current.let { }` in SleepTimerSheet save handler removed.
+- **L19** LrcParser offset sign flipped: positive offset now shifts lyrics
+  *later* (matches the LRC spec; code previously subtracted).
+
+versionCode 12.

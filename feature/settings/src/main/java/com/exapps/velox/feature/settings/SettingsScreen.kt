@@ -371,7 +371,7 @@ fun SettingsScreen(
                         androidx.compose.material3.TextButton(onClick = { exportLauncher.launch("velox-backup.json") }) {
                             Text(stringResource(R.string.settings_backup_export), color = accentColor())
                         }
-                        androidx.compose.material3.TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
+                        androidx.compose.material3.TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }) {
                             Text(stringResource(R.string.settings_backup_import), color = accentColor())
                         }
                     }

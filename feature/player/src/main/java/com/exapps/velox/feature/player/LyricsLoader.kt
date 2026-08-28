@@ -5,6 +5,8 @@ import com.exapps.velox.core.domain.model.MediaItem
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Phase 1.1 "Lyrics display (basic)": sidecar lookup next to the audio file —
