@@ -101,15 +101,30 @@ class MediaControllerPlayerController @Inject constructor(
      * to chase a self-reference inside a SAM lambda (which trips
      * "Type checking has run into a recursive problem" in Kotlin 2.0+).
      */
-    private val mediaControllerListener: androidx.media3.session.MediaController.Listener =
-        androidx.media3.session.MediaController.Listener { _ ->
-            // M6 (player-stack review): the controller died while the
-            // service restarts. The listener is invoked on the main
-            // looper, so launching into mainScope is safe. The reconnect
-            // logic lives in [reconnectController] so the type checker
-            // doesn't have to chase a self-reference inside this lambda.
-            mainScope.launch { reconnectController() }
-        }
+    /**
+     * M6 (player-stack review): [MediaSessionService] can be killed and restarted
+     * by the platform, but [MediaController] lives for the whole process.
+     * When the service restarts the existing controller is bound to a dead
+     * session — every method call would silently no-op or throw. We
+     * register a disconnect listener that nulls the controller and kicks
+     * off a fresh connect attempt; the next command (or [play] call)
+     * will see `controller == null` and go through [awaitController] to
+     * wait for the new connect.
+     *
+     * The listener is built as an explicit `object : Interface` rather
+     * than a SAM lambda because [androidx.media3.session.MediaController.Listener]
+     * is a regular Java interface (not `fun interface`) and the strict
+     * SAM conversion in Kotlin 2.0 doesn't accept lambda shorthand for
+     * regular Java interfaces. The reconnect logic lives in
+     * [reconnectController] to keep the type checker out of self-reference
+     * cycles.
+     *
+     * Declared with an explicit `lateinit var` so the [init] block can
+     * assign the real instance — the `private val` form tripped
+     * "does not have constructors" because the field initializer was being
+     * parsed as a constructor call instead of an object expression.
+     */
+    private lateinit var mediaControllerListener: androidx.media3.session.MediaController.Listener
 
     private suspend fun reconnectController() {
         // M6: the controller died while the service restarts. Drop the
@@ -139,6 +154,15 @@ class MediaControllerPlayerController @Inject constructor(
     }
 
     init {
+        // Build the disconnect listener now that the rest of the class
+        // is initialised; the lateinit var avoids a self-reference at
+        // declaration time and the object expression dodges the strict
+        // SAM conversion rules in Kotlin 2.0.
+        mediaControllerListener = object : androidx.media3.session.MediaController.Listener {
+            override fun onDisconnected(controller: androidx.media3.session.MediaController) {
+                mainScope.launch { reconnectController() }
+            }
+        }
         val sessionToken = SessionToken(context, ComponentName(context, VeloxPlaybackService::class.java))
         val future = MediaController.Builder(context, sessionToken)
             .setListener(mediaControllerListener)
