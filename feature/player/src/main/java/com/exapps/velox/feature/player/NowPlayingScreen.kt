@@ -15,9 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+// `minimumInteractiveComponentSize` lives in `androidx.compose.material`
+// (not `androidx.compose.foundation.layout`). Pulled in transitively
+// via `material-icons-extended`.
+import androidx.compose.material.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn

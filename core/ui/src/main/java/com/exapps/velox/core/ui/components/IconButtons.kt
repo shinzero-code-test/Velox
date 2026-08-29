@@ -3,8 +3,13 @@ package com.exapps.velox.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.size
+// `minimumInteractiveComponentSize` is exposed by the Material 2
+// (`androidx.compose.material`) extension on `Modifier`. Material 2
+// is on Velox's classpath via `androidx.compose.material:material`
+// (a transitive of material-icons-extended, which the
+// feature/library/feature/player modules all already depend on).
+import androidx.compose.material.minimumInteractiveComponentSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
