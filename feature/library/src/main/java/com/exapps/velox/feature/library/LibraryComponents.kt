@@ -16,9 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+// `itemsIndexed` for the grid is an extension on `LazyGridScope`, while
+// the regular `itemsIndexed` extends `LazyListScope`. They share a name
+// in the same package, so we alias the grid one to disambiguate.
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -211,9 +214,11 @@ private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifi
         horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
     ) {
-        // Qualified `lazy.grid.itemsIndexed` because both `lazy.itemsIndexed`
-        // and `lazy.grid.itemsIndexed` are imported in this file.
-        androidx.compose.foundation.lazy.grid.itemsIndexed(
+        // Use the aliased grid version because both `lazy.itemsIndexed`
+        // and `lazy.grid.itemsIndexed` are imported; the regular one
+        // would match `LazyColumnScope.itemsIndexed` and fail the
+        // overload resolution.
+        gridItemsIndexed(
             items = albums,
             key = { index, item: Album -> "${item.id}-$index" },
         ) { _, album ->
