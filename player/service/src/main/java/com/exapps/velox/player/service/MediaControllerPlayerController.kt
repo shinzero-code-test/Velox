@@ -101,11 +101,15 @@ class MediaControllerPlayerController @Inject constructor(
      * to chase a self-reference inside a SAM lambda (which trips
      * "Type checking has run into a recursive problem" in Kotlin 2.0+).
      */
-    private val mediaControllerListener = androidx.media3.session.MediaController.Listener {
-        // The listener is invoked on the main looper, so launching into
-        // mainScope is safe.
-        mainScope.launch { reconnectController() }
-    }
+    private val mediaControllerListener: androidx.media3.session.MediaController.Listener =
+        androidx.media3.session.MediaController.Listener { _ ->
+            // M6 (player-stack review): the controller died while the
+            // service restarts. The listener is invoked on the main
+            // looper, so launching into mainScope is safe. The reconnect
+            // logic lives in [reconnectController] so the type checker
+            // doesn't have to chase a self-reference inside this lambda.
+            mainScope.launch { reconnectController() }
+        }
 
     private suspend fun reconnectController() {
         // M6: the controller died while the service restarts. Drop the
