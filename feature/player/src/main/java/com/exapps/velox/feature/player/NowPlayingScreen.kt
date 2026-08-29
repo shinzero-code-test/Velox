@@ -312,9 +312,10 @@ fun NowPlayingScreen(
                         // existed, leaving the user with an empty card and
                         // no idea why. Disable + null tint when lyrics is
                         // null or empty so the affordance reflects the data.
-                        // Use a let-block so the non-null smart cast on
-                        // `it` doesn't require `lyrics!!`.
-                        val hasLyrics = lyrics?.isNotEmpty() == true
+                        // Use the Lyrics.isEmpty property (Lyrics is our
+                        // own data class and doesn't have a stdlib
+                        // isNotEmpty extension).
+                        val hasLyrics = lyrics?.isEmpty == false
                         VeloxGlassIconButton(
                             icon = Icons.Filled.MusicNote,
                             contentDescription = stringResource(R.string.cd_lyrics),

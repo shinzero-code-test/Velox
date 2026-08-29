@@ -31,8 +31,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.FastForward
-import androidx.compose.material.icons.automirrored.filled.FastRewind
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Bolt
@@ -662,8 +662,8 @@ private fun GestureFeedbackPill(feedback: GestureFeedback, modifier: Modifier = 
         // icon regardless of direction. Use FastForward / FastRewind so
         // the user can tell at a glance which way the scrub is going.
         is GestureFeedback.Seek -> (
-            if (feedback.deltaMs < 0) Icons.AutoMirrored.Filled.FastRewind
-            else Icons.AutoMirrored.Filled.FastForward
+            if (feedback.deltaMs < 0) Icons.Filled.FastRewind
+            else Icons.Filled.FastForward
         ) to formatSignedDuration(feedback.deltaMs)
         is GestureFeedback.Brightness -> Icons.Filled.Brightness6 to "${feedback.percent}%"
         is GestureFeedback.Volume -> Icons.Filled.VolumeUp to "${feedback.percent}%"
