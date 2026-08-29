@@ -159,10 +159,24 @@ class AndroidAudioEffectsController @Inject constructor(
         }
         if (shouldPersist) {
             // Flush this process's un-persisted edits so they survive restart.
-            synchronized(lock) {
+            // Snapshot the state under the lock, then release it and
+            // call the suspending DataStore write outside the critical
+            // section (Kotlin forbids suspending inside a non-suspending
+            // synchronized block).
+            val snapshot = synchronized(lock) {
                 if (generation != seenGeneration) return
-                persistCurrentDesiredLocked(bands)
+                Snapshot(
+                    enabled = enabled,
+                    presetId = activePresetId,
+                    bassStrength = bassStrength,
+                    virtualizerStrength = virtualizerStrength,
+                    canonical = EqualizerPreset.NORMAL.frequenciesHz.map { freqHz ->
+                        bands.minBy { abs(it.centerFrequencyMilliHz / 1000.0 - freqHz) }
+                            ?.let { desiredBandLevels[it.index] ?: it.levelMillibel } ?: 0
+                    },
+                )
             }
+            persistSnapshot(snapshot)
             return
         }
         saved = preferences.settings.first()
