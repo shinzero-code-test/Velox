@@ -12,7 +12,6 @@ import com.exapps.velox.core.network.model.NetworkProtocol
 import com.exapps.velox.core.network.net.NetworkClient
 import com.exapps.velox.core.network.repo.NetworkLibraryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.runBlocking
 import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,7 +53,11 @@ private class RoutingDataSource(
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        check(active == null) { "RoutingDataSource.open called twice" }
+        // L2 (player-stack review): Media3's `check` throws IllegalStateException
+        // for "called twice" — DataSource contract says this should surface as
+        // an IOException so ExoPlayer treats it as a retryable error rather
+        // than crashing the loader thread.
+        if (active != null) throw java.io.IOException("RoutingDataSource.open called twice")
         val scheme = dataSpec.uri.scheme?.lowercase()
         val dataSource: DataSource = when (scheme) {
             "smb", "ftp", "dav", "davs" -> NetworkStreamDataSource(networkRepository, clients)
@@ -97,7 +100,11 @@ private class NetworkStreamDataSource(
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
         val url = dataSpec.uri.toString()
-        val server = runBlocking { networkRepository.findServer(url) }
+        // M5 (player-stack review): the previous runBlocking parked the loader
+        // thread on a DataStore disk read every open/seek. The repository now
+        // serves server lookups from an in-memory StateFlow that's hot from
+        // app start, so this call is a single .value read.
+        val server = networkRepository.findServerCached(url)
             ?: throw java.io.IOException("No saved network server matches $url")
 
         val protocol = when (dataSpec.uri.scheme?.lowercase()) {

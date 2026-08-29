@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
@@ -27,9 +28,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -64,7 +69,25 @@ fun PlaylistsScreen(
     viewModel: PlaylistsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val importMessage by viewModel.importMessage.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
+
+    // M4 (features review): surface the import outcome via a snackbar driven
+    // by the opaque markers in [PlaylistsViewModel.importMessage].
+    val importSnackbar = remember { SnackbarHostState() }
+    val importSuccess = stringResource(R.string.playlists_import_done)
+    val importFailure = stringResource(R.string.playlists_import_failed)
+    LaunchedEffect(importMessage) {
+        importMessage?.let { marker ->
+            val localized = when (marker) {
+                PlaylistsViewModel.IMPORT_SUCCESS_MARKER -> importSuccess
+                PlaylistsViewModel.IMPORT_FAILED_MARKER -> importFailure
+                else -> marker
+            }
+            importSnackbar.showSnackbar(localized)
+            viewModel.clearImportMessage()
+        }
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -98,9 +121,13 @@ fun PlaylistsScreen(
 
             when (val s = state) {
                 is ScreenState.Loading -> VeloxFullScreenLoading()
+                // M3 (features review): the error state used the same title
+                // as the empty-playlists state ("No playlists yet") which
+                // was misleading — a DB error isn't the same as a fresh
+                // install. Show a dedicated error title.
                 is ScreenState.Error -> VeloxEmptyState(
                     icon = Icons.Filled.QueueMusic,
-                    title = stringResource(R.string.playlists_empty_title),
+                    title = stringResource(R.string.playlists_error_title),
                     body = s.message ?: stringResource(R.string.playlists_empty_body),
                 )
                 is ScreenState.Empty, is ScreenState.PermissionRequired -> VeloxEmptyState(
@@ -114,7 +141,7 @@ fun PlaylistsScreen(
                     contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
                     verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
                 ) {
-                    items(s.data, key = { it.id }) { playlist ->
+                    itemsIndexed(s.data, key = { index, item -> "${item.id}-$index" }) { _, playlist ->
                         PlaylistRow(playlist = playlist, onClick = { onPlaylistClick(playlist.id) })
                     }
                 }
@@ -133,10 +160,26 @@ fun PlaylistsScreen(
         ) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.playlists_create))
         }
+
+        // M4: snackbar host layered over the screen so M3U import outcomes
+        // surface without hijacking the create-name dialog.
+        SnackbarHost(
+            hostState = importSnackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(VeloxSpacing.lg),
+        )
     }
 
     if (showCreateDialog) {
         var name by remember { mutableStateOf("") }
+        // M3 (features review): the Create button used to be enabled
+        // unconditionally, so tapping with an empty field silently
+        // created a playlist named "" (or, with the post-v1.0.8 trim,
+        // a name with only whitespace which the repository rejected
+        // with no UI feedback). Disable the button until the trimmed
+        // name is non-blank.
+        val isValid = name.trim().isNotEmpty()
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
             title = { Text(stringResource(R.string.playlists_create_dialog_title)) },
@@ -146,13 +189,20 @@ fun PlaylistsScreen(
                     onValueChange = { name = it },
                     placeholder = { Text(stringResource(R.string.playlists_name_hint)) },
                     singleLine = true,
+                    isError = !isValid && name.isNotEmpty(),
+                    supportingText = if (!isValid && name.isNotEmpty()) {
+                        { Text(stringResource(R.string.playlists_name_required)) }
+                    } else null,
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.createPlaylist(name)
-                    showCreateDialog = false
-                }) { Text(stringResource(R.string.playlists_create)) }
+                TextButton(
+                    enabled = isValid,
+                    onClick = {
+                        viewModel.createPlaylist(name)
+                        showCreateDialog = false
+                    },
+                ) { Text(stringResource(R.string.playlists_create)) }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
@@ -179,8 +229,11 @@ private fun PlaylistRow(playlist: Playlist, onClick: () -> Unit, modifier: Modif
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = VeloxTheme.typography.titleLarge, color = VeloxColors.OnSurface)
+                // String parity: playlist_track_count is a plural in both
+                // locales (was a plain "%1$d tracks" string in en; switched
+                // to pluralStringResource for the 0/1/n cases).
                 Text(
-                    text = stringResource(R.string.playlist_track_count, playlist.trackCount),
+                    text = pluralStringResource(R.plurals.playlist_track_count, playlist.trackCount, playlist.trackCount),
                     style = VeloxTheme.typography.bodyMedium,
                     color = VeloxColors.OnSurfaceVariant,
                 )

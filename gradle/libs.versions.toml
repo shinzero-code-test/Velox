@@ -90,6 +90,9 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+# H4 (data-layer review): MigrationTestHelper is bundled with the main room
+# artifact on JVM; for Android instrumentation tests we use room-testing.
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 
 # Media3
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }

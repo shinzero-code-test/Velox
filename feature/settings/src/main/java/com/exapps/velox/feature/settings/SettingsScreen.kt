@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,28 +82,52 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    // L12: lastCrashSummary is now a StateFlow (loaded in the VM's init
+    // on IO). Read it the same way as settings instead of dereferencing
+    // a lazy property.
+    val lastCrashSummary by viewModel.lastCrashSummary.collectAsStateWithLifecycle()
+    // L13: history-cleared one-shot event from the VM; the snackbar
+    // host below consumes the true pulse and acks it back to false.
+    val historyCleared by viewModel.historyCleared.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
-    var showClearHistoryDialog by remember { mutableStateOf(false) }
-    var backupMessage by remember { mutableStateOf<String?>(null) }
+    // L18 (features review): the dialog/backupMessage flags were held
+    // in `remember`, which is destroyed on configuration change (rotation,
+    // dark/light mode toggle). rememberSaveable persists them through
+    // the SavedStateHandle so the user doesn't lose a pending dialog.
+    var showClearHistoryDialog by rememberSaveable { mutableStateOf(false) }
+    var backupMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Phase 2 "Backup / restore" — SAF pickers, no storage permissions.
     val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri != null) {
-            viewModel.exportBackup(uri, context) { backupMessage = it }
+            viewModel.exportBackup(uri) { backupMessage = it }
         }
     }
     val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            viewModel.restoreBackup(uri, context) { backupMessage = it }
+            viewModel.restoreBackup(uri) { backupMessage = it }
         }
     }
 
+    // L13: Snackbar host layered behind the LazyColumn so the
+    // history-cleared confirmation and the backupMessage popup don't
+    // hijack the screen.
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val historyClearedMessage = stringResource(R.string.settings_history_cleared)
+    androidx.compose.runtime.LaunchedEffect(historyCleared) {
+        if (historyCleared) {
+            snackbarHostState.showSnackbar(historyClearedMessage)
+            viewModel.ackHistoryCleared()
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(VeloxSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
     ) {
@@ -403,7 +431,7 @@ fun SettingsScreen(
                             color = VeloxColors.OnSurfaceVariant,
                         )
                     }
-                    if (viewModel.lastCrashSummary != null) {
+                    if (lastCrashSummary != null) {
                         Spacer(Modifier.height(VeloxSpacing.md))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -421,7 +449,7 @@ fun SettingsScreen(
                                 color = VeloxColors.OnSurface,
                             )
                             Text(
-                                text = viewModel.lastCrashSummary.orEmpty(),
+                                text = lastCrashSummary.orEmpty(),
                                 style = VeloxTheme.typography.bodyMedium,
                                 color = VeloxColors.Error,
                             )
@@ -450,6 +478,15 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // L13: snackbar host layered over the LazyColumn.
+    androidx.compose.material3.SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(androidx.compose.ui.Alignment.BottomCenter)
+            .padding(VeloxSpacing.lg),
+    )
     }
 
     if (showClearHistoryDialog) {
@@ -508,7 +545,12 @@ private fun SwitchRow(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = modifier.fillMaxWidth().padding(vertical = VeloxSpacing.xs),
+        // M13: vertical padding bumped to `sm` so the row meets
+        // Material's 40dp minimum touch target. L15: Role.Switch so
+        // TalkBack announces the row as a switch toggle.
+        modifier = modifier.fillMaxWidth()
+            .padding(vertical = VeloxSpacing.sm)
+            .semantics(mergeDescendants = true) { role = androidx.compose.ui.semantics.Role.Switch },
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = VeloxTheme.typography.titleMedium, color = VeloxColors.OnSurface)
@@ -529,13 +571,22 @@ private fun SwitchRow(
 
 @Composable
 private fun ChoiceRow(title: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // M13 (features review): padding used to be 4dp vertical, which on
+    // the small `titleMedium` text produced a row under Material's
+    // 40dp minimum touch target. Bump the vertical padding to 12dp so
+    // the row is always tall enough.
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
             .clip(VeloxShapes.sm)
             .clickable(onClick = onClick)
-            .padding(vertical = VeloxSpacing.xs),
+            // L15: Role.RadioButton so TalkBack announces the row as a
+            // radio selection.
+            .semantics(mergeDescendants = true) {
+                role = androidx.compose.ui.semantics.Role.RadioButton
+            }
+            .padding(vertical = VeloxSpacing.sm, horizontal = VeloxSpacing.xs),
     ) {
         Box(
             modifier = Modifier
@@ -587,6 +638,10 @@ private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit, mo
 private fun AccentSwatch(color: Color, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
+            // M13 (features review): the 36dp swatch was under Material's
+            // 40dp minimum touch target. minimumInteractiveComponentSize()
+            // pads the touchable area while the visual swatch stays 36dp.
+            .minimumInteractiveComponentSize()
             .size(36.dp)
             .clip(CircleShape)
             .background(color)

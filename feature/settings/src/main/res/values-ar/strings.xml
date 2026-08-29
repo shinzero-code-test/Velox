@@ -34,6 +34,7 @@
     <string name="settings_clear_history_confirm_title">مسح سجل الاستماع؟</string>
     <string name="settings_clear_history_confirm_body">سيبدأ «استُمع إليها مؤخرًا» و«الأكثر تشغيلًا» من جديد. مكتبتك وقوائم تشغيلك لن يتأثروا.</string>
     <string name="settings_clear_action">مسح</string>
+    <string name="settings_history_cleared">تم مسح سجل الاستماع.</string>
 
     <string name="settings_version">الإصدار</string>
     <string name="settings_replay_intro">إعادة عرض المقدمة</string>
@@ -64,4 +65,7 @@
     <string name="settings_backup_export">تصدير نسخة احتياطية</string>
     <string name="settings_backup_import">استيراد نسخة احتياطية</string>
     <string name="settings_backup_done_size">تم إنشاء النسخة (%1$d بايت)</string>
+    <string name="settings_restore_done">تمت استعادة النسخة (%1$s)</string>
+    <string name="settings_backup_failed">فشل تصدير النسخة. تحقّق من أذونات التخزين وأعد المحاولة.</string>
+    <string name="settings_restore_failed">فشل استيراد النسخة. قد يكون الملف تالفًا أو من إصدار أحدث.</string>
 </resources>

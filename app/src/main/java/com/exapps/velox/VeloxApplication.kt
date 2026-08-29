@@ -1,6 +1,7 @@
 package com.exapps.velox
 
 import android.app.Application
+import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.data.preferences.VeloxLocaleManager
 import java.io.File
 import dagger.hilt.android.HiltAndroidApp
@@ -11,6 +12,7 @@ import javax.inject.Inject
 class VeloxApplication : Application() {
 
     @Inject lateinit var localeManager: VeloxLocaleManager
+    @Inject lateinit var userSettings: UserSettingsPreferences
 
     companion object {
         const val LAST_CRASH_FILE = "last_crash.txt"
@@ -41,9 +43,15 @@ class VeloxApplication : Application() {
             }
             previousHandler?.uncaughtException(thread, throwable)
         }
-        // Loads the persisted app language before any activity's attachBaseContext
-        // runs — a single small DataStore read, paid once at process start.
-        runBlocking { localeManager.load() }
+        // H5 (player-stack review): warm the caches the playback service reads
+        // synchronously on its main thread (locale → attachBaseContext, decoder
+        // preference → renderers factory). Doing it here, while the process is
+        // still cold-starting, costs a single DataStore read per key rather
+        // than one per service create.
+        runBlocking {
+            localeManager.load()
+            userSettings.primeCache()
+        }
         VeloxLocaleManager.instance = localeManager
     }
 }

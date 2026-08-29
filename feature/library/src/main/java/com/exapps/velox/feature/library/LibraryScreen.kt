@@ -44,6 +44,7 @@ import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.LibraryGroup
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.SortOrder
+import com.exapps.velox.core.domain.model.applicableTo
 import com.exapps.velox.core.ui.components.VeloxEmptyState
 import com.exapps.velox.core.ui.components.VeloxErrorRow
 import com.exapps.velox.core.ui.components.VeloxFullScreenLoading
@@ -87,6 +88,20 @@ fun LibraryScreen(
             .values.any { it }
         viewModel.onMediaPermissionResult(mediaGranted)
     }
+    // M5 (features review): when the system permission dialog has been
+    // permanently denied (Android's "don't ask again"), the launcher
+    // returns immediately with the denial, leaving the user stuck on
+    // the permission screen. Detect that state and offer a "Open
+    // settings" shortcut so the user can still grant access.
+    val activity = context as? android.app.Activity
+    val isPermanentlyDenied = remember(permissionsToRequest) {
+        permissionsToRequest
+            .filter { it != Manifest.permission.POST_NOTIFICATIONS }
+            .any { permission ->
+                ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+                    activity != null && !activity.shouldShowRequestPermissionRationale(permission)
+            }
+    }
 
     // Check on first composition too — covers the case where permission was
     // already granted in a previous session (no dialog should flash on launch).
@@ -118,7 +133,11 @@ fun LibraryScreen(
                     contentDescription = stringResource(R.string.library_open_network),
                     onClick = onOpenNetworkBrowser,
                 )
-                SortMenuButton(sortOrder = sortOrder, onSortSelected = viewModel::onSortSelected)
+                SortMenuButton(
+                    sortOrder = sortOrder,
+                    group = selectedTab,
+                    onSortSelected = viewModel::onSortSelected,
+                )
                 if (!isScanning) {
                     VeloxGlassIconButton(
                         icon = Icons.Filled.Refresh,
@@ -137,9 +156,29 @@ fun LibraryScreen(
             is ScreenState.PermissionRequired -> VeloxEmptyState(
                 icon = Icons.Filled.LockOpen,
                 title = stringResource(R.string.library_permission_title),
-                body = stringResource(R.string.library_permission_body),
-                primaryActionLabel = stringResource(R.string.library_permission_action),
-                onPrimaryAction = { permissionLauncher.launch(permissionsToRequest) },
+                body = if (isPermanentlyDenied) {
+                    stringResource(R.string.library_permission_body_permanently_denied)
+                } else {
+                    stringResource(R.string.library_permission_body)
+                },
+                primaryActionLabel = if (isPermanentlyDenied) {
+                    stringResource(R.string.library_permission_open_settings)
+                } else {
+                    stringResource(R.string.library_permission_action)
+                },
+                onPrimaryAction = if (isPermanentlyDenied) {
+                    {
+                        activity?.let { act ->
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.fromParts("package", act.packageName, null),
+                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            act.startActivity(intent)
+                        }
+                    }
+                } else {
+                    { permissionLauncher.launch(permissionsToRequest) }
+                },
             )
 
             is ScreenState.Empty -> VeloxEmptyState(
@@ -177,7 +216,12 @@ fun LibraryScreen(
 
 /** ROADMAP M2 "Search & sort" — title / date added / duration / size / path. */
 @Composable
-private fun SortMenuButton(sortOrder: SortOrder, onSortSelected: (SortOrder) -> Unit, modifier: Modifier = Modifier) {
+private fun SortMenuButton(
+    sortOrder: SortOrder,
+    group: LibraryGroup,
+    onSortSelected: (SortOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier = modifier) {
         VeloxGlassIconButton(
@@ -186,20 +230,26 @@ private fun SortMenuButton(sortOrder: SortOrder, onSortSelected: (SortOrder) -> 
             onClick = { expanded = true },
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            SortOrder.entries.forEach { order ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = sortLabel(order),
-                            color = if (order == sortOrder) accentColor() else VeloxColors.OnSurface,
-                        )
-                    },
-                    onClick = {
-                        onSortSelected(order)
-                        expanded = false
-                    },
-                )
-            }
+            // sortedFor (features review): only show the sort options
+            // that have a meaningful value for the active group, so the
+            // menu doesn't show "by size" on Albums (where it would
+            // silently degrade to title sort).
+            SortOrder.entries
+                .filter { it.applicableTo(group) }
+                .forEach { order ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = sortLabel(order),
+                                color = if (order == sortOrder) accentColor() else VeloxColors.OnSurface,
+                            )
+                        },
+                        onClick = {
+                            onSortSelected(order)
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }
@@ -250,6 +300,14 @@ private fun rememberMediaPermissions(): Array<String> = remember {
             // C3 (app-shell review): include so re-prompt flows can also recover the
             // playback notification on 13+. Denial here must never block media access.
             Manifest.permission.POST_NOTIFICATIONS,
+            // M5 (features review): READ_MEDIA_VISUAL_USER_SELECTED is the
+            // API 34+ "partial" photo/video access permission. We don't
+            // request it explicitly — Velox wants full library access
+            // (a media player that only sees a few user-selected videos
+            // would be useless). If the user prefers partial access, the
+            // Android system photo/video picker is the right surface; we
+            // surface the system Settings shortcut from the permission
+            // denied state below.
         )
     } else {
         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)

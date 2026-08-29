@@ -38,9 +38,6 @@ private fun googleFontFamily(name: String) = FontFamily(
 
 val IbmPlexSansArabic: FontFamily = googleFontFamily("IBM Plex Sans Arabic")
 
-/** Documented alternative for a future per-user Latin-font preference — unused by default. */
-val PlusJakartaSans: FontFamily = googleFontFamily("Plus Jakarta Sans")
-
 /**
  * The full named scale from DESIGN_SYSTEM.md §3.2. Prefer these over MaterialTheme.typography
  * directly when a screen needs a style that doesn't map cleanly onto Material3's own slots

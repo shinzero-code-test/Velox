@@ -70,11 +70,21 @@ class WebDavClient @javax.inject.Inject constructor() : NetworkClient {
             val children = nodeListToList(response.childNodes)
 
             fun prop(localName: String): org.w3c.dom.Node? {
-                val propstat = children.firstOrNull { it.nodeName.substringAfter(':') == "propstat" } ?: return null
-                val propNode = nodeListToList(propstat.childNodes)
-                    .firstOrNull { it.nodeName.substringAfter(':') == "prop" } ?: return null
-                return nodeListToList(propNode.childNodes)
-                    .firstOrNull { it.nodeName.substringAfter(':') == localName }
+                // data-layer (review): only the first propstat was
+                // inspected, so servers that split properties across
+                // multiple propstat elements (with 200 status each)
+                // returned -1 size / non-collection for half the
+                // entries. Merge across every 200-status propstat in
+                // document order.
+                val propstats = children.filter { it.nodeName.substringAfter(':') == "propstat" }
+                for (propstat in propstats) {
+                    val propNode = nodeListToList(propstat.childNodes)
+                        .firstOrNull { it.nodeName.substringAfter(':') == "prop" } ?: continue
+                    val found = nodeListToList(propNode.childNodes)
+                        .firstOrNull { it.nodeName.substringAfter(':') == localName }
+                    if (found != null) return found
+                }
+                return null
             }
 
             val href = children.firstOrNull { it.nodeName.substringAfter(':') == "href" }?.textContent ?: continue

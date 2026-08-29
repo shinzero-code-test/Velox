@@ -2,7 +2,6 @@
 <resources>
     <string name="now_playing_title">التشغيل الآن</string>
     <string name="cd_collapse">طي</string>
-    <string name="cd_more_options">مزيد من الخيارات</string>
     <string name="cd_shuffle">تشغيل عشوائي</string>
     <string name="cd_repeat">تكرار</string>
     <string name="cd_edit_info">تعديل المعلومات</string>

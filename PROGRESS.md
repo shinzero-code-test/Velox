@@ -460,3 +460,319 @@ versionCode 11.
   *later* (matches the LRC spec; code previously subtracted).
 
 versionCode 12.
+
+---
+
+## v1.0.6 — Priority-A review fixes (player correctness + data-loss risk)
+
+This pass clears the seven Priority-A items in `tmp/review/deferred-backlog.md`
+plus a small handful of Priority-B UX items that came along for the ride.
+Everything that needed a Room schema export (H4) is wired up so the next CI
+build will populate `core/data/schemas/`; the migration test asserts
+behaviour against the JSONs the moment they exist.
+
+- **data-layer H4** Room schema export is already enabled
+  (`schemaDirectory("$projectDir/schemas")` in `core/data/build.gradle.kts`,
+  `exportSchema = true` in `VeloxDatabase`). The next CI build will generate
+  `1.json`–`3.json` under
+  `core/data/schemas/com.exapps.velox.core.data.local.VeloxDatabase/` and
+  the new `androidTest` (`VeloxDatabaseMigrationsTest`) will pin them.
+  Added `androidx.room.testing` to the version catalog.
+- **data-layer M13** `addTracksAtEnd` is now guarded by a per-playlist
+  `Mutex` in `PlaylistRepositoryImpl` so concurrent addTracks calls can't
+  read the same `MAX(position)` and violate the (playlistId, position) PK.
+  The DAO additionally renumbers positions densely and collapses duplicate
+  (playlistId, mediaItemId) rows via `MIN(rowid) GROUP BY mediaItemId`.
+- **player-stack H3** `AndroidAudioEffectsController` now serialises every
+  field (effect objects, desired levels, dirty flag) through a single
+  `synchronized(lock)` monitor. The setter path stays synchronous so the
+  ViewModel's `state.value` reads in `EqualizerViewModel.persist()` see the
+  post-write value immediately.
+- **player-stack M7** Same class gained a `generation` counter that any
+  in-flight `onAttachedRestoreOrFlush` checks after each suspension; a
+  newer attach or release (which bumps the counter) drops the stale
+  restore instead of overwriting the new state.
+- **player-stack H5** `UserSettingsPreferences` now holds the
+  `DecoderPreference` in an `AtomicReference`-equivalent `@Volatile` field
+  that is primed once at process start (`VeloxApplication.primeCache()`,
+  called alongside the locale load). `VeloxExoPlayerFactory.create()` reads
+  the cached value synchronously — no more `runBlocking { DataStore }` on
+  the service-creation main thread.
+- **player-stack M6** `MediaControllerPlayerController` registers a
+  `MediaController.Listener` (via `Builder.setListener`) whose
+  `onDisconnected` callback nulls the controller and kicks off a fresh
+  `buildAsync` against the same `SessionToken`. Subsequent commands
+  observe `controller == null` and wait via `awaitController` until the
+  new connect resolves.
+- **player-stack M5** `NetworkLibraryRepository.findServer` now reads
+  the server list from a `StateFlow` kept hot by the application scope
+  instead of calling `dataStore.first()` on every `DataSource.open()`. The
+  `IN (:ids)` DataStore query that runs at the same point is no longer on
+  the hot loader thread.
+- **features-library-playlists-network H2** `NetworkViewModel.navigateTo`
+  now (a) captures the previous listing and keeps it visible while a new
+  one is loading, (b) cancels any in-flight `list()` via a stored `Job`
+  + epoch counter, (c) records the failed URL on error and exposes a
+  `retry()` method, (d) `BrowserContent` renders a dedicated Retry button
+  next to Up when an error has a `failedUrl`. New localized strings
+  `network_retry` (en+ar).
+- **features-library-playlists-network M1** `playStream` now sets a
+  `streamError` `StateFlow` when the URL prefix isn't supported; the
+  screen surfaces it through a `SnackbarHost`. Localized
+  `network_stream_unsupported` (en+ar).
+- **features-library-playlists-network M2** `saveServer` now clamps the
+  port to `1..65535` and reports the rejection via the same
+  `streamError` channel. Localized `network_port_invalid` (en+ar).
+- **features-player-settings-eq-uicore M2** Long-press speed boost now
+  bails out when the in-screen controls are visible, so a long-press on
+  the play button (which keeps the controls alive) doesn't also flip
+  playback to 2x.
+- **features-player-settings-eq-uicore M3** Horizontal-seek commit now
+  writes back the clamped `seekDeltaMs` to the accumulator on every drag
+  frame, so the final commit on release matches the clamped value the
+  live feedback pill was already showing.
+- **features-player-settings-eq-uicore M15** `SettingsViewModel.exportBackup`
+  / `restoreBackup` now log the raw exception and surface a localized
+  string instead of concatenating `it.message`. New
+  `settings_restore_done` (+ `settings_backup_failed`, `settings_restore_failed`)
+  in en+ar.
+
+versionCode 13.
+
+
+---
+
+## v1.0.7 — Priority-B + Priority-C backlog (medium/polish items)
+
+A single pass that closes the medium-severity UX items, the EQ/stats
+polish, the library playback surface, and a long list of small nits.
+Grouped by area below.
+
+### EQ + player polish
+- **eq-uicore M2** Long-press speed boost now bails out when
+  `controlsVisible` is true so it can't fire while the user is
+  holding a control.
+- **eq-uicore M3** Horizontal-seek commit writes back the clamped
+  `seekDeltaMs` so the final commit matches the live feedback pill.
+- **eq-uicore M5** Statistics screen now buckets play history by the
+  device's local day (offset-aware SQL) instead of UTC-day.
+- **eq-uicore M6** The "Last N days" header now reflects the actually
+  rendered row count (`min(daily.size, 7)`) so the two never disagree.
+- **eq-uicore M7** Statistics screen distinguishes loading from
+  loaded-empty via a `ScreenState`-like flow; no more flash of the
+  empty-state on cold open.
+- **eq-uicore M10** `VerticalBandSlider` tracks an `isDragging` flag
+  and only reseeds `dragLevel` from the prop when the user isn't
+  actively dragging.
+- **eq-uicore M11** `END_OF_TRACK` sleep timer now waits for an
+  `PlaybackStatus.ENDED` transition, not just an id change, so
+  manual skipNext/skipPrevious no longer trips the timer.
+- **eq-uicore M13** Marker-delete and accent-swatch icon buttons
+  are wrapped in `minimumInteractiveComponentSize()`; the
+  `VeloxGlassIconButton` itself enforces the 40dp floor regardless
+  of caller-supplied visual size.
+- **eq-uicore L3** Lyrics toggle button is disabled when no sidecar
+  lyrics exist.
+- **eq-uicore L4** Plain-text lyrics panel has a height cap and uses
+  a real scroll container.
+- **eq-uicore L5** Lyrics auto-scroll now skips while the user is
+  scrolling, items are keyed by timestamp, and dead scroll modifiers
+  on the plain-text branch are removed.
+- **eq-uicore L6** Brightness/volume feedback now uses `roundToInt()`
+  so the live pill doesn't bias toward 0%.
+- **eq-uicore L7** `VerticalBandSlider` width comment matches the
+  40dp visual width code (the touch target is 48dp).
+- **eq-uicore L8** Queue sheet `LazyColumn` now uses `weight(1f)`
+  inside a `heightIn(max = screenHeight * 0.8)` column instead of a
+  fixed 420dp; queue items are keyed by id alone.
+- **eq-uicore L9** PiP button is disabled when
+  `PackageManager.FEATURE_PICTURE_IN_PICTURE` is absent (TV/Wear).
+- **eq-uicore L10** Seek feedback pill uses `FastRewind` /
+  `FastForward` so the direction is visible at a glance.
+- **eq-uicore L11** Crash-share chooser no longer carries
+  `FLAG_ACTIVITY_NEW_TASK` (unnecessary from an Activity context).
+- **eq-uicore L12** `lastCrashSummary` is now a `StateFlow` loaded
+  on `Dispatchers.IO` in the VM's init; no more lazy disk read on the
+  UI thread.
+- **eq-uicore L13** `historyCleared` is now a one-shot event; the
+  screen shows a confirmation snackbar and acks the flag.
+- **eq-uicore L18** `backupMessage` and `showClearHistoryDialog` use
+  `rememberSaveable` so they survive rotation.
+- **player-stack M4** Player uses `C.WAKE_MODE_NETWORK` so radio
+  suspension doesn't kill long network-streamed tracks.
+- **player-stack L2** `RoutingDataSource.open` now throws
+  `IOException` for the "called twice" path (retryable by ExoPlayer
+  instead of crashing the loader).
+- **player-stack L5** `subtitleMimeTypeFor` moved to
+  `:player:engine` where it belongs; `MediaItemMapper` now guards
+  against empty `artworkUri` strings.
+
+### Library, playlists, network
+- **library M2** Server editor: secure toggle is disabled for
+  non-WebDAV protocols with a helper text; dead `ExposedProtocolField`
+  parameters dropped; plaintext-credentials notice added.
+- **library M3** `CollectionDetailScreen` now exposes a proper
+  `ScreenState<List<MediaItem>>` so the loading vs empty state
+  can't be confused.
+- **library M4** M3U import/export results are now surfaced via a
+  snackbar; new `playlists_import_*` and `playlists_export_*`
+  strings in en+ar.
+- **library M5** `LibraryViewModel.onMediaPermissionResult` only
+  triggers a rescan on the denied→granted transition, not on every
+  tab return.
+- **library M7** Network id collisions reduced by mixing the artist
+  name's length into the high 32 bits of the id.
+- **library dead code** `LibraryGroup.RECENT` removed (the
+  "Recently Played" system playlist already covers that surface).
+- **library strings** `playlist_track_count` is now a `<plurals>`
+  resource in both locales; `CollectionDetailViewModel` was already
+  using `pluralStringResource`.
+- **library Search UX** Clear-text icon added to the search field;
+  a new `hasQueried` flag suppresses the "no results" empty state
+  during the 250ms debounce window.
+- **library `MediaItemDao.search`** Uses `ESCAPE '\'` on the LIKE
+  patterns; the repository escapes `%` and `_` in user input first.
+- **data-layer M3U charset** Export already uses `Charsets.UTF_8`;
+  the duplicate `toByteArray()` call was a stale reviewer note.
+- **network SMB** `SmbClient.list` normalises the URL to a trailing
+  slash via the new `UrlNormalize` helper.
+- **network WebDAV** `prop()` helper now merges across all 200-status
+  `propstat` elements in document order, not just the first.
+
+### SettingsViewModel
+- **eq-uicore M15** Export/restore backup already use localized
+  strings and log raw exceptions to logcat; verified in this pass.
+
+versionCode 14.
+
+---
+
+## v1.0.8 — highest-leverage remaining backlog items
+
+A targeted pass that closes the data-correctness and PlaybackSafety
+items that survived v1.0.6/v1.0.7. Grouped by area.
+
+### Library data correctness
+- **observeFolders placeholder counts** `MediaItemDao` now exposes
+  `observeFolderSummaries()` (single `GROUP BY folderPath` query); the
+  repository passes the count straight into `Folder.itemCount`.
+  Every folder in the Library list now shows its real track count
+  without a follow-up fetch.
+- **importM3u unreadable source** `PlaylistRepositoryImpl.importM3u`
+  now reads the entries first, refuses to create a placeholder
+  playlist if nothing resolved, and throws `IOException` so the
+  existing import snackbar surfaces the failure to the user.
+- **M6 duplicate-key robustness** Every `LazyColumn` /
+  `LazyVerticalGrid` in the Library, Playlists, and Network screens
+  switched to `itemsIndexed` with `"${id}-$index"` keys. A rescan
+  race that surfaces the same id twice no longer crashes Compose
+  with a duplicate-key exception.
+- **sortedFor inapplicable sorts** `SortOrder.applicableTo(group)`
+  filters the Library sort menu so it only shows options that have
+  a meaningful value for the active tab (Albums/Artists/Folders/
+  GENRES no longer present "by size" or "by date added" that would
+  silently degrade to title sort).
+
+### A11y
+- **LibraryTabChip a11y** `Role.Tab` + `stateDescription` (selected /
+  not selected) for TalkBack.
+- **Album / artist / folder / genre cells a11y** `Role.Button` +
+  `onClickLabel` via the new `cd_open_album/artist/folder/genre`
+  strings in en+ar; `ClickableGlassCard` accepts an optional
+  `onClickLabel` and propagates it to `combinedClickable`.
+
+### Player correctness
+- **M1 A-B seek-past-B policy** A `DISCONTINUITY_REASON_SEEK` that lands
+  outside the loop region now snaps the playback back to A. The
+  wrap was previously undefined.
+- **L11 publishState prefers desired over hardware truth**
+  `AndroidAudioEffectsController.setBandLevel` and
+  `applyDesiredToHardwareLocked` now re-read `eq.getBandLevel` after
+  each set so the StateFlow reflects the hardware's actual value
+  when the device clamped our request.
+
+### AddTracksSheet
+- **AddTracksSheet fixed 420dp** Now `heightIn(max = screenHeight *
+  0.8f)` + `weight(1f)` for the LazyColumn, mirroring the QueueSheet
+  fix from v1.0.7.
+
+### UI cleanup
+- **L16 VeloxErrorRow sizing** Removed the `fillMaxSize()` from
+  `VeloxErrorRow`; sizing is now caller-owned via the `modifier`
+  parameter. Callers that want the full-screen variant pass
+  `Modifier.fillMaxSize()` explicitly.
+- **L14 dead code** `Motion.mediumSpring` and `PlusJakartaSans`
+  removed (defined but never called).
+
+versionCode 15.
+
+---
+
+## v1.0.9 — final backlog cleanup pass
+
+Closes the remaining DEFERRED items from `tmp/review/deferred-backlog.md`.
+After this pass, only two items remain open: a "name-keyed table"
+for artist ids and a "port interface for DecoderPreferenceStore"
+(engine depends on :core:data directly) — both are tracked as
+out-of-scope architectural changes.
+
+### Player correctness
+- **L3 stock-buffer comment** The "stock 15s/50s min/max buffer"
+  comment was wrong: ExoPlayer's actual default is min == max ==
+  50_000ms. Comment corrected.
+- **L8 PlayerTrack.id collisions** The fallback id now includes
+  `format.codecs` and `format.sampleMimeType` so two formats in the
+  same group with identical label + language still get unique ids.
+- **L9 setLoopRegion contract** KDoc on `PlayerController.setLoopRegion`
+  now spells out the "endMs <= startMs clears the loop" contract
+  (the implementation already enforced it).
+- **L10 poll save cadence drifts during loops** The position-save
+  cadence is no longer skipped on a tick that fires the A-B wrap;
+  the saved position now updates with the same 5s cadence
+  regardless of looping.
+
+### Settings & permissions
+- **L15 settings rows** `SwitchRow` carries `Role.Switch` and
+  `ChoiceRow` carries `Role.RadioButton`; both rows now meet
+  Material's 40dp minimum touch target via `VeloxSpacing.sm` vertical
+  padding (M13).
+- **M5 permanent denial** `LibraryScreen` detects permanent
+  permission denial via `shouldShowRequestPermissionRationale()` and
+  offers an "Open settings" shortcut to grant access manually.
+  `READ_MEDIA_VISUAL_USER_SELECTED` is left unrequested (the system
+  photo/video picker is the right surface for partial access).
+
+### Playlists
+- **M3/M4 create dialog** The Create button is now disabled until
+  the trimmed playlist name is non-blank; an `isError` supporting
+  text surfaces the requirement (`playlists_name_required` in en+ar).
+- **M3/M4 error state** `ScreenState.Error` now uses a dedicated
+  `playlists_error_title` instead of the misleading "No playlists
+  yet" empty-state copy.
+
+### Library data layer
+- **importM3u legacy DATA access** The resolver still tries the
+  exact `DATA = ?` match first (works on API ≤28 and on most
+  backwards-compat ROMs), then falls back to a
+  `(RELATIVE_PATH, DISPLAY_NAME)` match against the MediaStore
+  Files table, which works on API 29+.
+
+### Bulk cleanup
+- **L14 dead resources** `cd_more_options` resource removed from
+  player/values and player/values-ar.
+- **bulk-cleanup** `ScreenState.dataOrNull()` removed from
+  core/common (no callers). `accentTint()` wrapper removed from
+  NetworkScreen; callers now use `accentColor()` directly.
+  `isBrowsing` in NetworkViewModel is now a `StateFlow<Boolean>`
+  consumed via `collectAsStateWithLifecycle` in the screen.
+
+### Documentation
+- **L6 engine depends on :core:data** Now explicitly documented as
+  deferred for a future architectural pass (the alternative is a
+  30-line refactor for zero behavioural change).
+- **L7 redundant `androidx-media3-common` dep** The dep audit shows
+  `:player:engine` uses `media3.common` directly and `:player:service`
+  uses it transitively via `media3.exoplayer` / `media3.session`;
+  no redundant `implementation` lines remain.
+
+versionCode 16.

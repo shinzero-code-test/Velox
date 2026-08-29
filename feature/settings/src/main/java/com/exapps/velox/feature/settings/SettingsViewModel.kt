@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,20 +34,36 @@ class SettingsViewModel @Inject constructor(
         initialValue = UserSettings(),
     )
 
-    /** Phase 1.1 crash hardening: last crash summary (null = none on record). */
-    val lastCrashSummary: String? by lazy {
-        runCatching {
-            val f = java.io.File(context.filesDir, "last_crash.txt")
-            if (!f.isFile) return@lazy null
-            val lines = f.readLines()
-            val time = lines.firstOrNull()?.removePrefix("time_epoch_ms=")?.toLongOrNull()
-            val at = time?.let {
-                android.text.format.DateFormat.getDateFormat(context).format(java.util.Date(it)) +
-                    " " + android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(it))
-            }
-            at ?: "unknown"
-        }.getOrNull()
+    /**
+     * Phase 1.1 crash hardening: last crash summary (null = none on record).
+     *
+     * L12 (features review): the previous `by lazy { ... }` did a disk read
+     * on first access, which on the Settings screen's first composition
+     * blocked the UI thread until the read finished. We now load the file
+     * once at VM init time on Dispatchers.IO and expose the result as a
+     * StateFlow.
+     */
+    private val _lastCrashSummary = MutableStateFlow<String?>(null)
+    val lastCrashSummary: StateFlow<String?> = _lastCrashSummary.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val text = withContext(kotlinx.coroutines.Dispatchers.IO) { readCrashSummary() }
+            _lastCrashSummary.value = text
+        }
     }
+
+    private fun readCrashSummary(): String? = runCatching {
+        val f = java.io.File(context.filesDir, "last_crash.txt")
+        if (!f.isFile) return null
+        val lines = f.readLines()
+        val time = lines.firstOrNull()?.removePrefix("time_epoch_ms=")?.toLongOrNull()
+        val at = time?.let {
+            android.text.format.DateFormat.getDateFormat(context).format(java.util.Date(it)) +
+                " " + android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(it))
+        }
+        at ?: "unknown"
+    }.getOrNull()
 
     fun lastCrashFullText(): String? = runCatching {
         java.io.File(context.filesDir, "last_crash.txt").readText().takeIf { it.isNotBlank() }
@@ -93,28 +110,47 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferences.setGestureVerticalDragMapping(mapping) }
 
     /** Phase 2 backup/restore — SAF transport handled by the screen; this wraps IO. */
-    fun exportBackup(uri: android.net.Uri, context: Context, onDone: (String) -> Unit) {
+    fun exportBackup(uri: android.net.Uri, onDone: (String) -> Unit) {
         viewModelScope.launch {
-            val result = runCatching {
+            val message = runCatching {
                 val bytes = backupManager.exportTo(uri)
                 context.getString(com.exapps.velox.feature.settings.R.string.settings_backup_done_size, bytes)
-            }.getOrElse { it.message ?: "Failed" }
-            onDone(result)
+            }.getOrElse {
+                // M15 (features review): log raw exception for debugging but
+                // show the user a localized, generic message.
+                android.util.Log.e("VeloxSettings", "Backup export failed", it)
+                context.getString(com.exapps.velox.feature.settings.R.string.settings_backup_failed)
+            }
+            onDone(message)
         }
     }
 
-    fun restoreBackup(uri: android.net.Uri, context: Context, onDone: (String) -> Unit) {
+    fun restoreBackup(uri: android.net.Uri, onDone: (String) -> Unit) {
         viewModelScope.launch {
-            val result = runCatching {
-                "Restored: " + backupManager.restoreFrom(uri)
-            }.getOrElse { it.message ?: "Failed" }
-            onDone(result)
+            val message = runCatching {
+                val applied = backupManager.restoreFrom(uri)
+                context.getString(com.exapps.velox.feature.settings.R.string.settings_restore_done, applied)
+            }.getOrElse {
+                // M15: same pattern — log raw exception, surface localized message.
+                android.util.Log.e("VeloxSettings", "Backup restore failed", it)
+                context.getString(com.exapps.velox.feature.settings.R.string.settings_restore_failed)
+            }
+            onDone(message)
         }
     }
     fun setAutoLoadExternalSubtitles(enabled: Boolean) = viewModelScope.launch { preferences.setAutoLoadExternalSubtitles(enabled) }
 
     fun clearPlayHistory() = viewModelScope.launch {
         libraryRepository.clearPlayHistory()
+        // L13 (features review): a one-shot event (true → consume) so the
+        // screen can show a confirmation snackbar without having to track
+        // "previously-cleared" state. The screen calls [ackHistoryCleared]
+        // after surfacing the message.
         _historyCleared.value = true
+    }
+
+    /** L13: called by the screen after it has shown the snackbar. */
+    fun ackHistoryCleared() {
+        _historyCleared.value = false
     }
 }

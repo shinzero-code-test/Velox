@@ -101,10 +101,11 @@ import com.exapps.velox.core.ui.theme.accentColor
 import com.exapps.velox.core.ui.theme.glassSurfaceColor
 import com.exapps.velox.player.engine.VeloxResizeMode
 import com.exapps.velox.player.engine.VeloxVideoSurface
-import com.exapps.velox.player.service.subtitleMimeTypeFor
+import com.exapps.velox.player.engine.subtitleMimeTypeFor
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** The transient center feedback for whichever gesture is in flight (§5 "Visual feedback"). */
 private sealed interface GestureFeedback {
@@ -330,6 +331,13 @@ fun VideoPlayerScreen(
                                             -playback.positionMs.toFloat(),
                                             (playback.durationMs - playback.positionMs).coerceAtLeast(0L).toFloat(),
                                         )
+                                        // M3 (features review): the seek commit
+                                        // used to read the unclamped `seekDeltaMs`
+                                        // on drag-end, contradicting the clamped
+                                        // value the user saw in the live feedback
+                                        // pill. Mirror the clamp back into the
+                                        // accumulator so the final commit matches.
+                                        seekDeltaMs = clamped
                                         feedback = GestureFeedback.Seek(clamped.toLong(), clamped < 0)
                                     }
                                     DragMode.BRIGHTNESS -> {
@@ -341,7 +349,11 @@ fun VideoPlayerScreen(
                                             attrs.screenBrightness = brightness
                                             window.attributes = attrs
                                         }
-                                        feedback = GestureFeedback.Brightness((brightness * 100).toInt())
+                                        // L6 (features review): toInt() truncated
+                                        // toward zero, biasing the live feedback
+                                        // pill toward 0%. roundToInt() snaps to
+                                        // the nearest percentage instead.
+                                        feedback = GestureFeedback.Brightness((brightness * 100).roundToInt())
                                     }
                                     DragMode.VOLUME -> {
                                         verticalAccumulated += dragAmount.y
@@ -350,11 +362,14 @@ fun VideoPlayerScreen(
                                         // height onto the whole range (up = louder).
                                         val fraction = (volumeDragAnchor / maxVolume - verticalAccumulated / size.height)
                                             .coerceIn(0f, 1f)
-                                        val targetSteps = (fraction * maxVolume).toInt().coerceIn(0, maxVolume)
+                                        // L6: roundToInt() instead of toInt() so the
+                                        // discrete step count snaps to the nearest
+                                        // step rather than biasing downward.
+                                        val targetSteps = (fraction * maxVolume).roundToInt().coerceIn(0, maxVolume)
                                         if (targetSteps != audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)) {
                                             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetSteps, 0)
                                         }
-                                        feedback = GestureFeedback.Volume((fraction * 100).toInt())
+                                        feedback = GestureFeedback.Volume((fraction * 100).roundToInt())
                                     }
                                     DragMode.NONE -> Unit
                                 }
@@ -375,8 +390,15 @@ fun VideoPlayerScreen(
                     // Long-press → temporary 2x speed (§5 "Speed scrub"). Observed on
                     // the Initial pass so it never steals events from the detectors
                     // above; release anywhere restores the previous speed.
+                    // M2 (features review): only fire the boost while the in-screen
+                    // controls are hidden — otherwise a long-press on the play
+                    // button (which keeps the controls alive) would also flip
+                    // playback to 2x, surprising the user. The `controlsVisible`
+                    // value is sampled at gesture start so the boost state never
+                    // toggles mid-gesture.
                     .pointerInput(Unit) {
                         awaitEachGesture {
+                            if (controlsVisible) return@awaitEachGesture
                             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                             var boosted = false
                             var slopped = false
@@ -459,9 +481,17 @@ fun VideoPlayerScreen(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // L9 (features review): the PiP entry was always
+                    // visible, but TV/Wear devices without the
+                    // FEATURE_PICTURE_IN_PICTURE system feature would
+                    // no-op (or worse, surface a system error). Disable
+                    // the button when the feature is absent.
+                    val pipSupported = activity?.packageManager
+                        ?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
                     VeloxGlassIconButton(
                         icon = Icons.Filled.PictureInPictureAlt,
                         contentDescription = stringResource(R.string.cd_pip),
+                        enabled = pipSupported,
                         onClick = {
                             activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().build())
                         },
@@ -626,7 +656,13 @@ fun VideoPlayerScreen(
 @Composable
 private fun GestureFeedbackPill(feedback: GestureFeedback, modifier: Modifier = Modifier) {
     val (icon, label) = when (feedback) {
-        is GestureFeedback.Seek -> Icons.Filled.PlayArrow to formatSignedDuration(feedback.deltaMs)
+        // L10 (features review): the seek pill used a generic PlayArrow
+        // icon regardless of direction. Use FastForward / FastRewind so
+        // the user can tell at a glance which way the scrub is going.
+        is GestureFeedback.Seek -> (
+            if (feedback.deltaMs < 0) Icons.AutoMirrored.Filled.FastRewind
+            else Icons.AutoMirrored.Filled.FastForward
+        ) to formatSignedDuration(feedback.deltaMs)
         is GestureFeedback.Brightness -> Icons.Filled.Brightness6 to "${feedback.percent}%"
         is GestureFeedback.Volume -> Icons.Filled.VolumeUp to "${feedback.percent}%"
         GestureFeedback.SpeedBoost -> Icons.Filled.Bolt to formatSpeed(2f)

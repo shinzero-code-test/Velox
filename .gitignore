@@ -17,3 +17,4 @@
 .navigation/
 tmp/
 /gradle/wrapper/gradle-wrapper.jar
+AGENTS.md

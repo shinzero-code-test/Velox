@@ -15,5 +15,3 @@ sealed interface ScreenState<out T> {
     /** SCREENS_OVERVIEW.md §5: "Offline / No permission — Permission explanation + action button." */
     data class PermissionRequired(val rationale: String? = null) : ScreenState<Nothing>
 }
-
-inline fun <T> ScreenState<T>.dataOrNull(): T? = (this as? ScreenState.Content)?.data

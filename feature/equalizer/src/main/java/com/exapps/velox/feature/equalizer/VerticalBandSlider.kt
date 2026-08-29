@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,8 +33,16 @@ import com.exapps.velox.core.ui.theme.glassSurfaceColor
 
 /**
  * One vertical EQ band (SCREEN_EQUALIZER.md §3): drag to move, fill is measured
- * from the 0dB midpoint like a hardware fader, accent-colored, ~48dp wide to stay
- * a comfortable touch target. Levels are in millibel.
+ * from the 0dB midpoint like a hardware fader, accent-colored, 40dp wide
+ * (the visual width; the touch target is 48dp via minimumInteractiveComponentSize).
+ * Levels are in millibel.
+ *
+ * M10 (features review): the previous implementation reseeded `dragLevel`
+ * from `levelMillibel` on every prop change, so the in-progress drag
+ * snapped back to the parent's reported value when the audio-effects
+ * controller published the optimistic update. We now remember the prop
+ * value separately, track an `isDragging` flag, and only sync from the
+ * prop when the user is not actively dragging.
  */
 @Composable
 internal fun VerticalBandSlider(
@@ -45,7 +55,14 @@ internal fun VerticalBandSlider(
     modifier: Modifier = Modifier,
 ) {
     val range = (maxLevelMillibel - minLevelMillibel).coerceAtLeast(1)
-    var dragLevel by remember(levelMillibel) { mutableFloatStateOf(levelMillibel.toFloat()) }
+    var dragLevel by remember { mutableFloatStateOf(levelMillibel.toFloat()) }
+    // M10: only re-seed dragLevel from the prop when the user is not
+    // currently dragging, so an in-progress gesture is never undone by
+    // a parent recomposition that arrives with the same logical value.
+    var isDragging by remember { mutableStateOf(false) }
+    LaunchedEffect(levelMillibel) {
+        if (!isDragging) dragLevel = levelMillibel.toFloat()
+    }
     // Composable-scoped so the Canvas draw lambda (a DrawScope, not a composable)
     // can use the live accent.
     val accent = accentColor()
@@ -58,6 +75,9 @@ internal fun VerticalBandSlider(
             .pointerInput(enabled, minLevelMillibel, maxLevelMillibel) {
                 if (!enabled) return@pointerInput
                 detectVerticalDragGestures(
+                    onDragStart = {
+                        isDragging = true
+                    },
                     onVerticalDrag = { change, dragAmount ->
                         change.consume()
                         // Drag up = boost: invert the Y delta over the track height.
@@ -66,8 +86,14 @@ internal fun VerticalBandSlider(
                             .coerceIn(minLevelMillibel.toFloat(), maxLevelMillibel.toFloat())
                         onLevelChange(dragLevel.toInt())
                     },
-                    onDragEnd = { onDragFinished() },
-                    onDragCancel = { onDragFinished() },
+                    onDragEnd = {
+                        isDragging = false
+                        onDragFinished()
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        onDragFinished()
+                    },
                 )
             },
         contentAlignment = Alignment.Center,

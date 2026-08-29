@@ -51,6 +51,20 @@ class AndroidAudioEffectsController @Inject constructor(
     private val _state = MutableStateFlow<EqualizerState?>(null)
     override val state: StateFlow<EqualizerState?> = _state.asStateFlow()
 
+    /**
+     * H3 (player-stack review): every field below is shared across the playback
+     * thread (audio-session attach), the main thread (setter calls from the EQ
+     * ViewModel), and the [scope]'s default dispatcher (the restore-or-flush
+     * coroutine launched from [attachToAudioSession]). Without serialisation a
+     * band-level set during a session-id change could be partially overwritten
+     * by a half-applied restore. The single [lock] (a Java monitor) protects
+     * every field, and the [generation] counter invalidates an in-flight
+     * restore that started before a new attach or release ran (M7).
+     */
+    private val lock = Any()
+    @Volatile
+    private var generation: Int = 0
+
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
@@ -70,26 +84,35 @@ class AndroidAudioEffectsController @Inject constructor(
     /** Called by [VeloxExoPlayerFactory]'s listener whenever the session id is set or changes. */
     fun attachToAudioSession(sessionId: Int) {
         if (sessionId == 0) return
-        releaseEffects()
-        runCatching {
-            val eq = Equalizer(/* priority = */ 0, sessionId)
-            val bass = BassBoost(0, sessionId)
-            val virt = Virtualizer(0, sessionId)
-            equalizer = eq
-            bassBoost = bass
-            virtualizer = virt
-            applyDesiredToHardware()
-            publishState()
+        val thisGeneration: Int
+        synchronized(lock) {
+            // Bump the generation first so any in-flight restore coroutine
+            // launched by the previous attach becomes a no-op (M7).
+            generation++
+            thisGeneration = generation
+            releaseEffectsLocked()
+            runCatching {
+                val eq = Equalizer(/* priority = */ 0, sessionId)
+                val bass = BassBoost(0, sessionId)
+                val virt = Virtualizer(0, sessionId)
+                equalizer = eq
+                bassBoost = bass
+                virtualizer = virt
+                applyDesiredToHardwareLocked()
+                publishStateLocked()
+            }
         }
         // Rehydrate whatever the user last saved (unless this process has fresher,
         // un-persisted edits — those win here and get flushed to DataStore instead).
+        // M7: the generation counter invalidates this if a newer attach or
+        // release runs while the coroutine is suspended on the DataStore read.
         scope.launch {
-            runCatching { onAttachedRestoreOrFlush() }
+            runCatching { onAttachedRestoreOrFlush(thisGeneration) }
         }
     }
 
-    /** Applies every cached desired value to the freshly-attached effect objects. */
-    private fun applyDesiredToHardware() {
+    /** Applies every cached desired value to the freshly-attached effect objects. Caller holds [lock]. */
+    private fun applyDesiredToHardwareLocked() {
         val eq = equalizer ?: return
         runCatching {
             eq.enabled = enabled
@@ -98,7 +121,14 @@ class AndroidAudioEffectsController @Inject constructor(
 
             val range = eq.bandLevelRange
             desiredBandLevels.forEach { (band, level) ->
-                eq.setBandLevel(band.toShort(), level.coerceIn(range[0].toInt(), range[1].toInt()).toShort())
+                // L11 (player-stack review): read the hardware's actual
+                // value back into the desired map after each set, so
+                // `publishState` reflects the truth (the device may
+                // have clamped to a narrower range than what we asked).
+                val coerced = level.coerceIn(range[0].toInt(), range[1].toInt())
+                eq.setBandLevel(band.toShort(), coerced.toShort())
+                val actual = runCatching { eq.getBandLevel(band.toShort()).toInt() }.getOrNull()
+                if (actual != null) desiredBandLevels[band] = actual
             }
             if (bassStrength > 0) bassBoost?.setStrength(bassStrength.coerceIn(0, 1000).toShort())
             if (virtualizerStrength > 0) virtualizer?.setStrength(virtualizerStrength.coerceIn(0, 1000).toShort())
@@ -108,14 +138,36 @@ class AndroidAudioEffectsController @Inject constructor(
     /**
      * Post-attach hook: either restore the persisted curve (fresh process) or flush
      * this process's pre-attach edits into persistence so they survive restarts.
+     * M7 (player-stack review): every operation checks the generation counter
+     * after acquiring the lock — if a newer attach or release ran while the
+     * coroutine was suspended on the DataStore read, this restore is dropped.
      */
-    private suspend fun onAttachedRestoreOrFlush() {
-        val bands = _state.value?.bands.orEmpty()
+    private suspend fun onAttachedRestoreOrFlush(seenGeneration: Int) {
+        // Read the current band list outside the long DataStore suspension —
+        // it's a single map lookup and keeps the critical section short.
+        val bands: List<EqualizerBand> = synchronized(lock) {
+            if (generation != seenGeneration) return
+            _state.value?.bands.orEmpty()
+        }
         if (bands.isEmpty()) return
-        if (dirtyInSession) {
-            persistCurrentDesired(bands)
-        } else {
-            val saved = preferences.settings.first()
+
+        val saved: EqualizerSettings
+        val shouldPersist: Boolean
+        synchronized(lock) {
+            if (generation != seenGeneration) return
+            shouldPersist = dirtyInSession
+        }
+        if (shouldPersist) {
+            // Flush this process's un-persisted edits so they survive restart.
+            synchronized(lock) {
+                if (generation != seenGeneration) return
+                persistCurrentDesiredLocked(bands)
+            }
+            return
+        }
+        saved = preferences.settings.first()
+        synchronized(lock) {
+            if (generation != seenGeneration) return
             enabled = saved.enabled
             bassStrength = saved.bassBoostStrength
             virtualizerStrength = saved.virtualizerStrength
@@ -131,13 +183,13 @@ class AndroidAudioEffectsController @Inject constructor(
                     desiredBandLevels[target.index] = savedLevel
                 }
             }
-            applyDesiredToHardware()
-            publishState()
+            applyDesiredToHardwareLocked()
+            publishStateLocked()
         }
     }
 
-    /** Canonical 10-frequency snapshot of the current desired state → DataStore. */
-    private suspend fun persistCurrentDesired(bands: List<EqualizerBand>) {
+    /** Canonical 10-frequency snapshot of the current desired state → DataStore. Caller holds [lock]. */
+    private suspend fun persistCurrentDesiredLocked(bands: List<EqualizerBand>) {
         val canonical = EqualizerPreset.NORMAL.frequenciesHz.map { freqHz ->
             bands.minBy { abs(it.centerFrequencyMilliHz / 1000.0 - freqHz) }
                 ?.let { desiredBandLevels[it.index] ?: it.levelMillibel } ?: 0
@@ -156,72 +208,104 @@ class AndroidAudioEffectsController @Inject constructor(
     }
 
     override fun setEnabled(enabled: Boolean) {
-        this.enabled = enabled
-        dirtyInSession = true
-        runCatching {
-            equalizer?.enabled = enabled
-            bassBoost?.enabled = enabled
-            virtualizer?.enabled = enabled
+        synchronized(lock) {
+            this.enabled = enabled
+            dirtyInSession = true
+            runCatching {
+                equalizer?.enabled = enabled
+                bassBoost?.enabled = enabled
+                virtualizer?.enabled = enabled
+            }
+            publishStateLocked()
         }
-        publishState()
     }
 
     override fun setBandLevel(bandIndex: Int, levelMillibel: Int) {
-        dirtyInSession = true
-        val range = equalizer?.bandLevelRange
-        val coerced = levelMillibel.coerceIn(range?.get(0)?.toInt() ?: -1500, range?.get(1)?.toInt() ?: 1500)
-        desiredBandLevels[bandIndex] = coerced
-        runCatching { equalizer?.setBandLevel(bandIndex.toShort(), coerced.toShort()) }
-        // A manual drag always leaves preset territory (SCREEN_EQUALIZER.md §4 "User").
-        activePresetId = null
-        publishState()
+        synchronized(lock) {
+            dirtyInSession = true
+            val range = equalizer?.bandLevelRange
+            val coerced = levelMillibel.coerceIn(range?.get(0)?.toInt() ?: -1500, range?.get(1)?.toInt() ?: 1500)
+            desiredBandLevels[bandIndex] = coerced
+            runCatching { equalizer?.setBandLevel(bandIndex.toShort(), coerced.toShort()) }
+            // L11 (player-stack review): re-read the hardware's value in
+            // case it clamped our request, so the StateFlow reflects
+            // reality (rather than the user's last drag coordinate).
+            runCatching { equalizer?.getBandLevel(bandIndex.toShort())?.toInt() }
+                ?.getOrNull()
+                ?.let { desiredBandLevels[bandIndex] = it }
+            // A manual drag always leaves preset territory (SCREEN_EQUALIZER.md §4 "User").
+            activePresetId = null
+            publishStateLocked()
+        }
     }
 
     override fun setBassBoostStrength(strength: Int) {
-        bassStrength = strength.coerceIn(0, 1000)
-        dirtyInSession = true
-        runCatching {
-            bassBoost?.takeIf { enabled }?.setStrength(bassStrength.toShort())
+        synchronized(lock) {
+            bassStrength = strength.coerceIn(0, 1000)
+            dirtyInSession = true
+            runCatching {
+                bassBoost?.takeIf { enabled }?.setStrength(bassStrength.toShort())
+            }
+            publishStateLocked()
         }
-        publishState()
     }
 
     override fun setVirtualizerStrength(strength: Int) {
-        virtualizerStrength = strength.coerceIn(0, 1000)
-        dirtyInSession = true
-        runCatching {
-            virtualizer?.takeIf { enabled }?.setStrength(virtualizerStrength.toShort())
+        synchronized(lock) {
+            virtualizerStrength = strength.coerceIn(0, 1000)
+            dirtyInSession = true
+            runCatching {
+                virtualizer?.takeIf { enabled }?.setStrength(virtualizerStrength.toShort())
+            }
+            publishStateLocked()
         }
-        publishState()
     }
 
     override fun applyPreset(preset: EqualizerPreset) {
-        dirtyInSession = true
-        val bands = _state.value?.bands.orEmpty()
-        preset.gainsFor(bands).forEachIndexed { index, level ->
-            setBandLevel(index, level)
+        synchronized(lock) {
+            dirtyInSession = true
+            val bands = _state.value?.bands.orEmpty()
+            preset.gainsFor(bands).forEachIndexed { index, level ->
+                val range = equalizer?.bandLevelRange
+                val coerced = level.coerceIn(range?.get(0)?.toInt() ?: -1500, range?.get(1)?.toInt() ?: 1500)
+                desiredBandLevels[index] = coerced
+                runCatching { equalizer?.setBandLevel(index.toShort(), coerced.toShort()) }
+            }
+            activePresetId = preset.name
+            publishStateLocked()
         }
-        activePresetId = preset.name // setBandLevel clears it; re-assert after the loop
-        publishState()
     }
 
     override fun reset() {
-        dirtyInSession = true
-        val bands = _state.value?.bands.orEmpty()
-        bands.forEach { setBandLevel(it.index, 0) }
-        activePresetId = EqualizerPreset.NORMAL.name
-        setBassBoostStrength(0)
-        setVirtualizerStrength(0)
-        publishState()
+        synchronized(lock) {
+            dirtyInSession = true
+            val bands = _state.value?.bands.orEmpty()
+            bands.forEach {
+                val range = equalizer?.bandLevelRange
+                val coerced = 0.coerceIn(range?.get(0)?.toInt() ?: -1500, range?.get(1)?.toInt() ?: 1500)
+                desiredBandLevels[it.index] = coerced
+                runCatching { equalizer?.setBandLevel(it.index.toShort(), coerced.toShort()) }
+            }
+            activePresetId = EqualizerPreset.NORMAL.name
+            bassStrength = 0
+            runCatching { bassBoost?.takeIf { enabled }?.setStrength(0) }
+            virtualizerStrength = 0
+            runCatching { virtualizer?.takeIf { enabled }?.setStrength(0) }
+            publishStateLocked()
+        }
     }
 
     /** Called from VeloxPlaybackService.onDestroy so effect objects don't outlive the player. */
     fun release() {
-        releaseEffects()
+        synchronized(lock) {
+            generation++
+            releaseEffectsLocked()
+        }
         _state.value = null
     }
 
-    private fun releaseEffects() {
+    /** Caller holds [lock]. */
+    private fun releaseEffectsLocked() {
         runCatching { equalizer?.enabled = false }
         runCatching { bassBoost?.enabled = false }
         runCatching { virtualizer?.enabled = false }
@@ -233,7 +317,8 @@ class AndroidAudioEffectsController @Inject constructor(
         virtualizer = null
     }
 
-    private fun publishState() {
+    /** Caller holds [lock]. */
+    private fun publishStateLocked() {
         val eq = equalizer ?: run {
             _state.value = null
             return

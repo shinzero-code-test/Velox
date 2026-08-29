@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -46,6 +49,11 @@ fun SearchScreen(
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
+    // Search UX (features review): hasQueried is true only after the
+    // 250ms debounce + a non-blank query has run. We use it to suppress
+    // the "no results" empty state during the debounce window so the
+    // prompt doesn't flash.
+    val hasQueried by viewModel.hasQueried.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = VeloxSpacing.lg)) {
         Text(
@@ -60,6 +68,15 @@ fun SearchScreen(
             onValueChange = viewModel::onQueryChange,
             placeholder = { Text(stringResource(R.string.search_hint), color = VeloxColors.OnSurfaceVariant) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = VeloxColors.OnSurfaceVariant) },
+            // Search UX: clear-text trailing icon, hidden when the
+            // field is empty so we don't waste horizontal space.
+            trailingIcon = if (query.isNotEmpty()) {
+                {
+                    IconButton(onClick = viewModel::onClearQuery) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.search_clear), tint = VeloxColors.OnSurfaceVariant)
+                    }
+                }
+            } else null,
             singleLine = true,
             shape = VeloxShapes.full,
             colors = TextFieldDefaults.colors(
@@ -80,6 +97,10 @@ fun SearchScreen(
                 title = stringResource(R.string.search_prompt_title),
                 body = stringResource(R.string.search_prompt_body),
             )
+            // Only show the "no results" empty state once a query has
+            // actually been looked up; during the debounce window we
+            // show nothing rather than a flash of "no results".
+            !hasQueried -> Unit
             results.isEmpty() -> VeloxEmptyState(
                 icon = Icons.Filled.SearchOff,
                 title = stringResource(R.string.search_empty_title),
@@ -89,7 +110,7 @@ fun SearchScreen(
                 contentPadding = PaddingValues(vertical = VeloxSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
             ) {
-                items(results, key = { it.id }) { item ->
+                itemsIndexed(results, key = { index, item -> "${item.id}-$index" }) { _, item ->
                     ClickableGlassCard(
                         onClick = { viewModel.onResultClick(item); onResultClick(item) },
                         modifier = Modifier.fillMaxWidth(),

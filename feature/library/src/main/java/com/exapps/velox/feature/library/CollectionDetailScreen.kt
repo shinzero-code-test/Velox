@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.exapps.velox.core.common.util.ScreenState
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.ui.components.ClickableGlassCard
 import com.exapps.velox.core.ui.components.VeloxEmptyState
@@ -52,7 +55,8 @@ fun CollectionDetailScreen(
     onMediaItemClick: (MediaItem) -> Unit = {},
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
-    val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+    val state by viewModel.tracks.collectAsStateWithLifecycle()
+    val tracks: List<MediaItem> = (state as? ScreenState.Content)?.data.orEmpty()
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -75,6 +79,9 @@ fun CollectionDetailScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // M3 (features review): the count subtitle now reflects the
+                // currently-rendered row count, not the still-loading total
+                // (0 during loading was misleading).
                 Text(
                     text = pluralStringResource(R.plurals.collection_track_count, tracks.size, tracks.size),
                     style = VeloxTheme.typography.bodyMedium,
@@ -83,31 +90,40 @@ fun CollectionDetailScreen(
             }
         }
 
-        if (tracks.isEmpty()) {
-            VeloxEmptyState(
-                icon = Icons.Filled.LibraryMusic,
-                title = stringResource(R.string.library_empty_title),
-                body = stringResource(R.string.collection_empty_body),
-            )
-        } else {
-            LazyColumn(
+        when (state) {
+            ScreenState.Loading -> Box(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
-                verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
+                contentAlignment = Alignment.Center,
             ) {
-                items(tracks, key = { it.id }) { track ->
-                    CollectionTrackRow(
-                        track = track,
-                        onClick = {
-                            viewModel.onTrackClick(track)
-                            // Same contract as the Library list: audio expands the
-                            // Now Playing sheet, video opens the fullscreen player.
-                            onMediaItemClick(track)
-                        },
-                        onFavoriteClick = { viewModel.onToggleFavorite(track) },
-                    )
+                CircularProgressIndicator()
+            }
+            is ScreenState.Content -> if (tracks.isEmpty()) {
+                VeloxEmptyState(
+                    icon = Icons.Filled.LibraryMusic,
+                    title = stringResource(R.string.library_empty_title),
+                    body = stringResource(R.string.collection_empty_body),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
+                ) {
+                    itemsIndexed(tracks, key = { index, item -> "${item.id}-$index" }) { _, track ->
+                        CollectionTrackRow(
+                            track = track,
+                            onClick = {
+                                viewModel.onTrackClick(track)
+                                // Same contract as the Library list: audio expands the
+                                // Now Playing sheet, video opens the fullscreen player.
+                                onMediaItemClick(track)
+                            },
+                            onFavoriteClick = { viewModel.onToggleFavorite(track) },
+                        )
+                    }
                 }
             }
+            else -> Unit
         }
     }
 }

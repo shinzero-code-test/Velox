@@ -67,6 +67,10 @@ fun ClickableGlassCard(
     elevated: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(VeloxSpacing.md),
     onLongClick: (() -> Unit)? = null,
+    // A11y (features review): pass an onClickLabel so TalkBack reads
+    // "Open artist Radiohead" instead of just reading the cell's text
+    // nodes one after another.
+    onClickLabel: String? = null,
     content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -91,6 +95,7 @@ fun ClickableGlassCard(
                 indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick,
+                onClickLabel = onClickLabel,
             )
             .padding(contentPadding),
     ) {

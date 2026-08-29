@@ -58,15 +58,15 @@ class MediaLibraryRepositoryImpl @Inject constructor(
         artistDao.observeAll().map { it.map { entity -> entity.toDomain() } }
 
     override fun observeFolders(parentPath: String?): Flow<List<Folder>> =
-        mediaItemDao.observeDistinctFolderPaths().map { paths ->
-            paths.filterNotNull()
-                .filter { path -> parentPath == null || File(path).parent == parentPath }
-                .map { path ->
+        mediaItemDao.observeFolderSummaries().map { summaries ->
+            summaries
+                .filter { parentPath == null || File(it.path).parent == parentPath }
+                .map { summary ->
                     Folder(
-                        path = path,
-                        displayName = File(path).name,
-                        itemCount = 0, // resolved lazily by the UI via observeFolderContents when opened
-                        parentPath = File(path).parent,
+                        path = summary.path,
+                        displayName = File(summary.path).name,
+                        itemCount = summary.count,
+                        parentPath = File(summary.path).parent,
                     )
                 }
         }
@@ -127,7 +127,8 @@ class MediaLibraryRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) { mediaItemDao.getById(id)?.toDomain() }
 
     override fun search(query: String, type: MediaType?): Flow<List<MediaItem>> =
-        mediaItemDao.search(query, type?.name).map { it.map { entity -> entity.toDomain() } }
+        mediaItemDao.search(MediaItemDao.escapeLike(query), type?.name)
+            .map { it.map { entity -> entity.toDomain() } }
 
     override suspend fun setFavorite(id: Long, favorite: Boolean) =
         withContext(ioDispatcher) { mediaItemDao.setFavorite(id, favorite) }

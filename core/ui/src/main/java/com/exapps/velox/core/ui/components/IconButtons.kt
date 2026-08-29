@@ -3,6 +3,7 @@ package com.exapps.velox.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -24,6 +25,11 @@ import com.exapps.velox.core.ui.theme.glassSurfaceColor
  * Circular glass icon button (DESIGN_SYSTEM.md §5.5). The 48dp default touch target
  * meets the accessibility minimum called out in §9 and SCREEN_PATTERNS.md §11 even
  * when the visual icon itself is smaller.
+ *
+ * M13 (features review): callers previously passed a 32dp or 36dp `size` to
+ * compress rows, which put the touch target below Material's 40dp minimum.
+ * We now enforce the 40dp floor via `minimumInteractiveComponentSize()`
+ * regardless of the caller's chosen visual size.
  */
 @Composable
 fun VeloxGlassIconButton(
@@ -39,6 +45,7 @@ fun VeloxGlassIconButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .size(size)
             .clip(VeloxShapes.full)
             .background(if (filled) accentColor() else glassSurfaceColor())

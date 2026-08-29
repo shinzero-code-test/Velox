@@ -15,7 +15,15 @@ fun VeloxMediaItem.toMedia3MediaItem(): Media3MediaItem {
         .setTitle(title)
         .setArtist(artistName)
         .setAlbumTitle(albumTitle)
-        .apply { artworkUri?.let { setArtworkUri(Uri.parse(it)) } }
+        // L12 (player-stack review): `artworkUri` is stored as a String
+        // (null/blank allowed). Uri.parse("") produces a relative-uri
+        // with a misleading empty authority; skip empty values entirely
+        // so Media3 falls back to its default art placeholder.
+        .apply {
+            artworkUri
+                ?.takeIf { it.isNotBlank() }
+                ?.let { setArtworkUri(Uri.parse(it)) }
+        }
         .setDurationMs(durationMs)
         .setIsBrowsable(false)
         .setIsPlayable(true)

@@ -73,8 +73,19 @@ class NowPlayingViewModel @Inject constructor(
     private var watchedTrackId: Long? = null
 
     init {
-        // Sleep-timer watch: end-of-track (current item changed) and end-of-queue
-        // (last item reached) both pause before anything new starts.
+        // Sleep-timer watch: end-of-track fires only on a natural ENDED transition
+        // (M11), and end-of-queue fires when the last item is at ENDED. Manual
+        // skipNext/skipPrevious changes `currentItem.id` without changing
+        // status, so a transition-by-id approach was cancelling the timer on
+        // every user-initiated skip.
+        //
+        // L17 (features review): the player state is collected for the
+        // lifetime of the VM. We accept the (negligible) battery tradeoff
+        // because the same `state` flow is already kept hot by the
+        // `stateIn` call below; an extra subscriber doesn't add IO, just
+        // a callback. Cancelling this collector on screen background
+        // would mean a sleep timer "fire while screen is off" silently
+        // no-ops, which is a worse UX.
         viewModelScope.launch {
             state.collect { playback ->
                 when (_sleepTimer.value) {
@@ -82,9 +93,19 @@ class NowPlayingViewModel @Inject constructor(
                         val currentId = playback.currentItem?.id
                         if (watchedTrackId == null) {
                             watchedTrackId = currentId
-                        } else if (currentId != null && currentId != watchedTrackId) {
+                        } else if (
+                            currentId != null && currentId != watchedTrackId &&
+                            playback.status == com.exapps.velox.core.domain.player.PlaybackStatus.ENDED
+                        ) {
+                            // Natural end of the watched track: pause and disarm.
                             playerController.pause()
                             setSleepTimer(SleepTimerOption.OFF)
+                        }
+                        // L20 (features review): REPEAT_ONE keeps the same id
+                        // looping, so update the watch whenever the same track
+                        // continues playing rather than only on first observation.
+                        if (playback.status != com.exapps.velox.core.domain.player.PlaybackStatus.ENDED) {
+                            watchedTrackId = currentId
                         }
                     }
 
@@ -151,15 +172,22 @@ class NowPlayingViewModel @Inject constructor(
     }
 
     fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
-        _sleepTimer.value = option
-        sleepTimerJob?.cancel()
-        watchedTrackId = state.value.currentItem?.id
-        playerController.setVolume(1f) // reset any in-progress fade
-
+        // L2 (features review): the previous version mutated `_sleepTimer`
+        // and reset the volume before validating the input. A caller
+        // passing `option = CUSTOM, customMinutes = 0` would leave the
+        // VM with `_sleepTimer = CUSTOM` and no scheduled job, which
+        // would make subsequent UI look like the timer is on while
+        // nothing is happening. Validate first; only commit state when
+        // we actually have a duration to schedule.
         val minutes = when (option) {
             SleepTimerOption.CUSTOM -> customMinutes?.takeIf { it > 0 } ?: return
             else -> option.minutes ?: return
         }
+
+        _sleepTimer.value = option
+        sleepTimerJob?.cancel()
+        watchedTrackId = state.value.currentItem?.id
+        playerController.setVolume(1f) // reset any in-progress fade
 
         sleepTimerJob = viewModelScope.launch {
             val totalMs = minutes * 60_000L

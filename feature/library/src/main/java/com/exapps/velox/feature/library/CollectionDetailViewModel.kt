@@ -3,6 +3,7 @@ package com.exapps.velox.feature.library
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.exapps.velox.core.common.util.ScreenState
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 import com.exapps.velox.core.domain.usecase.PlayMediaUseCase
@@ -10,6 +11,7 @@ import com.exapps.velox.core.domain.usecase.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -40,15 +42,22 @@ class CollectionDetailViewModel @Inject constructor(
             ?: folderPath?.let { File(it).name },
     ) { "CollectionDetail route must carry a title" }
 
-    val tracks: StateFlow<List<MediaItem>> = when {
+    /**
+     * M3 (features review): the previous `emptyList()` initial value made it
+     * impossible to distinguish "still loading" from "loaded with zero
+     * tracks", so the screen flashed the empty-state card on every cold
+     * open. We now surface a [ScreenState] like the sibling screens.
+     */
+    val tracks: StateFlow<ScreenState<List<MediaItem>>> = when {
         albumId != null -> repository.observeAlbumTracks(albumId)
         artistId != null -> repository.observeArtistTracks(artistId)
         genre != null -> repository.observeGenreTracks(genre)
         else -> repository.observeFolderContents(checkNotNull(folderPath))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.map<List<MediaItem>, ScreenState<List<MediaItem>>> { ScreenState.Content(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScreenState.Loading)
 
     fun onTrackClick(track: MediaItem) {
-        viewModelScope.launch { playMedia(track, tracks.value) }
+        viewModelScope.launch { playMedia(track, (tracks.value as? ScreenState.Content)?.data.orEmpty()) }
     }
 
     fun onToggleFavorite(track: MediaItem) {

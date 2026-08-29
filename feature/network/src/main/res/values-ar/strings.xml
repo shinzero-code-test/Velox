@@ -19,6 +19,11 @@
     <string name="network_field_user">اسم المستخدم (اختياري)</string>
     <string name="network_field_password">كلمة المرور (اختيارية)</string>
     <string name="network_field_basepath">المسار الأساسي</string>
+    <string name="network_retry">إعادة المحاولة</string>
+    <string name="network_stream_unsupported">رابط بث غير مدعوم. استخدم http(s) أو rtsp أو smb أو ftp أو WebDAV.</string>
+    <string name="network_port_invalid">يجب أن يكون المنفذ بين 1 و 65535.</string>
+    <string name="network_secure_disabled_help">يدعم WebDAV فقط HTTPS. يستخدم FTP و SMB اتصالات غير مشفّرة.</string>
+    <string name="network_plaintext_credentials_notice">تُخزَّن بيانات الاعتماد محليًا كنص عادي. استخدم حسابًا مخصصًا بصلاحيات محدودة.</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_save">حفظ</string>
 </resources>

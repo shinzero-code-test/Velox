@@ -30,14 +30,35 @@ class SearchViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
+    /**
+     * Becomes true the moment a non-blank query has been debounced and
+     * looked up. The screen uses this to keep showing the "type to search"
+     * prompt during the 250ms debounce window instead of flashing the
+     * "no results" empty state (library dead code / features review).
+     */
+    private val _hasQueried = MutableStateFlow(false)
+    val hasQueried: StateFlow<Boolean> = _hasQueried.asStateFlow()
+
     val results: StateFlow<List<MediaItem>> = _query
         .debounce(SEARCH_DEBOUNCE_MS)
         .distinctUntilChanged()
-        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else repository.search(q) }
+        .flatMapLatest { q ->
+            if (q.isBlank()) {
+                _hasQueried.value = false
+                flowOf(emptyList())
+            } else {
+                _hasQueried.value = true
+                repository.search(q)
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onQueryChange(value: String) {
         _query.value = value
+    }
+
+    fun onClearQuery() {
+        _query.value = ""
     }
 
     fun onResultClick(item: MediaItem) {

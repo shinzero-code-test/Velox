@@ -2,7 +2,6 @@
 <resources>
     <string name="now_playing_title">Now Playing</string>
     <string name="cd_collapse">Collapse</string>
-    <string name="cd_more_options">More options</string>
     <string name="cd_shuffle">Shuffle</string>
     <string name="cd_repeat">Repeat</string>
     <string name="cd_edit_info">Edit info</string>

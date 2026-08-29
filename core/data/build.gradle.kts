@@ -49,5 +49,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
+    // H4 (data-layer review): MigrationTestHelper for asserting that the 1→2
+    // and 2→3 migrations preserve the user-visible shape (favourites, play
+    // stats, tag-editor overrides, bookmarks) on every schema bump.
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
 }

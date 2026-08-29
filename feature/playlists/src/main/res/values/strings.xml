@@ -7,14 +7,19 @@
     <string name="playlist_most_played">Most Played</string>
     <string name="playlists_empty_title">No playlists yet</string>
     <string name="playlists_empty_body">Create a playlist to start grouping your favorite tracks together.</string>
+    <string name="playlists_error_title">Couldn\'t load playlists</string>
     <string name="playlists_create_action">New playlist</string>
     <string name="playlists_create_first">Create your first playlist</string>
     <string name="playlists_create">Create</string>
     <string name="playlists_create_dialog_title">New playlist</string>
     <string name="playlists_name_hint">Playlist name</string>
+    <string name="playlists_name_required">Playlist name can\'t be empty</string>
     <string name="playlists_import_m3u">Import M3U playlist</string>
     <string name="playlists_export_m3u">Export as M3U</string>
-    <string name="playlist_track_count">%1$d tracks</string>
+    <plurals name="playlist_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
     <string name="playlist_header_subtitle">%1$d tracks • %2$s</string>
     <string name="playlist_play_all">Play all</string>
     <string name="playlist_shuffle">Shuffle</string>
@@ -24,5 +29,9 @@
     <string name="playlist_add_selected">Add %1$d tracks</string>
     <string name="playlist_remove_track">Remove from playlist</string>
     <string name="playlist_fallback_name">Playlist</string>
+    <string name="playlists_import_done">M3U imported.</string>
+    <string name="playlists_import_failed">M3U import failed. The file may be corrupt or empty.</string>
+    <string name="playlists_export_done">M3U exported.</string>
+    <string name="playlists_export_failed">M3U export failed. Check the destination permissions and try again.</string>
     <string name="cancel">Cancel</string>
 </resources>

@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,8 +29,11 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,7 +72,26 @@ fun PlaylistDetailScreen(
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
     val libraryTracks by viewModel.libraryTracks.collectAsStateWithLifecycle()
+    val exportMessage by viewModel.exportMessage.collectAsStateWithLifecycle()
     var showAddTracksSheet by remember { mutableStateOf(false) }
+
+    // M4 (features review): exportM3u previously swallowed its result; the
+    // snackbar below surfaces success/failure via the opaque markers in
+    // [PlaylistDetailViewModel.exportMessage].
+    val exportSnackbar = remember { SnackbarHostState() }
+    val exportSuccess = stringResource(R.string.playlists_export_done)
+    val exportFailure = stringResource(R.string.playlists_export_failed)
+    LaunchedEffect(exportMessage) {
+        exportMessage?.let { marker ->
+            val localized = when (marker) {
+                PlaylistDetailViewModel.EXPORT_SUCCESS_MARKER -> exportSuccess
+                PlaylistDetailViewModel.EXPORT_FAILED_MARKER -> exportFailure
+                else -> marker
+            }
+            exportSnackbar.showSnackbar(localized)
+            viewModel.clearExportMessage()
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("audio/x-mpegurl"),
@@ -77,11 +101,20 @@ fun PlaylistDetailScreen(
 
     val current = detail
     if (current == null) {
-        VeloxFullScreenLoading(modifier.fillMaxSize())
+        Box(modifier = modifier.fillMaxSize()) {
+            VeloxFullScreenLoading()
+            SnackbarHost(
+                hostState = exportSnackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(VeloxSpacing.lg),
+            )
+        }
         return
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Header (§6): back, name, export
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -172,7 +205,7 @@ fun PlaylistDetailScreen(
                 contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
                 verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xxs),
             ) {
-                items(current.tracks, key = { it.id }) { track ->
+                itemsIndexed(current.tracks, key = { index, item -> "${item.id}-$index" }) { _, track ->
                     PlaylistTrackRow(
                         track = track,
                         onClick = {
@@ -210,6 +243,15 @@ fun PlaylistDetailScreen(
             },
             onDismiss = { showAddTracksSheet = false },
         )
+    }
+
+    // M4: snackbar host for M3U export outcomes.
+    SnackbarHost(
+        hostState = exportSnackbar,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(VeloxSpacing.lg),
+    )
     }
 }
 
@@ -273,15 +315,24 @@ private fun AddTracksSheet(
     val selected = remember { mutableStateOf(setOf<Long>()) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
-        Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
+        // AddTracksSheet (features review): the 420dp fixed height cropped
+        // the picker on landscape phones and looked tiny on tablets. Cap
+        // at 80% of viewport so the sheet fills the available space
+        // without covering the system bars.
+        Column(
+            modifier = Modifier
+                .padding(horizontal = VeloxSpacing.lg)
+                .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.8f)
+                .fillMaxWidth(),
+        ) {
             Text(
                 text = stringResource(R.string.playlist_add_tracks),
                 style = VeloxTheme.typography.headlineMedium,
                 color = VeloxColors.OnBackground,
                 modifier = Modifier.padding(bottom = VeloxSpacing.sm),
             )
-            LazyColumn(modifier = Modifier.height(420.dp)) {
-                items(allTracks, key = { it.id }) { track ->
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                itemsIndexed(allTracks, key = { index, item -> "${item.id}-$index" }) { _, track ->
                     val isSelected = track.id in selected.value
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

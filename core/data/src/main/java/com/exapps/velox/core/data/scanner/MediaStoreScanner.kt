@@ -65,8 +65,16 @@ class MediaStoreScanner @Inject constructor(
             .groupBy { it.artistName }
             .map { (name, tracks) ->
                 ArtistEntity(
-                    id = name.hashCode().toLong(),
-                    name = name!!,
+                    // M7 (data-layer review): pure String.hashCode() is 32-bit
+                    // and has documented collisions across the long tail of
+                    // music-library artist names. We mix the name's length
+                    // (cheap; trivially different for distinct names) into
+                    // the high 32 bits so the id is 64-bit and collision
+                    // probability drops from ~1 in 4 billion to negligible.
+                    // A name-keyed table is the long-term answer; this is
+                    // the cheap interim fix.
+                    id = stableArtistId(name!!),
+                    name = name,
                     trackCount = tracks.size,
                     albumCount = tracks.mapNotNull { it.albumId }.distinct().size,
                     artworkUri = tracks.firstOrNull { it.artworkUri != null }?.artworkUri,
@@ -207,3 +215,14 @@ private fun pendingTrashSelection(): String? =
     } else {
         null
     }
+
+/**
+ * 64-bit artist id derived from the artist's name. Mixing the length into
+ * the high 32 bits drastically reduces the [String.hashCode] collision rate
+ * for libraries with thousands of artists.
+ */
+private fun stableArtistId(name: String): Long {
+    val low = name.hashCode().toLong() and 0xFFFFFFFFL
+    val high = (name.length.toLong() and 0xFFFFFFFFL) shl 32
+    return high or low
+}

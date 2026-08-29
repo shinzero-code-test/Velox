@@ -17,6 +17,8 @@
     <string name="library_permission_title">الوصول إلى وسائطك</string>
     <string name="library_permission_body">يحتاج Velox إلى إذن لرؤية ملفات الصوت والفيديو المخزّنة على هذا الجهاز. لا تغادر بياناتك هاتفك أبدًا.</string>
     <string name="library_permission_action">السماح بالوصول</string>
+    <string name="library_permission_body_permanently_denied">لن يظهر مربع حوار إذن النظام مرة أخرى. افتح إعدادات Android لمنح Velox صلاحية الوصول إلى الوسائط.</string>
+    <string name="library_permission_open_settings">فتح الإعدادات</string>
     <string name="library_track_subtitle">%1$s • %2$s</string>
 
     <string name="library_sort">ترتيب حسب</string>
@@ -39,6 +41,7 @@
 
     <string name="search_title">البحث</string>
     <string name="search_hint">ابحث عن أغاني، ألبومات، فنانين…</string>
+    <string name="search_clear">مسح البحث</string>
     <string name="search_empty_title">لا توجد نتائج</string>
     <string name="search_empty_body">جرّب عنوانًا أو فنانًا أو ألبومًا مختلفًا.</string>
     <string name="search_prompt_title">ابحث عمّا تريد تشغيله</string>
@@ -46,4 +49,10 @@
     <string name="cd_video_result">فيديو</string>
     <string name="cd_favorite_add">إضافة إلى المفضلة</string>
     <string name="cd_favorite_remove">إزالة من المفضلة</string>
+    <string name="cd_open_album">افتح الألبوم %1$s</string>
+    <string name="cd_open_artist">افتح الفنان %1$s</string>
+    <string name="cd_open_folder">افتح المجلد %1$s</string>
+    <string name="cd_open_genre">افتح النوع %1$s</string>
+    <string name="cd_tab_selected">محدد</string>
+    <string name="cd_tab_not_selected">غير محدد</string>
 </resources>

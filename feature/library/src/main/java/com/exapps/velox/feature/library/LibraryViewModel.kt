@@ -77,7 +77,6 @@ class LibraryViewModel @Inject constructor(
         LibraryGroup.FOLDERS -> repository.observeFolders().map {
             LibraryContent.Folders(it.sortedFor(sortOrder) { folder -> folder.displayName }).asScreenState()
         }
-        LibraryGroup.RECENT -> repository.observeRecentlyPlayed().map { LibraryContent.Tracks(it).asScreenState() }
         LibraryGroup.GENRES -> repository.observeGenres().map {
             LibraryContent.Genres(it.sortedFor(sortOrder) { genre -> genre.name }).asScreenState()
         }
@@ -99,12 +98,21 @@ class LibraryViewModel @Inject constructor(
         _sortOrder.value = sortOrder
     }
 
-    /** Called once from the screen after the runtime permission result comes back
-     * (and on first composition, in case it was already granted from a prior
-     * launch) — see LibraryScreen's rememberLauncherForActivityResult wiring. */
+    /** Called from the screen after the runtime permission result comes back.
+     *
+     * M5 (features review): the previous behaviour rescaned on every
+     * tab-return, because the screen's `LaunchedEffect(Unit)` reports the
+     * current permission state to this VM on every fresh composition, and
+     * a permission grant was always followed by `rescan()`. We now only
+     * rescan when the permission transitions from denied → granted; if
+     * the user has had the permission all along, the data has been
+     * observed live via the Flow the whole time and a rescan would be
+     * pure duplicate work. Manual rescan (the toolbar button / retry)
+     * still calls [rescan] directly. */
     fun onMediaPermissionResult(granted: Boolean) {
+        val wasGranted = _hasMediaPermission.value
         _hasMediaPermission.value = granted
-        if (granted) rescan()
+        if (granted && !wasGranted) rescan()
     }
 
     fun rescan() {

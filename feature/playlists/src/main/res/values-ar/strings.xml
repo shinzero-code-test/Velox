@@ -7,14 +7,23 @@
     <string name="playlist_most_played">الأكثر تشغيلًا</string>
     <string name="playlists_empty_title">لا توجد قوائم تشغيل بعد</string>
     <string name="playlists_empty_body">أنشئ قائمة تشغيل لتبدأ في تجميع أغانيك المفضلة معًا.</string>
+    <string name="playlists_error_title">تعذّر تحميل قوائم التشغيل</string>
     <string name="playlists_create_action">قائمة تشغيل جديدة</string>
     <string name="playlists_create_first">أنشئ أول قائمة تشغيل</string>
     <string name="playlists_create">إنشاء</string>
     <string name="playlists_create_dialog_title">قائمة تشغيل جديدة</string>
     <string name="playlists_name_hint">اسم قائمة التشغيل</string>
+    <string name="playlists_name_required">لا يمكن أن يكون اسم قائمة التشغيل فارغًا</string>
     <string name="playlists_import_m3u">استيراد قائمة M3U</string>
     <string name="playlists_export_m3u">تصدير بصيغة M3U</string>
-    <string name="playlist_track_count">%1$d أغنية</string>
+    <plurals name="playlist_track_count">
+        <item quantity="zero">لا توجد أغانٍ</item>
+        <item quantity="one">أغنية واحدة</item>
+        <item quantity="two">أغنيتان</item>
+        <item quantity="few">%1$d أغانٍ</item>
+        <item quantity="many">%1$d أغنية</item>
+        <item quantity="other">%1$d أغنية</item>
+    </plurals>
     <string name="playlist_header_subtitle">%1$d أغنية • %2$s</string>
     <string name="playlist_play_all">تشغيل الكل</string>
     <string name="playlist_shuffle">عشوائي</string>
@@ -24,5 +33,9 @@
     <string name="playlist_add_selected">إضافة %1$d مقطعًا</string>
     <string name="playlist_remove_track">إزالة من قائمة التشغيل</string>
     <string name="playlist_fallback_name">قائمة تشغيل</string>
+    <string name="playlists_import_done">تم استيراد M3U.</string>
+    <string name="playlists_import_failed">فشل استيراد M3U. قد يكون الملف تالفًا أو فارغًا.</string>
+    <string name="playlists_export_done">تم تصدير M3U.</string>
+    <string name="playlists_export_failed">فشل تصدير M3U. تحقّق من أذونات الوجهة وأعد المحاولة.</string>
     <string name="cancel">إلغاء</string>
 </resources>

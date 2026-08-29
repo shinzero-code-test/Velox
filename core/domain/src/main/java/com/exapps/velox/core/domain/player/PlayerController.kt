@@ -74,6 +74,13 @@ interface PlayerController {
      * A-B repeat (Phase 2): loops playback between [startMs] and [endMs] of the
      * current item. Passing only [startMs] arms point A (end pending); passing both
      * null clears the loop.
+     *
+     * Contract (L9 in the player-stack review):
+     * - If [startMs] is null, the loop is cleared.
+     * - If [endMs] is non-null but `endMs <= startMs`, the loop is also
+     *   cleared (the previously "undefined" behaviour is now explicit:
+     *   a non-strictly-positive region is treated as no loop).
+     * - If [endMs] is null, the loop is armed at [startMs] (end pending).
      */
     fun setLoopRegion(startMs: Long?, endMs: Long? = null)
 

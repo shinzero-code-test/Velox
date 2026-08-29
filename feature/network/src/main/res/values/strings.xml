@@ -19,6 +19,11 @@
     <string name="network_field_user">Username (optional)</string>
     <string name="network_field_password">Password (optional)</string>
     <string name="network_field_basepath">Base path</string>
+    <string name="network_retry">Retry</string>
+    <string name="network_stream_unsupported">Unsupported stream URL. Use http(s), rtsp, smb, ftp, or WebDAV.</string>
+    <string name="network_port_invalid">Port must be between 1 and 65535.</string>
+    <string name="network_secure_disabled_help">Only WebDAV supports HTTPS. FTP and SMB use plain connections.</string>
+    <string name="network_plaintext_credentials_notice">Credentials are stored locally in plain text. Use a dedicated account with limited permissions.</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
 </resources>

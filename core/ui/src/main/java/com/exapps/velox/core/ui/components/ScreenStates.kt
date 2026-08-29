@@ -88,7 +88,16 @@ fun VeloxFullScreenLoading(modifier: Modifier = Modifier) {
     }
 }
 
-/** Inline retry row for list-level errors (SCREEN_PATTERNS.md §6: "Inline for lists"). */
+/**
+ * Inline retry row for list-level errors (SCREEN_PATTERNS.md §6:
+ * "Inline for lists").
+ *
+ * L16 (features review): the previous `fillMaxSize()` forced every
+ * caller into full-screen sizing even when the error was only a small
+ * banner. Sizing is now caller-owned via [modifier] — pass
+ * `Modifier.fillMaxSize()` if you want the full-screen variant, or
+ * just leave it default for an inline list error.
+ */
 @Composable
 fun VeloxErrorRow(
     message: String,
@@ -97,9 +106,7 @@ fun VeloxErrorRow(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(VeloxSpacing.xxl),
+        modifier = modifier.padding(VeloxSpacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

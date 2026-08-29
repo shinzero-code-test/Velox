@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -302,10 +304,17 @@ fun NowPlayingScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // L3 (features review): the lyrics button used to
+                        // toggle the panel even when no .lrc/.txt sidecar
+                        // existed, leaving the user with an empty card and
+                        // no idea why. Disable + null tint when lyrics is
+                        // null or empty so the affordance reflects the data.
+                        val hasLyrics = lyrics != null && !lyrics.isEmpty
                         VeloxGlassIconButton(
                             icon = Icons.Filled.MusicNote,
                             contentDescription = stringResource(R.string.cd_lyrics),
                             onClick = { showLyrics = !showLyrics },
+                            enabled = hasLyrics,
                             tint = if (showLyrics) accentColor() else VeloxColors.OnSurface,
                         )
                         // Playback speed for songs (videos have their own picker in the
@@ -417,7 +426,18 @@ private fun QueueSheet(
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
-        Column(Modifier.padding(horizontal = VeloxSpacing.lg)) {
+        // L8 (features review): the LazyColumn used a fixed 420dp height
+        // which cropped large queues on landscape phones and looked tiny
+        // on tablets. Use weight(1f) inside the bottom-sheet column so
+        // the list fills the available sheet area.
+        Column(
+            modifier = Modifier
+                .padding(horizontal = VeloxSpacing.lg)
+                // L8: cap the sheet at 80% of viewport so it never covers
+                // the entire screen for short queues.
+                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
+                .fillMaxWidth(),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -438,8 +458,11 @@ private fun QueueSheet(
                         .padding(VeloxSpacing.sm),
                 )
             }
-            LazyColumn(modifier = Modifier.height(420.dp).padding(bottom = VeloxSpacing.xl)) {
-                itemsIndexed(state.queue, key = { index, item -> "${item.id}-$index" }) { index, mediaItem ->
+            LazyColumn(modifier = Modifier.weight(1f).padding(bottom = VeloxSpacing.xl)) {
+                // L8: key on item id alone — playlist rows already guarantee
+                // uniqueness, so the index suffix was noise that defeated
+                // LazyListState reuse on reorders.
+                itemsIndexed(state.queue, key = { _, item -> item.id }) { index, mediaItem ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md),
@@ -576,7 +599,18 @@ private fun formatPlaybackSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}x" else "${speed}x"
 
 /** Phase 1.1 "Lyrics display (basic)": synced lines highlight + auto-scroll; plain
- * text just scrolls. Kept deliberately simple — no karaoke wipe, no font settings. */
+ * text just scrolls. Kept deliberately simple — no karaoke wipe, no font settings.
+ *
+ * L5 (features review): auto-scroll was fighting manual scrolling (the user
+ * could never pin a line) because `animateScrollToItem` ran on every
+ * `activeIndex` change. We now skip the auto-scroll while the user is
+ * dragging the list, and key items by their timestamp so the list state
+ * survives reorders.
+ *
+ * L4 (features review): the plain-text branch had a dead `verticalScroll`
+ * modifier on a non-scrolling container. We now use the same LazyColumn
+ * with a fixed item and let it scroll natively.
+ */
 @Composable
 private fun LyricsPanel(
     lyrics: LyricsLoader.Lyrics,
@@ -585,8 +619,10 @@ private fun LyricsPanel(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(activeIndex) {
-        if (activeIndex >= 0 && lyrics.syncedLines.isNotEmpty()) {
+    // L5: only auto-scroll when the user is NOT actively dragging —
+    // honouring scroll-in-progress lets the user pin a line.
+    LaunchedEffect(activeIndex, listState.isScrollInProgress) {
+        if (activeIndex >= 0 && lyrics.syncedLines.isNotEmpty() && !listState.isScrollInProgress) {
             listState.animateScrollToItem(index = (activeIndex - 2).coerceAtLeast(0))
         }
     }
@@ -598,7 +634,9 @@ private fun LyricsPanel(
             contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
         ) {
-            itemsIndexed(lyrics.syncedLines) { index, line ->
+            // L5: key by timestamp, not by index, so reorders/replaces don't
+            // throw the list state.
+            itemsIndexed(lyrics.syncedLines, key = { _, line -> line.timeMs ?: line.text.hashCode().toLong() }) { index, line ->
                 val active = index == activeIndex
                 Text(
                     text = line.text.ifBlank { "♪" },
@@ -609,12 +647,16 @@ private fun LyricsPanel(
             }
         }
     } else {
+        // L4: cap the panel height so a long plain-text file doesn't
+        // push the rest of the screen off the viewport; the user
+        // scrolls inside the cap.
         Text(
             text = lyrics.plainText.orEmpty(),
             style = VeloxTheme.typography.bodyLarge,
             color = VeloxColors.OnSurfaceVariant,
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
+                .heightIn(max = 240.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(VeloxSpacing.lg),
         )
@@ -764,8 +806,18 @@ private fun MarkersSheet(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
-                            IconButton(onClick = { onDeleteBookmark(bookmark.id) }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), tint = VeloxColors.OnSurfaceVariant)
+                            // M13 (features review): a 32dp IconButton falls
+                            // under Material's 40dp minimum touch target. Use
+                            // minimumInteractiveComponentSize() so the
+                            // touchable area is at least 40dp even though the
+                            // visible icon stays compact.
+                            IconButton(
+                                onClick = { onDeleteBookmark(bookmark.id) },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .minimumInteractiveComponentSize(),
+                            ) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_delete_marker), tint = VeloxColors.OnSurfaceVariant)
                             }
                         }
                     }

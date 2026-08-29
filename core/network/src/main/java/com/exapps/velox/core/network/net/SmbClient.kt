@@ -37,7 +37,11 @@ class SmbClient @javax.inject.Inject constructor() : NetworkClient {
         SmbFile(url, contextFor(server))
 
     override fun list(server: NetworkServer, url: String): List<NetworkEntry> {
-        val dir = smbFile(server, url)
+        // data-layer (review): jcifs-ng's SmbFile.listFiles() returns
+        // empty when the URL doesn't end with a slash for a directory
+        // path. Normalise the trailing slash here so callers don't
+        // have to remember.
+        val dir = smbFile(server, ensureTrailingSlash(url))
         val children = dir.listFiles() ?: return emptyList()
         return children
             .filter { it.name !in setOf(".", "..") }

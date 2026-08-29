@@ -30,12 +30,21 @@ interface StatsDao {
     )
     fun observeMostPlayedTracks(limit: Int): Flow<List<TrackPlayAggregate>>
 
-    /** Day buckets keyed by UTC-day epoch seconds (playedAt is stored in seconds). */
+    /**
+     * Day buckets keyed by local-day epoch seconds (M5: was UTC, which made
+     * "today" shift by an entire day once the user crossed a midnight UTC
+     * boundary that wasn't midnight locally). The bucket is computed at query
+     * time using the device's offset-at-the-time-of-the-row — the GROUP BY
+     * uses the offset at query time, which is a small but accepted trade-off
+     * (rows written yesterday with a different offset would still bucket into
+     * the same offset-today, which is the desired UX).
+     */
     @Query(
-        """SELECT (h.playedAtEpochSeconds / 86400) * 86400 AS dayEpochSeconds, COUNT(*) AS plays
+        """SELECT ((h.playedAtEpochSeconds + :offsetSeconds) / 86400) * 86400 - :offsetSeconds
+                  AS dayEpochSeconds, COUNT(*) AS plays
            FROM play_history h GROUP BY dayEpochSeconds ORDER BY dayEpochSeconds DESC LIMIT :days"""
     )
-    fun observeDailyPlays(days: Int): Flow<List<DayPlayCount>>
+    fun observeDailyPlays(days: Int, offsetSeconds: Long): Flow<List<DayPlayCount>>
 
     @Query(
         """SELECT COUNT(*) AS plays,

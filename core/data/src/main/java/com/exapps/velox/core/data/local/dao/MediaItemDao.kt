@@ -52,12 +52,26 @@ interface MediaItemDao {
     @Query(
         """SELECT * FROM media_items
            WHERE (:type IS NULL OR mediaType = :type)
-             AND (title LIKE '%' || :query || '%'
-                  OR artistName LIKE '%' || :query || '%'
-                  OR albumTitle LIKE '%' || :query || '%')
+             AND (title LIKE '%' || :query || '%' ESCAPE '\'
+                  OR artistName LIKE '%' || :query || '%' ESCAPE '\'
+                  OR albumTitle LIKE '%' || :query || '%' ESCAPE '\')
            ORDER BY title COLLATE NOCASE ASC""",
     )
     fun search(query: String, type: String?): Flow<List<MediaItemEntity>>
+
+    /**
+     * data-layer (review): SQL LIKE wildcards (`%`, `_`) in user input used
+     * to be passed through to the query unescaped, so a search for "AC/DC"
+     * matched every AC* row. Escape them at the repository boundary; the
+     * DAO uses `ESCAPE '\'` so the backslash escape sequence survives the
+     * round-trip.
+     */
+    companion object {
+        fun escapeLike(input: String): String = input
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+    }
 
     @Query("SELECT * FROM media_items WHERE id = :id")
     suspend fun getById(id: Long): MediaItemEntity?
@@ -73,6 +87,23 @@ interface MediaItemDao {
 
     @Query("SELECT DISTINCT folderPath FROM media_items WHERE folderPath IS NOT NULL")
     fun observeDistinctFolderPaths(): Flow<List<String>>
+
+    /**
+     * data-layer (review): the previous `observeFolders` flow paired a
+     * `DISTINCT folderPath` with a hard-coded `itemCount = 0` and asked
+     * the UI to resolve counts lazily on tap. The result: every folder
+     * in the Library list read "0 tracks" until the user opened it, and
+     * the count never re-aggregated if a scan added files. We now emit
+     * (path, count) pairs in a single query so the list always shows
+     * the right number and the UI doesn't need a follow-up fetch.
+     */
+    @Query(
+        """SELECT folderPath AS path, COUNT(*) AS count
+           FROM media_items
+           WHERE folderPath IS NOT NULL
+           GROUP BY folderPath"""
+    )
+    fun observeFolderSummaries(): Flow<List<FolderSummary>>
 
     @Query("SELECT COUNT(*) FROM media_items WHERE folderPath = :path")
     suspend fun countInFolder(path: String): Int
@@ -136,3 +167,6 @@ interface MediaItemDao {
     @Query("SELECT COUNT(*) FROM media_items")
     suspend fun count(): Int
 }
+
+/** Aggregate row for the Folders tab — folder path + count, joined in SQL. */
+data class FolderSummary(val path: String, val count: Int)

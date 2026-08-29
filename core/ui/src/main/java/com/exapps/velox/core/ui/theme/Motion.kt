@@ -3,8 +3,6 @@ package com.exapps.velox.core.ui.theme
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 
 /**
  * Motion tokens — DESIGN_SYSTEM.md §6. "Purposeful, not decorative" (§6.1): every
@@ -29,12 +27,6 @@ object VeloxMotion {
     val standardEasing: Easing = FastOutSlowInEasing
     val enterEasing: Easing = CubicBezierEasing(0f, 0f, 0.2f, 1f)   // Decelerate
     val exitEasing: Easing = CubicBezierEasing(0.4f, 0f, 1f, 1f)    // Accelerate
-
-    /** Medium-stiffness spring used for sheet presentation and player expand/collapse. */
-    fun <T> mediumSpring() = spring<T>(
-        dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness = Spring.StiffnessMedium,
-    )
 
     /** Press scale for cards and list rows (DESIGN_SYSTEM.md §5.2, SCREENS_OVERVIEW.md §7). */
     const val PRESS_SCALE = 0.97f

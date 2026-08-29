@@ -72,7 +72,28 @@ data class Genre(
     val trackCount: Int,
 )
 
-/** SCREEN_HOME_LIBRARY.md §4: the top-level library groupings / tabs. */
-enum class LibraryGroup { FOLDERS, ARTISTS, ALBUMS, TRACKS, VIDEOS, GENRES, RECENT }
+/** SCREEN_HOME_LIBRARY.md §4: the top-level library groupings / tabs.
+ *
+ * Library dead code (features review): RECENT used to be in this enum
+ * but no tab in [LibraryScreen] rendered it — the "Recently Played"
+ * system playlist covers the same use case. Removed to keep the tab
+ * surface and the type in sync. */
+enum class LibraryGroup { FOLDERS, ARTISTS, ALBUMS, TRACKS, VIDEOS, GENRES }
 
+/**
+ * `sortedFor` (features review): DATE_ADDED / DURATION / SIZE / PATH have
+ * no analogue for Albums / Artists / Folders / GENRES — they only have a
+ * `title` (or `name` / `displayName`). The previous implementation silently
+ * degraded every sort to title for those groups, so the menu showed options
+ * that did nothing. We now surface the applicable subset per tab.
+ */
 enum class SortOrder { TITLE, DATE_ADDED, DURATION, SIZE, PATH }
+
+/** Subset of sort options that have a meaningful value for [group]. */
+fun SortOrder.applicableTo(group: LibraryGroup): Boolean = when (this) {
+    SortOrder.TITLE -> true
+    SortOrder.DATE_ADDED -> group == LibraryGroup.TRACKS || group == LibraryGroup.VIDEOS
+    SortOrder.DURATION -> group == LibraryGroup.TRACKS || group == LibraryGroup.VIDEOS
+    SortOrder.SIZE -> group == LibraryGroup.TRACKS || group == LibraryGroup.VIDEOS
+    SortOrder.PATH -> group == LibraryGroup.FOLDERS
+}

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,6 +55,20 @@ class UserSettingsPreferences @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
 
+    /**
+     * H5 (player-stack review): the audio-effects chain and the ExoPlayer
+     * factory are constructed during service create, which runs on the main
+     * thread. Reading [settings] synchronously there with `runBlocking` blocked
+     * the UI for the duration of a DataStore disk read. We instead cache the
+     * [DecoderPreference] in an AtomicReference that is primed once at app
+     * start (alongside [VeloxLocaleManager.load]) and updated on every write
+     * via the [settings] collector. The factory reads the cached value
+     * synchronously, falling back to AUTO on the very first call before priming
+     * completes (the user's last save wins on the second open).
+     */
+    @Volatile
+    private var cachedDecoderPreference: DecoderPreference = DecoderPreference.AUTO
+
     val settings: Flow<UserSettings> = dataStore.data.map { prefs ->
         UserSettings(
             language = prefs[LANGUAGE_KEY]?.let { runCatching { AppLanguage.valueOf(it) }.getOrNull() } ?: AppLanguage.SYSTEM,
@@ -72,7 +87,24 @@ class UserSettingsPreferences @Inject constructor(
             gestureVerticalDragMapping = prefs[GESTURE_V_DRAG_KEY]
                 ?.let { runCatching { VerticalDragMapping.valueOf(it) }.getOrNull() }
                 ?: VerticalDragMapping.BRIGHTNESS_LEFT_VOLUME_RIGHT,
-        )
+        ).also { userSettings ->
+            cachedDecoderPreference = userSettings.decoderPreference
+        }
+    }
+
+    /** Synchronous accessor used by the player factory on the main thread. */
+    fun decoderPreferenceCached(): DecoderPreference = cachedDecoderPreference
+
+    /**
+     * H5: warm the [cachedDecoderPreference] from disk. Called once from
+     * [VeloxApplication.onCreate] alongside the locale load — both happen
+     * before any activity's `attachBaseContext` runs, so the first service
+     * create observes a hot cache.
+     */
+    suspend fun primeCache() {
+        runCatching {
+            cachedDecoderPreference = settings.first().decoderPreference
+        }
     }
 
     suspend fun setLanguage(language: AppLanguage) = dataStore.edit { it[LANGUAGE_KEY] = language.name }

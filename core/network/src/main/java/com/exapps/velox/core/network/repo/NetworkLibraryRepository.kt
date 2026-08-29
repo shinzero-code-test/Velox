@@ -5,9 +5,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.exapps.velox.core.network.model.NetworkServer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -24,6 +29,26 @@ class NetworkLibraryRepository @Inject constructor(
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * M5 (player-stack review): the per-open `runBlocking { servers() }` call in
+     * [findServer] used to block the loader thread on a DataStore disk read every
+     * time ExoPlayer opened a network stream. We now hold the parsed list in a
+     * [StateFlow] that's kept hot by the application scope; reads are O(1) and
+     * never touch the disk after the first emission. The DataStore itself remains
+     * the source of truth — `observeServers()` is unchanged for UI consumers.
+     */
+    private val cachedServers: StateFlow<List<NetworkServer>> = dataStore.data
+        .map { prefs ->
+            prefs[SERVERS_KEY]?.let {
+                runCatching { json.decodeFromString<List<NetworkServer>>(it) }.getOrNull()
+            }.orEmpty()
+        }
+        .stateIn(
+            scope = SERVER_CACHE_SCOPE,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList(),
+        )
 
     // ---- Servers -----------------------------------------------------------------
 
@@ -56,8 +81,32 @@ class NetworkLibraryRepository @Inject constructor(
     /** Matches a playable URL back to its server record (engine DataSource routing).
      * M2 (data-layer review): match protocol (from scheme) AND host case-insensitively
      * so two saved servers on the same NAS (SMB + WebDAV) can't cross-route. Port is
-     * matched only when the URL carries one explicitly. */
-    suspend fun findServer(url: String): NetworkServer? {
+     * matched only when the URL carries one explicitly.
+     *
+     * M5: read from [cachedServers] so the loader thread never blocks on DataStore
+     * disk I/O. The first open on a cold process may see the initialValue (empty)
+     * for a few hundred ms; in practice the StateFlow's first emission is ready
+     * well before playback reaches this point because the application scope was
+     * collecting it eagerly at startup.
+     */
+    /**
+     * Coroutine-friendly variant: returns the same value as [findServerCached]
+     * but is marked `suspend` so callers that already have a coroutine context
+     * can keep their call sites unchanged.
+     */
+    suspend fun findServer(url: String): NetworkServer? = findServerCached(url)
+
+    /**
+     * M5 (player-stack review): non-suspending variant for the ExoPlayer
+     * loader thread. Reads from the hot [cachedServers] StateFlow directly so
+     * the call never parks the loader thread on DataStore disk I/O.
+     *
+     * M2 (data-layer review): match protocol (from scheme) AND host
+     * case-insensitively so two saved servers on the same NAS (SMB + WebDAV)
+     * can't cross-route. Port is matched only when the URL carries one
+     * explicitly.
+     */
+    fun findServerCached(url: String): NetworkServer? {
         val protocolByScheme = mapOf(
             "smb" to com.exapps.velox.core.network.model.NetworkProtocol.SMB,
             "ftp" to com.exapps.velox.core.network.model.NetworkProtocol.FTP,
@@ -69,7 +118,7 @@ class NetworkLibraryRepository @Inject constructor(
         val authority = url.substringAfter("://").substringBefore('/')
         val host = authority.substringBefore(':').lowercase()
         val port = authority.substringAfter(':', "").toIntOrNull()
-        return servers().firstOrNull {
+        return cachedServers.value.firstOrNull {
             it.protocol == protocol &&
                 it.host.equals(host, ignoreCase = true) &&
                 (port == null || it.port == port)
@@ -108,5 +157,13 @@ class NetworkLibraryRepository @Inject constructor(
     private companion object {
         val SERVERS_KEY = stringPreferencesKey("network_servers_v1")
         val RECENT_STREAMS_KEY = stringPreferencesKey("recent_streams_v1")
+
+        /**
+         * Process-lifetime scope for the in-memory server cache. Lives as long as
+         * the singleton itself; no need to cancel on its own — `@Singleton` is
+         * application-scoped and the StateFlow stops collecting only at process
+         * death.
+         */
+        val SERVER_CACHE_SCOPE = CoroutineScope(Dispatchers.Default)
     }
 }

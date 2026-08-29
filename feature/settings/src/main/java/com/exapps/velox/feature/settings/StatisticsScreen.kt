@@ -47,8 +47,14 @@ class StatisticsViewModel @Inject constructor(statsDao: StatsDao) : ViewModel() 
     val topTracks = statsDao.observeMostPlayedTracks(10)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val dailyPlays = statsDao.observeDailyPlays(days = 30)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /**
+     * M5 (features review): bucket by local-day, not UTC-day, so the
+     * Statistics screen's "today" matches the user's calendar.
+     */
+    val dailyPlays = statsDao.observeDailyPlays(
+        days = 30,
+        offsetSeconds = java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 1000L,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
 
 /** Phase 2 "Playback statistics & history": totals, 30-day activity, top tracks. */
@@ -79,6 +85,21 @@ fun StatisticsScreen(
             )
         }
 
+        // M7 (features review): the totals flow seeds with `null` (loading)
+        // before the first DB emission. The old `(totals?.plays ?: 0) == 0`
+        // check would flash the empty-state card for one frame on every cold
+        // open. Distinguish "loading" (totals == null) from "loaded with no
+        // plays" (totals != null && totals.plays == 0) and show a spinner in
+        // the former case.
+        if (totals == null) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.CircularProgressIndicator()
+            }
+            return
+        }
         if ((totals?.plays ?: 0) == 0) {
             VeloxEmptyState(
                 icon = Icons.Filled.Info,
@@ -103,7 +124,17 @@ fun StatisticsScreen(
             }
             if (daily.isNotEmpty()) {
                 item {
-                    Text(stringResource(R.string.stats_last_days, daily.size), style = com.exapps.velox.core.ui.theme.VeloxTheme.typography.labelLarge, color = VeloxColors.OnSurfaceVariant)
+                    // M6 (features review): the header used to read "Last N days"
+                    // with daily.size (≤30) but the card only rendered 7. Either
+                    // render everything (the limit is now 7 below) or pass the
+                    // rendered-row count to the header. Choose the latter so the
+                    // header always matches what the user sees.
+                    val shownCount = minOf(daily.size, 7)
+                    Text(
+                        stringResource(R.string.stats_last_days, shownCount),
+                        style = com.exapps.velox.core.ui.theme.VeloxTheme.typography.labelLarge,
+                        color = VeloxColors.OnSurfaceVariant,
+                    )
                     Spacer(Modifier.height(VeloxSpacing.xs))
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(VeloxSpacing.md)) {

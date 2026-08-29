@@ -9,7 +9,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -57,7 +56,8 @@ class VeloxExoPlayerFactory @Inject constructor(
         // Slightly larger buffers than the ExoPlayer default: FEATURES.md's "Gapless
         // and configurable crossfade where feasible" and smooth scrubbing on flaky
         // storage (SD cards, network shares added later) both benefit from more
-        // headroom than the stock 15s/50s min/max buffer. Phase 2 doubles down for
+        // headroom than the stock 50s/50s min/max buffer (yes, both 50s — the
+        // ExoPlayer default treats min == max). Phase 2 doubles down for
         // network playback specifically.
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -68,13 +68,13 @@ class VeloxExoPlayerFactory @Inject constructor(
             )
             .build()
 
-        // Phase 2 "Advanced video processing": decoder priority (auto / software).
-        // Decoder fallback is always on so hardware gaps degrade gracefully; the
-        // software-preferred mode biases MediaCodec selection toward c2.android /
-        // OMX.google decoders first.
-        val decoderPreference = runCatching {
-            kotlinx.coroutines.runBlocking { userSettings.settings.first().decoderPreference }
-        }.getOrDefault(com.exapps.velox.core.data.preferences.DecoderPreference.AUTO)
+        // H5 (player-stack review): the previous `runBlocking { userSettings.settings.first() }`
+        // blocked the main thread on a DataStore disk read every time the service
+        // recreated (every cold start, every low-memory restart). We now read the
+        // cache that [UserSettingsPreferences.primeCache] warmed at app start.
+        // If priming didn't run yet (very first call before Application.onCreate
+        // completes, which is rare) the cache still returns the safe default.
+        val decoderPreference = userSettings.decoderPreferenceCached()
         val preferSoftware = decoderPreference == com.exapps.velox.core.data.preferences.DecoderPreference.SOFTWARE
 
         val renderersFactory = DefaultRenderersFactory(context)
@@ -93,7 +93,15 @@ class VeloxExoPlayerFactory @Inject constructor(
             .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true) // ARCHITECTURE.md / FEATURES.md: "noisy handling"
             .setLoadControl(loadControl)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
+            // M4 (player-stack review): WAKE_MODE_LOCAL keeps the CPU
+            // running while the app is foregrounded (or holding a
+            // foreground service notification), which is fine for
+            // local-file playback but does NOT keep the radio/wifi
+            // link alive for SMB/FTP/WebDAV streams. WAKE_MODE_NETWORK
+            // does both. We use NETWORK unconditionally so background
+            // network playback of long tracks doesn't get killed when
+            // the device tries to suspend radios.
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .also { player ->
                 // The EQ/effects chain attaches to the audio session, which exists

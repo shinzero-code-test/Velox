@@ -6,7 +6,6 @@ import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.Timeline
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -87,9 +86,49 @@ class MediaControllerPlayerController @Inject constructor(
     /** Our stable track ids → the (TrackGroup, index) needed for selection overrides. */
     private var trackSelectionRefs: Map<String, Pair<TrackGroup, Int>> = emptyMap()
 
+    /**
+     * M6 (player-stack review): [MediaSessionService] can be killed and restarted by
+     * the platform (low memory, app update, etc.) but [MediaController] lives for the
+     * whole process. When the service restarts the existing controller is bound to a
+     * dead session — every method call would silently no-op or throw. We register
+     * a disconnect listener that nulls the controller and kicks off a fresh connect
+     * attempt; the next command (or [play] call) will see `controller == null` and
+     * go through [awaitController] to wait for the new connect.
+     *
+     * Declared before [init] so the eager `setListener(mediaControllerListener)` call
+     * below runs against a non-null field.
+     */
+    private val mediaControllerListener = androidx.media3.session.MediaController.Listener {
+        // M6: the controller died while the service restarts. Drop the reference
+        // immediately and rebuild asynchronously; mainScope.launch is safe because
+        // this listener is invoked on the main looper.
+        mainScope.launch {
+            controller = null
+            trackSelectionRefs = emptyMap()
+            val sessionToken = SessionToken(context, ComponentName(context, VeloxPlaybackService::class.java))
+            val future = MediaController.Builder(context, sessionToken)
+                .setListener(this@MediaControllerPlayerController.mediaControllerListener)
+                .buildAsync()
+            future.addListener(
+                {
+                    try {
+                        controller = future.get().also { it.addListener(playerListener) }
+                        syncStateFromController()
+                        publishTracks(controller?.currentTracks)
+                    } catch (e: Exception) {
+                        android.util.Log.w("VeloxPlayer", "MediaController reconnect failed", e)
+                    }
+                },
+                ContextCompat.getMainExecutor(context),
+            )
+        }
+    }
+
     init {
         val sessionToken = SessionToken(context, ComponentName(context, VeloxPlaybackService::class.java))
-        val future = MediaController.Builder(context, sessionToken).buildAsync()
+        val future = MediaController.Builder(context, sessionToken)
+            .setListener(mediaControllerListener)
+            .buildAsync()
         future.addListener(
             {
                 try {
@@ -136,27 +175,32 @@ class MediaControllerPlayerController @Inject constructor(
     }
 
     override fun playPause() {
+        // M8 (player-stack review): all controller-touching commands go through
+        // [awaitController] so a connect that's still in flight doesn't silently
+        // drop the user's tap. The bounded wait (CONTROLLER_WAIT_TIMEOUT_MS)
+        // prevents the coroutine from leaking if the service is dead.
         mainScope.launch {
-            val c = controller ?: return@launch
+            val c = awaitController() ?: return@launch
             if (c.isPlaying) c.pause() else c.play()
         }
     }
 
-    override fun pause() { mainScope.launch { controller?.pause() } }
-    override fun resume() { mainScope.launch { controller?.play() } }
-    override fun seekTo(positionMs: Long) { mainScope.launch { controller?.seekTo(positionMs) } }
-    override fun skipNext() { mainScope.launch { controller?.seekToNextMediaItem() } }
-    override fun skipPrevious() { mainScope.launch { controller?.seekToPreviousMediaItem() } }
+    override fun pause() { mainScope.launch { awaitController()?.pause() } }
+    override fun resume() { mainScope.launch { awaitController()?.play() } }
+    override fun seekTo(positionMs: Long) { mainScope.launch { awaitController()?.seekTo(positionMs) } }
+    override fun skipNext() { mainScope.launch { awaitController()?.seekToNextMediaItem() } }
+    override fun skipPrevious() { mainScope.launch { awaitController()?.seekToPreviousMediaItem() } }
 
     override fun setShuffleEnabled(enabled: Boolean) {
         _state.update { it.copy(shuffleEnabled = enabled) }
-        mainScope.launch { controller?.shuffleModeEnabled = enabled }
+        mainScope.launch { awaitController()?.shuffleModeEnabled = enabled }
     }
 
     override fun setRepeatMode(mode: RepeatMode) {
         _state.update { it.copy(repeatMode = mode) }
         mainScope.launch {
-            controller?.repeatMode = when (mode) {
+            val c = awaitController() ?: return@launch
+            c.repeatMode = when (mode) {
                 RepeatMode.OFF -> Player.REPEAT_MODE_OFF
                 RepeatMode.ONE -> Player.REPEAT_MODE_ONE
                 RepeatMode.ALL -> Player.REPEAT_MODE_ALL
@@ -181,7 +225,7 @@ class MediaControllerPlayerController @Inject constructor(
 
     /** Phase 2 sleep-timer fade-out surface. */
     override fun setVolume(scale: Float) {
-        mainScope.launch { controller?.volume = scale.coerceIn(0f, 1f) }
+        mainScope.launch { awaitController()?.volume = scale.coerceIn(0f, 1f) }
     }
 
     override fun setFavorite(mediaItemId: Long, favorite: Boolean) {
@@ -196,7 +240,7 @@ class MediaControllerPlayerController @Inject constructor(
 
     override fun playQueueItem(index: Int) {
         mainScope.launch {
-            val c = controller ?: return@launch
+            val c = awaitController() ?: return@launch
             if (index !in 0 until c.mediaItemCount) return@launch
             c.seekTo(index, 0L)
             c.play()
@@ -206,25 +250,25 @@ class MediaControllerPlayerController @Inject constructor(
     override fun addToQueue(item: MediaItem) {
         mainScope.launch {
             queueById = queueById + (item.id.toString() to item)
-            controller?.addMediaItem(item.toMedia3MediaItem())
+            awaitController()?.addMediaItem(item.toMedia3MediaItem())
         }
     }
 
     override fun playNext(item: MediaItem) {
         mainScope.launch {
             queueById = queueById + (item.id.toString() to item)
-            val c = controller ?: return@launch
+            val c = awaitController() ?: return@launch
             val insertAt = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
             c.addMediaItem(insertAt, item.toMedia3MediaItem())
         }
     }
 
-    override fun removeFromQueue(index: Int) { mainScope.launch { controller?.removeMediaItem(index) } }
-    override fun moveQueueItem(fromIndex: Int, toIndex: Int) { mainScope.launch { controller?.moveMediaItem(fromIndex, toIndex) } }
+    override fun removeFromQueue(index: Int) { mainScope.launch { awaitController()?.removeMediaItem(index) } }
+    override fun moveQueueItem(fromIndex: Int, toIndex: Int) { mainScope.launch { awaitController()?.moveMediaItem(fromIndex, toIndex) } }
     override fun clearQueue() {
         mainScope.launch {
             queueById = emptyMap()
-            controller?.clearMediaItems()
+            awaitController()?.clearMediaItems()
         }
     }
 
@@ -273,9 +317,13 @@ class MediaControllerPlayerController @Inject constructor(
     }
 
     override fun stop() {
+        // M8 (player-stack review): route the stop through awaitController so
+        // the resume-position write and the controller.stop() see the same
+        // (possibly just-reconnected) controller instance.
         mainScope.launch {
-            awaitController()?.let { saveResumePosition(it) }
-            controller?.stop()
+            val c = awaitController() ?: return@launch
+            saveResumePosition(c)
+            c.stop()
         }
     }
 
@@ -383,7 +431,15 @@ class MediaControllerPlayerController @Inject constructor(
         }
 
         /** H2 (player-stack review): a paused seekTo fires this but not the poll —
-         * without the override the scrubber snaps back to its pre-seek position. */
+         * without the override the scrubber snaps back to its pre-seek position.
+         *
+         * M1 (player-stack review): if the new position lands outside an
+         * active A-B loop on a user seek, the previously documented policy
+         * was "behave however — undefined". We now snap the playback back
+         * to A so the loop never plays outside its window. A `SEEK_PLACEHOLDER`
+         * is also issued in `setLoopRegion` when the user picks B before A;
+         * the position the scrubber lands on is clamped to the new loop
+         * region so feedback is consistent. */
         override fun onPositionDiscontinuity(
             oldPosition: Player.PositionInfo,
             newPosition: Player.PositionInfo,
@@ -394,6 +450,24 @@ class MediaControllerPlayerController @Inject constructor(
                     positionMs = newPosition.positionMs.coerceAtLeast(0),
                     currentIndex = newPosition.mediaItemIndex,
                 )
+            }
+            // A-B: if the discontinuity was a user seek that landed
+            // outside the loop region, wrap to A. The seek-back itself
+            // happens on the next poll tick (≤500 ms later) so we just
+            // check the precondition here.
+            val s = _state.value
+            val a = s.loopStartMs
+            val b = s.loopEndMs
+            if (a != null && b != null && reason == Player.DISCONTINUITY_REASON_SEEK) {
+                val pos = newPosition.positionMs.coerceAtLeast(0)
+                if (pos < a || pos > b) {
+                    mainScope.launch {
+                        awaitController()?.let { c ->
+                            c.seekTo(a)
+                            _state.update { it.copy(positionMs = a) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -447,7 +521,15 @@ class MediaControllerPlayerController @Inject constructor(
                         val restartAt = (loopStart ?: 0L)
                         c.seekTo(restartAt)
                         _state.update { it.copy(positionMs = restartAt) }
-                    } else if (++ticks % POSITION_SAVE_EVERY_TICKS == 0) {
+                    }
+                    // L10 (player-stack review): always run the
+                    // position-save cadence, even on a tick where the
+                    // A-B wrap fired. The previous `else if` meant the
+                    // save was skipped on wrap ticks, which silently
+                    // drifted the saved position (the post-wrap
+                    // `restartAt` was never persisted until the loop
+                    // region ended).
+                    if (++ticks % POSITION_SAVE_EVERY_TICKS == 0) {
                         saveResumePosition(c)
                     }
                 }
@@ -473,7 +555,14 @@ class MediaControllerPlayerController @Inject constructor(
             for (i in 0 until group.length) {
                 if (!group.isTrackSupported(i)) continue
                 val format = group.getTrackFormat(i)
-                val id = format.id ?: "${group.type}-${format.label}-${format.language}-$i"
+                // L8 (player-stack review): the previous fallback
+                // (label-language-i) could collide when two formats in
+                // the same group shared label + language + null id
+                // (e.g. identical-language undifferentiated streams).
+                // Hash the format's full codec/container metadata so the
+                // id is unique per format within a group.
+                val id = format.id ?: "${group.type}-${format.label}-${format.language}-" +
+                    "${format.codecs ?: "?"}-${format.sampleMimeType ?: "?"}-$i"
                 result += PlayerTrack(
                     id = id,
                     type = domainType,
@@ -514,13 +603,4 @@ class MediaControllerPlayerController @Inject constructor(
         const val CONTROLLER_WAIT_TIMEOUT_MS = 2_500L
         const val CONTROLLER_POLL_MS = 50L
     }
-}
-
-/** Maps a picked subtitle file's extension to a Media3 text MIME type. */
-fun subtitleMimeTypeFor(fileName: String): String = when (fileName.substringAfterLast('.', "").lowercase()) {
-    "srt" -> MimeTypes.APPLICATION_SUBRIP
-    "vtt" -> MimeTypes.TEXT_VTT
-    "ttml", "xml", "dfxp" -> MimeTypes.APPLICATION_TTML
-    "ssa", "ass" -> MimeTypes.TEXT_SSA
-    else -> MimeTypes.APPLICATION_SUBRIP
 }

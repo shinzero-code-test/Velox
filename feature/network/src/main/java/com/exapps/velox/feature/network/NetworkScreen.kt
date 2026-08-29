@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -64,17 +65,44 @@ fun NetworkScreen(
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     val recents by viewModel.recentStreams.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
+    val streamError by viewModel.streamError.collectAsStateWithLifecycle()
+    // bulk-cleanup: was `viewModel.isBrowsing` (a get() property that
+    // re-read `_browse.value` on every recomposition). Now a
+    // StateFlow consumed via collectAsStateWithLifecycle so it
+    // participates in the standard Compose snapshot system.
+    val isBrowsingState by viewModel.isBrowsing.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<com.exapps.velox.core.network.model.NetworkServer?>(null) }
 
+    // M1 (features review): a snackbar surfaces the rejected-stream reason
+    // without stealing focus from the URL field. The message is owned by
+    // strings.xml so the same copy shows in both locales — the ViewModel
+    // publishes an opaque marker and the screen maps it to a localized
+    // resource so this layer doesn't have to depend on Application/Context.
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val unsupportedMessage = stringResource(R.string.network_stream_unsupported)
+    val portInvalidMessage = stringResource(R.string.network_port_invalid)
+    androidx.compose.runtime.LaunchedEffect(streamError) {
+        streamError?.let { marker ->
+            val localized = when (marker) {
+                NetworkViewModel.UNSUPPORTED_STREAM_MARKER -> unsupportedMessage
+                NetworkViewModel.PORT_INVALID_MARKER -> portInvalidMessage
+                else -> marker
+            }
+            snackbarHostState.showSnackbar(localized)
+            viewModel.clearStreamError()
+        }
+    }
+
     // H4 (features review): system back while browsing goes up one directory
     // instead of exiting the entire destination.
-    if (viewModel.isBrowsing) {
+    if (isBrowsingState) {
         BackHandler(enabled = true) { viewModel.goUp() }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    androidx.compose.foundation.layout.Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -85,13 +113,13 @@ fun NetworkScreen(
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.network_back),
                 onClick = {
-                    if (viewModel.isBrowsing) viewModel.goUp() else onBack()
+                    if (isBrowsingState) viewModel.goUp() else onBack()
                 },
             )
             Column {
                 Text(
                     text = stringResource(
-                        if (viewModel.isBrowsing) R.string.network_browse_title else R.string.network_title,
+                        if (isBrowsingState) R.string.network_browse_title else R.string.network_title,
                     ),
                     style = MaterialTheme.typography.headlineMedium,
                     color = VeloxColors.OnBackground,
@@ -104,11 +132,12 @@ fun NetworkScreen(
 
         when {
             // --- directory browser ---
-            viewModel.isBrowsing -> BrowserContent(
+            isBrowsingState -> BrowserContent(
                 state = browse,
                 onOpenDirectory = viewModel::openDirectory,
                 onPlayEntry = viewModel::play,
                 onUp = viewModel::goUp,
+                onRetry = viewModel::retry,
             )
 
             // --- server list + streams ---
@@ -133,6 +162,13 @@ fun NetworkScreen(
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false },
+        )
+    }
+        androidx.compose.material3.SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(VeloxSpacing.lg),
         )
     }
 }
@@ -166,7 +202,7 @@ private fun ServersContent(
                 Text(
                     text = url,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = accentTint(),
+                    color = com.exapps.velox.core.ui.theme.accentColor(),
                     maxLines = 1,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -197,7 +233,7 @@ private fun ServersContent(
                 )
             }
         }
-        items(servers, key = { it.id }) { server ->
+        itemsIndexed(servers, key = { index, item -> "${item.id}-$index" }) { _, server ->
             ClickableGlassCard(onClick = { onOpenServer(server) }, modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = VeloxSpacing.xs)) {
                     Column(Modifier.weight(1f)) {
@@ -220,9 +256,6 @@ private fun ServersContent(
         }
     }
 }
-
-@Composable
-private fun accentTint() = com.exapps.velox.core.ui.theme.accentColor()
 
 @Composable
 private fun TestButton(server: com.exapps.velox.core.network.model.NetworkServer, onTest: (com.exapps.velox.core.network.model.NetworkServer, (Boolean) -> Unit) -> Unit) {
@@ -264,6 +297,7 @@ private fun BrowserContent(
     onOpenDirectory: (com.exapps.velox.core.network.model.NetworkEntry) -> Unit,
     onPlayEntry: (com.exapps.velox.core.network.model.NetworkEntry, List<com.exapps.velox.core.network.model.NetworkEntry>) -> Unit,
     onUp: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     if (state.isLoading && state.entries.isEmpty()) {
@@ -272,11 +306,56 @@ private fun BrowserContent(
         }
         return
     }
-    state.error?.let {
-        Column(Modifier.fillMaxSize().padding(VeloxSpacing.lg)) {
-            Text(it, color = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(VeloxSpacing.md))
-            TextButton(onClick = onUp) { Text(stringResource(R.string.network_back)) }
+    state.error?.let { message ->
+        // H2 (features review): keep the previous listing visible below the
+        // error so the user can still tap a sibling directory (which cancels
+        // the failed state). Offer an explicit Retry button for the exact URL
+        // that errored, distinct from "Up" (which loses your place).
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(VeloxSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
+        ) {
+            item {
+                Column(Modifier.fillMaxWidth().padding(bottom = VeloxSpacing.md)) {
+                    Text(message, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(VeloxSpacing.xs))
+                    Row(horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm)) {
+                        if (state.failedUrl != null) {
+                            TextButton(onClick = onRetry) { Text(stringResource(R.string.network_retry)) }
+                        }
+                        TextButton(onClick = onUp) { Text(stringResource(R.string.network_back)) }
+                    }
+                }
+            }
+            items(state.entries, key = { it.url }) { entry ->
+                ClickableGlassCard(
+                    onClick = {
+                        if (entry.isDirectory) onOpenDirectory(entry)
+                        else onPlayEntry(entry, state.entries)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = VeloxSpacing.xs)) {
+                        Icon(
+                            imageVector = if (entry.isDirectory) Icons.Filled.Folder else Icons.Filled.MusicNote,
+                            contentDescription = null,
+                            tint = com.exapps.velox.core.ui.theme.accentColor(),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(entry.name, style = MaterialTheme.typography.titleMedium, color = VeloxColors.OnSurface, maxLines = 1)
+                            if (!entry.isDirectory && entry.sizeBytes >= 0) {
+                                Text(
+                                    android.text.format.Formatter.formatShortFileSize(context, entry.sizeBytes),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = VeloxColors.OnSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
         return
     }
@@ -358,13 +437,12 @@ private fun ServerEditorDialog(
             Column(verticalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.network_field_name)) }, singleLine = true)
 
-                // Protocol picker (3 options — a menu keeps the dialog compact).
-                var protocolOpen by remember { mutableStateOf(false) }
+                // M2 (features review): the protocol field used to take
+                // expanded/onExpand parameters that the caller never wired
+                // up; the cycling-field approach renders without a menu.
                 ExposedProtocolField(
                     selected = protocol,
-                    expanded = protocolOpen,
-                    onExpand = { protocolOpen = it },
-                    onSelect = { protocol = it; protocolOpen = false },
+                    onSelect = { protocol = it },
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
@@ -384,13 +462,39 @@ private fun ServerEditorDialog(
                 }
                 OutlinedTextField(value = basePath, onValueChange = { basePath = it }, label = { Text(stringResource(R.string.network_field_basepath)) }, singleLine = true)
 
-                if (protocol == NetworkProtocol.WEBDAV) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.network_secure), style = MaterialTheme.typography.bodyMedium, color = VeloxColors.OnSurface)
-                        Spacer(Modifier.weight(1f))
-                    }
-                    SwitchRow(checked = secure, onChange = { secure = it })
+                // M2 (features review): the secure toggle was visible for
+                // every protocol, but only WebDAV honours it (FTP and SMB
+                // don't have an "HTTPS" mode). Disable + helper text for
+                // the others so the toggle isn't misleading.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.network_secure),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (protocol == NetworkProtocol.WEBDAV) VeloxColors.OnSurface else VeloxColors.OnSurfaceVariant,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    SwitchRow(
+                        checked = secure,
+                        enabled = protocol == NetworkProtocol.WEBDAV,
+                        onChange = { secure = it },
+                    )
                 }
+                if (protocol != NetworkProtocol.WEBDAV) {
+                    Text(
+                        text = stringResource(R.string.network_secure_disabled_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = VeloxColors.OnSurfaceVariant,
+                    )
+                }
+
+                // M2 (features review): credentials are stored as plaintext
+                // in DataStore (see NetworkLibraryRepository). Surface that
+                // so a user editing a server can decide.
+                Text(
+                    text = stringResource(R.string.network_plaintext_credentials_notice),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = VeloxColors.OnSurfaceVariant,
+                )
             }
         },
         confirmButton = {
@@ -403,12 +507,13 @@ private fun ServerEditorDialog(
     )
 }
 
-/** Three protocols — a cycling field avoids the experimental menu API entirely. */
+/** Three protocols — a cycling field avoids the experimental menu API entirely.
+ * M2 (features review): dropped the unused `expanded`/`onExpand` parameters
+ * — they were a leftover from an earlier dropdown attempt and the caller
+ * never wrote to them. */
 @Composable
 private fun ExposedProtocolField(
     selected: NetworkProtocol,
-    expanded: Boolean,
-    onExpand: (Boolean) -> Unit,
     onSelect: (NetworkProtocol) -> Unit,
 ) {
     val options = NetworkProtocol.entries
@@ -424,6 +529,6 @@ private fun ExposedProtocolField(
 }
 
 @Composable
-private fun SwitchRow(checked: Boolean, onChange: (Boolean) -> Unit) {
-    androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange)
+private fun SwitchRow(checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
+    androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
 }

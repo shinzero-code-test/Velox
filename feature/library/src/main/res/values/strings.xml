@@ -17,6 +17,8 @@
     <string name="library_permission_title">Access your media</string>
     <string name="library_permission_body">Velox needs permission to see the audio and video files stored on this device. Nothing ever leaves your phone.</string>
     <string name="library_permission_action">Allow access</string>
+    <string name="library_permission_body_permanently_denied">The system permission dialog won\'t show again. Open Android Settings to grant media access for Velox.</string>
+    <string name="library_permission_open_settings">Open settings</string>
     <string name="library_track_subtitle">%1$s • %2$s</string>
 
     <!-- ROADMAP M2 "Search & sort" -->
@@ -37,6 +39,7 @@
 
     <string name="search_title">Search</string>
     <string name="search_hint">Search songs, albums, artists…</string>
+    <string name="search_clear">Clear search</string>
     <string name="search_empty_title">No results</string>
     <string name="search_empty_body">Try a different title, artist, or album name.</string>
     <string name="search_prompt_title">Find something to play</string>
@@ -44,4 +47,10 @@
     <string name="cd_video_result">Video</string>
     <string name="cd_favorite_add">Add to favourites</string>
     <string name="cd_favorite_remove">Remove from favourites</string>
+    <string name="cd_open_album">Open album %1$s</string>
+    <string name="cd_open_artist">Open artist %1$s</string>
+    <string name="cd_open_folder">Open folder %1$s</string>
+    <string name="cd_open_genre">Open genre %1$s</string>
+    <string name="cd_tab_selected">selected</string>
+    <string name="cd_tab_not_selected">not selected</string>
 </resources>

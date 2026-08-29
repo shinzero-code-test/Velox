@@ -133,10 +133,13 @@ fun VeloxNavHost(
                             type = "text/plain"
                             putExtra(android.content.Intent.EXTRA_TEXT, text)
                         }
-                        shareContext.startActivity(
-                            android.content.Intent.createChooser(send, null)
-                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
+                        // L11 (features review): FLAG_ACTIVITY_NEW_TASK is
+                        // unnecessary when starting an Activity from an
+                        // Activity context (which is what `LocalContext`
+                        // resolves to inside a Composable hosted in
+                        // MainActivity). It was a defensive default; drop
+                        // it so the chooser surfaces in the right task.
+                        shareContext.startActivity(android.content.Intent.createChooser(send, null))
                     },
                     onReplayIntro = { navController.navigate(VeloxRoute.Onboarding) },
                 )

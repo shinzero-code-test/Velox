@@ -9,8 +9,10 @@ import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 import com.exapps.velox.core.domain.repository.PlaylistRepository
 import com.exapps.velox.core.domain.usecase.PlayMediaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -37,6 +39,18 @@ class PlaylistDetailViewModel @Inject constructor(
     /** The full track list, for the "add tracks" picker (§6). */
     val libraryTracks: StateFlow<List<MediaItem>> = libraryRepository.observeTracks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * M4 (features review): exportM3u previously swallowed its result; the
+     * screen now surfaces success/failure via a snackbar driven by this
+     * StateFlow.
+     */
+    private val _exportMessage = MutableStateFlow<String?>(null)
+    val exportMessage: StateFlow<String?> = _exportMessage.asStateFlow()
+
+    fun clearExportMessage() {
+        _exportMessage.value = null
+    }
 
     fun onPlayAll(shuffle: Boolean) {
         viewModelScope.launch {
@@ -65,7 +79,18 @@ class PlaylistDetailViewModel @Inject constructor(
 
     fun onExportM3u(destinationUri: String) {
         viewModelScope.launch {
-            runCatching { playlistRepository.exportM3u(playlistId, destinationUri) }
+            val result = runCatching { playlistRepository.exportM3u(playlistId, destinationUri) }
+            result.onSuccess { _exportMessage.value = EXPORT_SUCCESS_MARKER }
+            result.onFailure {
+                android.util.Log.w("VeloxPlaylists", "M3U export failed", it)
+                _exportMessage.value = EXPORT_FAILED_MARKER
+            }
         }
+    }
+
+    companion object {
+        // M4: opaque markers mapped to localized strings by the screen.
+        const val EXPORT_SUCCESS_MARKER = "export_ok"
+        const val EXPORT_FAILED_MARKER = "export_failed"
     }
 }

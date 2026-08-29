@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,6 +36,27 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val mediaItemDao: MediaItemDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : PlaylistRepository {
+
+    /**
+     * M13 (data-layer review): the read-then-write in
+     * [PlaylistDao.addTracksAtEnd] was safe inside a single transaction but
+     * two concurrent calls (e.g. AddTracksSheet submitted twice while a
+     * backup-restore was also writing) would both observe the same
+     * MAX(position) and the second INSERT would violate the
+     * (playlistId, position) primary key. Per-playlist Mutexes serialise all
+     * write operations on the same playlist, so the read+write pair is atomic
+     * from the caller's point of view.
+     *
+     * Concurrent writes to *different* playlists are unaffected, and a
+     * read-while-write just sees a slightly stale state for the duration of
+     * the lock.
+     */
+    private val writeLocks = mutableMapOf<Long, Mutex>()
+    private val locksLock = Mutex()
+
+    private suspend fun playlistWriteLock(playlistId: Long): Mutex = locksLock.withLock {
+        writeLocks.getOrPut(playlistId) { Mutex() }
+    }
 
     /** SCREEN_PLAYLISTS.md §3: user playlists plus the always-present system playlists.
      * System playlists use small negative ids (never collide with Room's
@@ -157,13 +180,25 @@ class PlaylistRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) { playlistDao.delete(playlistId) }
 
     override suspend fun addTracks(playlistId: Long, mediaItemIds: List<Long>) =
-        withContext(ioDispatcher) { playlistDao.addTracksAtEnd(playlistId, mediaItemIds) }
+        withContext(ioDispatcher) {
+            playlistWriteLock(playlistId).withLock {
+                playlistDao.addTracksAtEnd(playlistId, mediaItemIds)
+            }
+        }
 
     override suspend fun removeTrack(playlistId: Long, mediaItemId: Long) =
-        withContext(ioDispatcher) { playlistDao.removeItem(playlistId, mediaItemId) }
+        withContext(ioDispatcher) {
+            playlistWriteLock(playlistId).withLock {
+                playlistDao.removeItem(playlistId, mediaItemId)
+            }
+        }
 
     override suspend fun reorderTrack(playlistId: Long, fromPosition: Int, toPosition: Int) =
-        withContext(ioDispatcher) { playlistDao.reorder(playlistId, fromPosition, toPosition) }
+        withContext(ioDispatcher) {
+            playlistWriteLock(playlistId).withLock {
+                playlistDao.reorder(playlistId, fromPosition, toPosition)
+            }
+        }
 
     /**
      * FEATURES.md §3 "Import / Export M3U / M3U8". Exports an extended M3U with
@@ -194,22 +229,42 @@ class PlaylistRepositoryImpl @Inject constructor(
      * above) or a plain filesystem path; paths are resolved against the MediaStore
      * index via the library database, and anything unmatched is skipped rather
      * than aborting the whole import.
+     *
+     * data-layer (review): the previous version always created the playlist,
+     * even if the stream could not be opened (`.orEmpty()` masked the
+     * failure) or every line failed to resolve, leaving the user with an
+     * empty playlist. We now create the playlist last, only when at
+     * least one track resolved, and surface a typed error otherwise.
      */
     override suspend fun importM3u(sourcePath: String, playlistName: String): Long =
         withContext(ioDispatcher) {
+            val entries = readM3uEntries(sourcePath)
+            if (entries.isEmpty()) {
+                throw java.io.IOException(
+                    "M3U import produced no resolvable entries (file unreadable or all paths unknown to MediaStore)",
+                )
+            }
             val playlistId = createPlaylist(playlistName)
-            val lines = context.contentResolver.openInputStream(Uri.parse(sourcePath))?.use { stream ->
-                stream.bufferedReader(Charsets.UTF_8).readLines()
-            }.orEmpty()
-
-            val ids = lines.asSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() && !it.startsWith("#") }
-                .mapNotNull { entry -> resolveToMediaItemId(entry) }
-                .toList()
-            if (ids.isNotEmpty()) playlistDao.addTracksAtEnd(playlistId, ids)
+            playlistDao.addTracksAtEnd(playlistId, entries)
             playlistId
         }
+
+    /**
+     * Parse the M3U at [sourcePath] into a list of resolved media-item ids.
+     * Returns an empty list (without throwing) if the file is empty or every
+     * entry fails to resolve — `importM3u` then surfaces a friendly error
+     * and refuses to create the placeholder playlist.
+     */
+    private suspend fun readM3uEntries(sourcePath: String): List<Long> {
+        val stream = context.contentResolver.openInputStream(Uri.parse(sourcePath))
+            ?: return emptyList()
+        val lines = stream.use { it.bufferedReader(Charsets.UTF_8).readLines() }
+        return lines.asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .mapNotNull { entry -> resolveToMediaItemId(entry) }
+            .toList()
+    }
 
     private fun resolveToMediaItemId(entry: String): Long? {
         if (entry.startsWith("content://")) {
@@ -219,6 +274,15 @@ class PlaylistRepositoryImpl @Inject constructor(
         // Plain filesystem paths (from other apps' playlists) resolve through
         // MediaStore's DATA index rather than a stored column — the library schema
         // deliberately doesn't persist raw paths.
+        //
+        // data-layer (review): on API 29+ MediaColumns.DATA is deprecated
+        // and on some OEM ROMs returns null. We first try the exact DATA
+        // match (works on API ≤28 and on most devices for backwards-compat
+        // reasons), then fall back to a basename + parent-path match
+        // using the `MediaStore.Files` collection with a RELATIVE_PATH
+        // filter. The fallback picks the first match — collisions are
+        // possible if two files in the library have identical basenames
+        // and parent paths, but that's a rare M3U-import edge case.
         val collections = listOf(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
         for (collection in collections) {
             context.contentResolver.query(
@@ -228,6 +292,24 @@ class PlaylistRepositoryImpl @Inject constructor(
                 arrayOf(entry),
                 null,
             )?.use { cursor -> if (cursor.moveToFirst()) return cursor.getLong(0) }
+        }
+        // Fallback for API 29+ where DATA is unreliable: build a
+        // (RELATIVE_PATH, DISPLAY_NAME) pair from the path and query the
+        // MediaStore Files table which still exposes those columns.
+        val fileName = entry.substringAfterLast('/')
+        if (fileName.isNotBlank()) {
+            val parentRelative = entry.substringBeforeLast('/').trimStart('/')
+            // RELATIVE_PATH always ends with a trailing slash.
+            val relPath = if (parentRelative.isEmpty()) "" else "$parentRelative/"
+            for (collection in collections) {
+                context.contentResolver.query(
+                    collection,
+                    arrayOf(MediaStore.MediaColumns._ID),
+                    "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
+                    arrayOf(fileName, relPath),
+                    null,
+                )?.use { cursor -> if (cursor.moveToFirst()) return cursor.getLong(0) }
+            }
         }
         return null
     }
