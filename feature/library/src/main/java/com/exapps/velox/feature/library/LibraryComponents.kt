@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -33,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.onClickLabel
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -210,7 +211,12 @@ private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifi
         horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
     ) {
-        itemsIndexed(albums, key = { index, item -> "${item.id}-$index" }) { _, album ->
+        // Qualified `lazy.grid.itemsIndexed` because both `lazy.itemsIndexed`
+        // and `lazy.grid.itemsIndexed` are imported in this file.
+        androidx.compose.foundation.lazy.grid.itemsIndexed(
+            items = albums,
+            key = { index, item: Album -> "${item.id}-$index" },
+        ) { _, album ->
             // A11y (features review): announce as a Button with an
             // onClickLabel so TalkBack says "Open album <title>" instead
             // of just reading the cell text.
@@ -220,10 +226,9 @@ private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifi
             )
             Column(
                 modifier = Modifier
-                    .clickable(onClick = { onAlbumClick(album) })
+                    .clickable(onClickLabel = openLabel, onClick = { onAlbumClick(album) })
                     .semantics(mergeDescendants = true) {
                         role = androidx.compose.ui.semantics.Role.Button
-                        onClickLabel = openLabel
                     },
             ) {
                 AsyncImage(
