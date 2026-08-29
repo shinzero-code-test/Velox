@@ -95,33 +95,43 @@ class MediaControllerPlayerController @Inject constructor(
      * attempt; the next command (or [play] call) will see `controller == null` and
      * go through [awaitController] to wait for the new connect.
      *
-     * Declared before [init] so the eager `setListener(mediaControllerListener)` call
-     * below runs against a non-null field.
+     * Declared as a val (eagerly initialised) so the [init] block can pass it
+     * to [MediaController.Builder.setListener]. The listener body is a thin
+     * trampoline to [reconnectController] so the type checker doesn't have
+     * to chase a self-reference inside a SAM lambda (which trips
+     * "Type checking has run into a recursive problem" in Kotlin 2.0+).
      */
     private val mediaControllerListener = androidx.media3.session.MediaController.Listener {
-        // M6: the controller died while the service restarts. Drop the reference
-        // immediately and rebuild asynchronously; mainScope.launch is safe because
-        // this listener is invoked on the main looper.
-        mainScope.launch {
-            controller = null
-            trackSelectionRefs = emptyMap()
-            val sessionToken = SessionToken(context, ComponentName(context, VeloxPlaybackService::class.java))
-            val future = MediaController.Builder(context, sessionToken)
-                .setListener(this@MediaControllerPlayerController.mediaControllerListener)
-                .buildAsync()
-            future.addListener(
-                {
-                    try {
-                        controller = future.get().also { it.addListener(playerListener) }
-                        syncStateFromController()
-                        publishTracks(controller?.currentTracks)
-                    } catch (e: Exception) {
-                        android.util.Log.w("VeloxPlayer", "MediaController reconnect failed", e)
-                    }
-                },
-                ContextCompat.getMainExecutor(context),
-            )
-        }
+        // The listener is invoked on the main looper, so launching into
+        // mainScope is safe.
+        mainScope.launch { reconnectController() }
+    }
+
+    private suspend fun reconnectController() {
+        // M6: the controller died while the service restarts. Drop the
+        // reference immediately and rebuild asynchronously.
+        controller = null
+        trackSelectionRefs = emptyMap()
+        val sessionToken = SessionToken(context, ComponentName(context, VeloxPlaybackService::class.java))
+        val future = MediaController.Builder(context, sessionToken)
+            // Pass the same listener so the new connection also wires up
+            // disconnect detection; this is the only place we re-read the
+            // listener field, and it's only read after this val is initialised
+            // (the field is declared above [init], which is the only caller).
+            .setListener(mediaControllerListener)
+            .buildAsync()
+        future.addListener(
+            {
+                try {
+                    controller = future.get().also { it.addListener(playerListener) }
+                    syncStateFromController()
+                    publishTracks(controller?.currentTracks)
+                } catch (e: Exception) {
+                    android.util.Log.w("VeloxPlayer", "MediaController reconnect failed", e)
+                }
+            },
+            ContextCompat.getMainExecutor(context),
+        )
     }
 
     init {
