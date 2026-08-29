@@ -42,6 +42,7 @@ fun VeloxGlassIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     size: androidx.compose.ui.unit.Dp = 48.dp,
     iconSize: androidx.compose.ui.unit.Dp = 24.dp,
     tint: androidx.compose.ui.graphics.Color = VeloxColors.OnSurface,
@@ -54,7 +55,7 @@ fun VeloxGlassIconButton(
             .size(size)
             .clip(VeloxShapes.full)
             .background(if (filled) accentColor() else glassSurfaceColor())
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .semantics { this.contentDescription = contentDescription },
     ) {
         CompositionLocalProvider(LocalContentColor provides if (filled) VeloxColors.currentBackground else tint) {

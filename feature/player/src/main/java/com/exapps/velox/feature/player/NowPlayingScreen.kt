@@ -312,7 +312,9 @@ fun NowPlayingScreen(
                         // existed, leaving the user with an empty card and
                         // no idea why. Disable + null tint when lyrics is
                         // null or empty so the affordance reflects the data.
-                        val hasLyrics = lyrics != null && !lyrics.isEmpty
+                        // Use a let-block so the non-null smart cast on
+                        // `it` doesn't require `lyrics!!`.
+                        val hasLyrics = lyrics?.isNotEmpty() == true
                         VeloxGlassIconButton(
                             icon = Icons.Filled.MusicNote,
                             contentDescription = stringResource(R.string.cd_lyrics),
@@ -438,7 +440,7 @@ private fun QueueSheet(
                 .padding(horizontal = VeloxSpacing.lg)
                 // L8: cap the sheet at 80% of viewport so it never covers
                 // the entire screen for short queues.
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
+                .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.8f)
                 .fillMaxWidth(),
         ) {
             Row(
