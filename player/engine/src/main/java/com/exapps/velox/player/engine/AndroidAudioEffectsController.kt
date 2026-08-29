@@ -202,20 +202,29 @@ class AndroidAudioEffectsController @Inject constructor(
         }
     }
 
-    /** Canonical 10-frequency snapshot of the current desired state → DataStore. Caller holds [lock]. */
-    private suspend fun persistCurrentDesiredLocked(bands: List<EqualizerBand>) {
-        val canonical = EqualizerPreset.NORMAL.frequenciesHz.map { freqHz ->
-            bands.minBy { abs(it.centerFrequencyMilliHz / 1000.0 - freqHz) }
-                ?.let { desiredBandLevels[it.index] ?: it.levelMillibel } ?: 0
-        }
+    /**
+     * Snapshot of the EQ state for the suspending DataStore write. Captured
+     * under [lock] so the subsequent prefs.save (which holds DataStores
+     * own lock and may suspend) sees a consistent view.
+     */
+    private data class Snapshot(
+        val enabled: Boolean,
+        val presetId: String?,
+        val bassStrength: Int,
+        val virtualizerStrength: Int,
+        val canonical: List<Int>,
+    )
+
+    /** Persist a pre-snapshotted EQ state. Safe to call outside the lock. */
+    private suspend fun persistSnapshot(snapshot: Snapshot) {
         runCatching {
             preferences.save(
                 EqualizerSettings(
-                    enabled = enabled,
-                    presetId = activePresetId,
-                    bandGainsMillibel = canonical,
-                    bassBoostStrength = bassStrength,
-                    virtualizerStrength = virtualizerStrength,
+                    enabled = snapshot.enabled,
+                    presetId = snapshot.presetId,
+                    bandGainsMillibel = snapshot.canonical,
+                    bassBoostStrength = snapshot.bassStrength,
+                    virtualizerStrength = snapshot.virtualizerStrength,
                 ),
             )
         }
