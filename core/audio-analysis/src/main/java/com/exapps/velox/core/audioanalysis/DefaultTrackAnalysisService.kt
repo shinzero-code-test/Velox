@@ -8,6 +8,7 @@ import com.exapps.velox.core.domain.audio.Chapter
 import com.exapps.velox.core.domain.audio.IntroOutro
 import com.exapps.velox.core.domain.audio.IntroOutroKind
 import com.exapps.velox.core.domain.audio.TrackAnalysisService
+import com.exapps.velox.core.domain.audio.TrackAnalyzer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
