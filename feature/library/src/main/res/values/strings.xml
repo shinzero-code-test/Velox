@@ -14,6 +14,14 @@
     <string name="library_rescan">Rescan library</string>
     <string name="library_error_body">Couldn\'t load your library.</string>
     <string name="library_error_retry">Retry</string>
+    <!-- Phase 3 / Milestone 3 — Better tablet layouts. Shown in the
+         detail pane of the two-pane Library at medium/expanded widths
+         when no album/artist/folder/genre has been selected yet. -->
+    <string name="library_two_pane_hint">Pick an album, artist, folder, or genre from the list to see its tracks here.</string>
+    <!-- Phase 3 / Wave 3 / Round 3 — Milestone 7. -->
+    <string name="library_recommended_title">Recommended for you</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5 — Search "Because you listened to X" header. -->
+    <string name="search_because_you_listened">Because you listened to this</string>
     <string name="library_permission_title">Access your media</string>
     <string name="library_permission_body">Velox needs permission to see the audio and video files stored on this device. Nothing ever leaves your phone.</string>
     <string name="library_permission_action">Allow access</string>

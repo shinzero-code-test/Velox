@@ -58,6 +58,16 @@
     <string name="markers_title">Bookmarks &amp; chapters</string>
     <string name="markers_chapters">Chapters</string>
     <string name="markers_bookmarks">Your bookmarks</string>
+    <!-- Phase 3 / Wave 3 / Round 2 — auto-skip intro. -->
+    <string name="cd_skip_intro">Skip intro</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5 — "Up next for you" in the queue sheet. -->
+    <string name="queue_up_next_title">Up next for you</string>
+    <string name="cd_queue_add">Add to queue</string>
+    <string name="cd_queue_play_next">Play next</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5c — auto-detected chapter badge. -->
+    <string name="chapter_auto_badge">auto</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5e — bulk-delete auto chapters. -->
+    <string name="markers_clear_auto_chapters">Clear all auto-detected chapters</string>
     <string name="markers_add">Add at position</string>
     <string name="cd_favorite_toggle">Toggle favourite</string>
     <string name="cd_delete_marker">Delete bookmark</string>

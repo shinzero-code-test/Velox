@@ -1,6 +1,7 @@
 package com.exapps.velox.navigation
 
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import com.exapps.velox.feature.library.CollectionDetailScreen
 import com.exapps.velox.feature.library.LibraryScreen
 import com.exapps.velox.feature.library.SearchScreen
 import com.exapps.velox.feature.network.NetworkScreen
+import com.exapps.velox.feature.settings.PluginsScreen
 import com.exapps.velox.feature.settings.StatisticsScreen
 import com.exapps.velox.feature.player.NowPlayingScreen
 import com.exapps.velox.feature.player.VideoPlayerScreen
@@ -34,6 +36,11 @@ fun VeloxNavHost(
     startDestination: VeloxRoute,
     appViewModel: AppViewModel,
     modifier: Modifier = Modifier,
+    // Phase 3 / Milestone 3 — Better tablet layouts. Forwarded to
+    // MainScaffold so the bottom-bar / side-rail decision can be
+    // made at every composable that hosts the chrome. Previews pass
+    // the compact default.
+    windowSizeClass: WindowSizeClass = DefaultWindowSizeClass,
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -84,6 +91,7 @@ fun VeloxNavHost(
                 currentRoute = VeloxRoute.Library,
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
+                windowSizeClass = windowSizeClass,
             ) {
                 LibraryScreen(
                     onMediaItemClick = ::openMediaItem,
@@ -92,6 +100,7 @@ fun VeloxNavHost(
                     onArtistClick = { navController.navigate(VeloxRoute.ArtistDetail(it.id, it.name)) },
                     onFolderClick = { navController.navigate(VeloxRoute.FolderDetail(it.path, it.displayName)) },
                     onGenreClick = { navController.navigate(VeloxRoute.GenreDetail(it.name, it.name)) },
+                    windowSizeClass = windowSizeClass,
                 )
             }
         }
@@ -101,8 +110,12 @@ fun VeloxNavHost(
                 currentRoute = VeloxRoute.Playlists,
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
+                windowSizeClass = windowSizeClass,
             ) {
-                PlaylistsScreen(onPlaylistClick = { navController.navigate(VeloxRoute.PlaylistDetail(it)) })
+                PlaylistsScreen(
+                    onPlaylistClick = { navController.navigate(VeloxRoute.PlaylistDetail(it)) },
+                    windowSizeClass = windowSizeClass,
+                )
             }
         }
 
@@ -111,6 +124,7 @@ fun VeloxNavHost(
                 currentRoute = VeloxRoute.Search,
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
+                windowSizeClass = windowSizeClass,
             ) {
                 SearchScreen(onResultClick = ::openMediaItem)
             }
@@ -121,6 +135,7 @@ fun VeloxNavHost(
                 currentRoute = VeloxRoute.Settings,
                 onNavigate = { navController.navigateToTab(it) },
                 onExpandPlayer = { navController.navigate(VeloxRoute.NowPlaying) },
+                windowSizeClass = windowSizeClass,
             ) {
                 val shareContext = LocalContext.current
                 SettingsScreen(
@@ -142,6 +157,7 @@ fun VeloxNavHost(
                         shareContext.startActivity(android.content.Intent.createChooser(send, null))
                     },
                     onReplayIntro = { navController.navigate(VeloxRoute.Onboarding) },
+                    onOpenPlugins = { navController.navigate(VeloxRoute.Plugins) },
                 )
             }
         }
@@ -213,6 +229,11 @@ fun VeloxNavHost(
                     navController.navigate(VeloxRoute.Library)
                 }
             })
+        }
+
+        // Phase 3 / Milestone 4 — plugin registry surface.
+        composable<VeloxRoute.Plugins> {
+            PluginsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

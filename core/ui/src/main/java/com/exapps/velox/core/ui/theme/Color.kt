@@ -80,13 +80,6 @@ object VeloxColors {
     }
 }
 
-/** Convenience helpers for the glass surfaces used throughout the app (DESIGN_SYSTEM.md §5.1, §8). */
-fun glassSurfaceColor(elevated: Boolean = false): Color =
-    Color.White.copy(alpha = if (elevated) VeloxColors.SurfaceGlassElevatedAlpha else VeloxColors.SurfaceGlassAlpha)
-
-fun glassOutlineColor(strong: Boolean = false): Color =
-    Color.White.copy(alpha = if (strong) VeloxColors.OutlineStrongAlpha else VeloxColors.OutlineAlpha)
-
 /** The selectable accent swatches (BRANDING.md / DESIGN_SYSTEM.md §2.2). Order matters:
  * index 0 (Teal) is the v1 default and what UserSettingsPreferences.accentIndex counts
  * from. Kept as a val list so Settings can render the picker without hand-copying. */

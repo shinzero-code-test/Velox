@@ -29,6 +29,8 @@
     <string name="playlist_add_selected">Add %1$d tracks</string>
     <string name="playlist_remove_track">Remove from playlist</string>
     <string name="playlist_fallback_name">Playlist</string>
+    <!-- Phase 3 / Round 1 — Playlists two-pane hint. -->
+    <string name="playlists_two_pane_hint">Pick a playlist from the list to see its tracks here.</string>
     <string name="playlists_import_done">M3U imported.</string>
     <string name="playlists_import_failed">M3U import failed. The file may be corrupt or empty.</string>
     <string name="playlists_export_done">M3U exported.</string>

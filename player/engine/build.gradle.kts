@@ -26,7 +26,11 @@ android {
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:domain"))
-    implementation(project(":core:data"))
+    // Phase 3 / L6 (deferred-backlog): the engine no longer imports
+    // `:core:data` directly. EQ and decoder preferences flow through the
+    // domain ports in `:core:domain` (see DecoderPreferenceStore and
+    // EqualizerPreferencesStore), with adapters bound by Hilt in
+    // `:core:data`/DataModule.kt.
     implementation(project(":core:network"))
 
     implementation(libs.androidx.core.ktx)

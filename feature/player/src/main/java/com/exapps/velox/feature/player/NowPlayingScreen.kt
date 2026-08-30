@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Close
@@ -40,17 +41,20 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -247,6 +251,20 @@ fun NowPlayingScreen(
                     onClick = viewModel::onPlayPause,
                 )
                 VeloxGlassIconButton(Icons.Filled.SkipNext, stringResource(R.string.cd_next), viewModel::onSkipNext, size = 56.dp, iconSize = 28.dp)
+                // Phase 3 / Wave 3 / Round 2 — skip-intro affordance.
+                // Visible only when the analysis service has a saved
+                // intro row for the current track. Tapping seeks to
+                // the intro's `endMs` (the same code path the auto-
+                // skip uses on the first listen).
+                val skipIntroVisible by viewModel.hasIntro.collectAsStateWithLifecycle()
+                if (skipIntroVisible) {
+                    VeloxGlassIconButton(
+                        icon = Icons.Filled.FastForward,
+                        contentDescription = stringResource(R.string.cd_skip_intro),
+                        onClick = viewModel::onSkipIntro,
+                        tint = accentColor(),
+                    )
+                }
                 VeloxGlassIconButton(
                     icon = if (state.repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                     contentDescription = stringResource(R.string.cd_repeat),
@@ -386,11 +404,15 @@ fun NowPlayingScreen(
     }
 
     if (showQueueSheet) {
+        val upNext by viewModel.upNext.collectAsStateWithLifecycle()
         QueueSheet(
             state = state,
+            upNext = upNext.items,
             onItemClick = viewModel::onQueueItemClick,
             onItemRemove = viewModel::onQueueItemRemove,
             onClear = viewModel::onQueueClear,
+            onUpNextAppend = viewModel::onUpNextAppend,
+            onUpNextPlayNext = viewModel::onUpNextPlayNext,
             onDismiss = { showQueueSheet = false },
         )
     }
@@ -403,6 +425,7 @@ fun NowPlayingScreen(
             onAddBookmark = viewModel::onAddBookmark,
             onSeekToBookmark = viewModel::onSeekToBookmark,
             onDeleteBookmark = viewModel::onDeleteBookmark,
+            onClearAllAutoChapters = viewModel::onClearAllAutoChapters,
             onDismiss = { showMarkersSheet = false },
         )
     }
@@ -426,9 +449,12 @@ fun NowPlayingScreen(
 @Composable
 private fun QueueSheet(
     state: com.exapps.velox.core.domain.player.PlaybackState,
+    upNext: List<com.exapps.velox.core.domain.model.MediaItem>,
     onItemClick: (Int) -> Unit,
     onItemRemove: (Int) -> Unit,
     onClear: () -> Unit,
+    onUpNextAppend: (com.exapps.velox.core.domain.model.MediaItem) -> Unit,
+    onUpNextPlayNext: (com.exapps.velox.core.domain.model.MediaItem) -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
@@ -462,6 +488,23 @@ private fun QueueSheet(
                         .clip(VeloxShapes.sm)
                         .clickable(onClick = onClear)
                         .padding(VeloxSpacing.sm),
+                )
+            }
+            // Phase 3 / Wave 3 / Round 3.5 — "Up next for you" section
+            // appears at the top of the queue sheet, above the
+            // current queue. Renders only when the engine has
+            // recommendations (cold start: empty). Each row has
+            // a "play next" button (inserts at currentIndex + 1) and
+            // an "add to queue" button (appends at the end).
+            if (upNext.isNotEmpty()) {
+                UpNextSection(
+                    items = upNext,
+                    onPlayNext = onUpNextPlayNext,
+                    onAppend = onUpNextAppend,
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(vertical = VeloxSpacing.sm),
+                    color = VeloxColors.OnSurfaceVariant.copy(alpha = 0.2f),
                 )
             }
             LazyColumn(modifier = Modifier.weight(1f).padding(bottom = VeloxSpacing.xl)) {
@@ -514,6 +557,80 @@ private fun QueueSheet(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Phase 3 / Wave 3 / Round 3.5 — the "Up next for you" section in
+ * the queue sheet. Capped at 5 rows so the sheet doesn't push
+ * the current queue off-screen. Each row has a "play next"
+ * button (inserts as immediate successor) and a "queue" button
+ * (appends at the end).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UpNextSection(
+    items: List<com.exapps.velox.core.domain.model.MediaItem>,
+    onPlayNext: (com.exapps.velox.core.domain.model.MediaItem) -> Unit,
+    onAppend: (com.exapps.velox.core.domain.model.MediaItem) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = VeloxSpacing.sm)) {
+        Text(
+            text = stringResource(R.string.queue_up_next_title),
+            style = VeloxTheme.typography.labelLarge,
+            color = VeloxColors.OnSurfaceVariant,
+            modifier = Modifier.padding(bottom = VeloxSpacing.xs),
+        )
+        items.take(5).forEach { track ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(VeloxShapes.sm)
+                    .padding(vertical = VeloxSpacing.xxs),
+            ) {
+                AsyncImage(
+                    model = track.artworkUri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(VeloxShapes.sm),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = track.title,
+                        style = VeloxTheme.typography.titleSmall,
+                        color = VeloxColors.OnSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    track.artistName?.let {
+                        Text(
+                            text = it,
+                            style = VeloxTheme.typography.bodySmall,
+                            color = VeloxColors.OnSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                VeloxGlassIconButton(
+                    icon = Icons.Filled.PlaylistAdd,
+                    contentDescription = stringResource(R.string.cd_queue_add),
+                    onClick = { onAppend(track) },
+                    size = 36.dp,
+                    iconSize = 18.dp,
+                )
+                VeloxGlassIconButton(
+                    icon = Icons.AutoMirrored.Filled.PlaylistPlay,
+                    contentDescription = stringResource(R.string.cd_queue_play_next),
+                    onClick = { onPlayNext(track) },
+                    size = 36.dp,
+                    iconSize = 18.dp,
+                )
             }
         }
     }
@@ -732,6 +849,7 @@ private fun MarkersSheet(
     onAddBookmark: (Long) -> Unit,
     onSeekToBookmark: (Long) -> Unit,
     onDeleteBookmark: (Long) -> Unit,
+    onClearAllAutoChapters: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
@@ -771,6 +889,43 @@ private fun MarkersSheet(
                             color = VeloxColors.OnSurface,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Phase 3 / Wave 3 / Round 3.5c — auto badge
+                        // on auto-detected chapters. Helps the user
+                        // tell sidecar `.chapters.txt` from the
+                        // heuristic detector's output.
+                        if (chapter.autoGenerated) {
+                            Text(
+                                text = stringResource(R.string.chapter_auto_badge),
+                                style = VeloxTheme.typography.labelSmall,
+                                color = accentColor(),
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                                    .background(accentColor().copy(alpha = 0.12f))
+                                    .padding(horizontal = VeloxSpacing.xs, vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
+                // Phase 3 / Wave 3 / Round 3.5e — bulk-delete row,
+                // visible only when at least one chapter in the
+                // current view is auto-detected. Sidecar / embedded
+                // chapters are unaffected by the delete.
+                if (chapters.any { it.autoGenerated }) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(VeloxShapes.md)
+                            .clickable { onClearAllAutoChapters() }
+                            .padding(vertical = VeloxSpacing.xs),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.markers_clear_auto_chapters),
+                            style = VeloxTheme.typography.labelLarge,
+                            color = VeloxColors.Error,
                         )
                     }
                 }

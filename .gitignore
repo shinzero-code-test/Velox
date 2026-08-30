@@ -18,3 +18,4 @@
 tmp/
 /gradle/wrapper/gradle-wrapper.jar
 AGENTS.md
+.opencode/

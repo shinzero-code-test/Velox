@@ -23,6 +23,10 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
+    // Phase 3 / Wave 3 / Round 2 — silence / intro detection and
+    // auto chapter generation. The service port lives in
+    // :core:domain; the implementation lives in :core:audio-analysis.
+    implementation(project(":core:audio-analysis"))
     implementation(project(":player:engine"))
 
     implementation(libs.androidx.core.ktx)

@@ -5,6 +5,7 @@
 // never the reverse).
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 java {
@@ -26,6 +27,11 @@ dependencies {
     // @Inject annotations (JSR-330) for constructor injection wiring via Hilt,
     // without dragging Hilt itself into the domain layer.
     implementation(libs.javax.inject)
+
+    // Phase 3 / Milestone 2: theme manifests are serialised JSON; the
+    // domain layer owns the schema so :core:data and :core:ui can both
+    // parse the same shape without one depending on the other.
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

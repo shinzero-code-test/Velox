@@ -24,7 +24,7 @@ import android.webkit.MimeTypeMap
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlayerController
 import androidx.compose.ui.Modifier
-import com.exapps.velox.core.ui.theme.VeloxAccentOptions
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import com.exapps.velox.core.ui.theme.VeloxColors
 import com.exapps.velox.core.ui.theme.VeloxTheme
 import com.exapps.velox.navigation.VeloxNavHost
@@ -71,22 +71,30 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val settings by appViewModel.settings.collectAsStateWithLifecycle()
+            val themeSpec by appViewModel.themeSpec.collectAsStateWithLifecycle()
+            // Phase 3 / Milestone 3 — Better tablet layouts.
+            // `calculateWindowSizeClass(activity)` reads the activity's
+            // current window metrics and buckets them into
+            // Compact/Medium/Expanded. We hoist it once at the root and
+            // let the screen-level layouts decide between single-pane
+            // (Compact) and two-/three-pane (Medium/Expanded).
+            val windowSizeClass = calculateWindowSizeClass(this)
             // The window background comes from the XML theme (a fixed color
             // resource), and screens draw on top of it transparently — so without
             // this root the AMOLED toggle never reached what the user actually sees.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(VeloxColors.currentBackground),
+                    .background(themeSpec.background),
             ) {
-                VeloxTheme(
-                    amoled = settings.amoled,
-                    accent = VeloxAccentOptions.getOrElse(settings.accentIndex) { VeloxAccentOptions.first() },
-                ) {
+                VeloxTheme(spec = themeSpec) {
                     val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
                     startDestination?.let { destination ->
-                        VeloxNavHost(startDestination = destination, appViewModel = appViewModel)
+                        VeloxNavHost(
+                            startDestination = destination,
+                            appViewModel = appViewModel,
+                            windowSizeClass = windowSizeClass,
+                        )
                     }
                 }
             }

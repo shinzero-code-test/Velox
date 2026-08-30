@@ -18,6 +18,7 @@ import com.exapps.velox.core.domain.model.Genre
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.model.SortOrder
+import com.exapps.velox.core.domain.recommendation.RecommendationEngine
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +41,11 @@ class MediaLibraryRepositoryImpl @Inject constructor(
     private val scanner: MediaStoreScanner,
     private val database: com.exapps.velox.core.data.local.VeloxDatabase,
     private val preferencesDataStore: DataStore<Preferences>,
+    // Phase 3 / Wave 3 / Round 3 — Milestone 7. Notify the
+    // recommender whenever the play history changes so the
+    // forYou / upNext / becauseYouListened flows re-emit on the
+    // next subscription.
+    private val recommendationEngine: RecommendationEngine,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : MediaLibraryRepository {
 
@@ -145,6 +151,9 @@ class MediaLibraryRepositoryImpl @Inject constructor(
         // M5 (data-layer review): the KDoc promised a cap; enforce it so the
         // history table can't grow unbounded on heavy listeners.
         playHistoryDao.trimTo(PLAY_HISTORY_KEEP_MOST_RECENT)
+        // Milestone 7: notify the recommender. The next subscriber
+        // to forYou/upNext/becauseYouListened re-runs the build.
+        recommendationEngine.onPlayHistoryChanged()
     }
 
     override suspend fun rescanLibrary() = withContext(ioDispatcher) {
@@ -201,6 +210,9 @@ class MediaLibraryRepositoryImpl @Inject constructor(
             playHistoryDao.clearAll()
             mediaItemDao.resetPlayStatistics()
         }
+        // Milestone 7: dropping the history invalidates the
+        // co-occurrence matrix.
+        recommendationEngine.onPlayHistoryChanged()
     }
 
     override fun hasScannedBefore(): Flow<Boolean> =

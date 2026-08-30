@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Subtitles
@@ -42,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,7 +58,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.exapps.velox.core.data.preferences.AppLanguage
+import com.exapps.velox.core.domain.theme.ThemeDefinition
 import com.exapps.velox.core.ui.components.GlassCard
+import kotlinx.coroutines.launch
 import com.exapps.velox.core.ui.components.VeloxDestructiveButton
 import com.exapps.velox.core.ui.theme.VeloxAccentOptions
 import com.exapps.velox.core.ui.theme.VeloxColors
@@ -81,6 +85,7 @@ fun SettingsScreen(
     onShareCrashLog: (String) -> Unit = {},
     onOpenStatistics: () -> Unit = {},
     onReplayIntro: () -> Unit,
+    onOpenPlugins: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -98,6 +103,7 @@ fun SettingsScreen(
     // dark/light mode toggle). rememberSaveable persists them through
     // the SavedStateHandle so the user doesn't lose a pending dialog.
     var showClearHistoryDialog by rememberSaveable { mutableStateOf(false) }
+    var showResetRecommendationsDialog by rememberSaveable { mutableStateOf(false) }
     var backupMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Phase 2 "Backup / restore" — SAF pickers, no storage permissions.
@@ -115,6 +121,28 @@ fun SettingsScreen(
             viewModel.restoreBackup(uri) { backupMessage = it }
         }
     }
+
+    // Phase 3 / Milestone 2 — Theme engine. SAF launcher for importing
+    // a .json theme file. The user picks a file; we hand the URI to
+    // the VM, which parses, copies, and refreshes the available list.
+    val coroutineScope = rememberCoroutineScope()
+    val themeImportError = stringResource(R.string.settings_theme_import_failed)
+    val importThemeLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val newId = viewModel.importTheme(uri)
+                if (newId != null) {
+                    viewModel.selectTheme(newId)
+                } else {
+                    backupMessage = themeImportError
+                }
+            }
+        }
+    }
+    val availableThemes by viewModel.availableThemes.collectAsStateWithLifecycle()
+    val activeTheme by viewModel.activeTheme.collectAsStateWithLifecycle()
 
     // L13: Snackbar host layered behind the LazyColumn so the
     // history-cleared confirmation and the backupMessage popup don't
@@ -148,6 +176,44 @@ fun SettingsScreen(
         item {
             GlassCard {
                 Column {
+                    // Phase 3 / Milestone 2 — Theme engine. The picker
+                    // lists every bundled + imported theme as a ChoiceRow
+                    // (radio-style). The active theme is highlighted; the
+                    // AMOLED toggle below is the runtime override
+                    // (Dark Glass + AMOLED = pure black, regardless of
+                    // the theme's own background token).
+                    val currentLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
+                    Text(
+                        text = stringResource(R.string.settings_theme_picker),
+                        style = VeloxTheme.typography.titleMedium,
+                        color = VeloxColors.OnSurface,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_theme_picker_hint),
+                        style = VeloxTheme.typography.bodySmall,
+                        color = VeloxColors.OnSurfaceVariant,
+                        modifier = Modifier.padding(top = VeloxSpacing.xxs, bottom = VeloxSpacing.sm),
+                    )
+                    availableThemes.forEach { theme ->
+                        ChoiceRow(
+                            title = theme.name.forLocale(currentLocale),
+                            selected = activeTheme.id == theme.id,
+                            onClick = { viewModel.selectTheme(theme.id) },
+                        )
+                    }
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            importThemeLauncher.launch(arrayOf("application/json", "text/plain"))
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FileOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.size(VeloxSpacing.xs))
+                        Text(text = stringResource(R.string.settings_theme_import))
+                    }
                     ChoiceRow(
                         title = stringResource(R.string.settings_theme_dark_glass),
                         selected = !settings.amoled,
@@ -187,6 +253,31 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_resume_playback),
                         checked = settings.resumePlayback,
                         onCheckedChange = viewModel::setResumePlayback,
+                    )
+                    // Phase 3 / Wave 3 / Round 2 — smart silence skip.
+                    // The detector runs once per track the first time
+                    // it plays; the player seeks past the intro on
+                    // the second listen. Default ON; the per-track
+                    // skip-intro button on Now Playing is the manual
+                    // override and is unaffected.
+                    SwitchRow(
+                        title = stringResource(R.string.settings_intelligent_silence),
+                        subtitle = stringResource(R.string.settings_intelligent_silence_hint),
+                        checked = settings.intelligentSilenceEnabled,
+                        onCheckedChange = viewModel::setIntelligentSilenceEnabled,
+                    )
+                    // Phase 3 / Wave 3 / Round 3.5c — auto chapter
+                    // generation. Default OFF; the chapter detector
+                    // is heuristic and noisy on mixed-content
+                    // libraries. When on, the Markers sheet
+                    // surfaces auto chapters with an "auto" badge
+                    // so they can be distinguished from sidecar /
+                    // embedded chapters.
+                    SwitchRow(
+                        title = stringResource(R.string.settings_auto_chapter_generation),
+                        subtitle = stringResource(R.string.settings_auto_chapter_generation_hint),
+                        checked = settings.autoChapterGenerationEnabled,
+                        onCheckedChange = viewModel::setAutoChapterGenerationEnabled,
                     )
                     SwitchRow(
                         title = stringResource(R.string.settings_auto_pip),
@@ -318,6 +409,39 @@ fun SettingsScreen(
                         VeloxDestructiveButton(
                             text = stringResource(R.string.settings_clear_action),
                             onClick = { showClearHistoryDialog = true },
+                        )
+                    }
+                }
+            }
+        }
+
+        // Phase 3 / Wave 3 / Round 3 — Milestone 7: recommendation
+        // data reset. The matrix is recomputed from play history
+        // on the next call to forYou/upNext/becauseYouListened; this
+        // entry just throws away the in-memory cache.
+        item {
+            GlassCard {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_reset_recommendations),
+                                style = VeloxTheme.typography.titleMedium,
+                                color = VeloxColors.OnSurface,
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_reset_recommendations_hint),
+                                style = VeloxTheme.typography.bodyMedium,
+                                color = VeloxColors.OnSurfaceVariant,
+                            )
+                        }
+                        VeloxDestructiveButton(
+                            text = stringResource(R.string.settings_reset_action),
+                            onClick = { showResetRecommendationsDialog = true },
                         )
                     }
                 }
@@ -478,6 +602,42 @@ fun SettingsScreen(
                                 .padding(VeloxSpacing.sm),
                         )
                     }
+                    // Phase 3 / Milestone 4 — link into the plugin
+                    // registry surface. Round 1 is read-only; the
+                    // entry is intentionally a clickable row, not a
+                    // button, so it sits in the same Rhythm as the
+                    // other About rows.
+                    Spacer(Modifier.height(VeloxSpacing.md))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(VeloxShapes.sm)
+                            .clickable(onClick = onOpenPlugins)
+                            .padding(VeloxSpacing.sm),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_plugins_title),
+                            style = VeloxTheme.typography.titleMedium,
+                            color = VeloxColors.OnSurface,
+                        )
+                        Text(
+                            text = "›",
+                            style = VeloxTheme.typography.titleLarge,
+                            color = VeloxColors.OnSurfaceVariant,
+                        )
+                    }
+                    // Phase 3 / Wave 3 / Round 3 — Milestone 7. The
+                    // recommendations engine is on-device only;
+                    // surface that explicitly so the user knows
+                    // their play history never leaves the phone.
+                    Spacer(Modifier.height(VeloxSpacing.md))
+                    Text(
+                        text = stringResource(R.string.settings_about_recommendations_privacy),
+                        style = VeloxTheme.typography.bodySmall,
+                        color = VeloxColors.OnSurfaceVariant,
+                    )
                 }
             }
         }
@@ -514,6 +674,37 @@ fun SettingsScreen(
                     modifier = Modifier
                         .clip(VeloxShapes.sm)
                         .clickable { showClearHistoryDialog = false }
+                        .padding(VeloxSpacing.md),
+                )
+            },
+            containerColor = VeloxColors.currentSurface,
+            titleContentColor = VeloxColors.OnBackground,
+            textContentColor = VeloxColors.OnSurfaceVariant,
+        )
+    }
+
+    if (showResetRecommendationsDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetRecommendationsDialog = false },
+            title = { Text(stringResource(R.string.settings_reset_recommendations_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_reset_recommendations_confirm_body)) },
+            confirmButton = {
+                VeloxDestructiveButton(
+                    text = stringResource(R.string.settings_reset_action),
+                    onClick = {
+                        viewModel.resetRecommendations()
+                        showResetRecommendationsDialog = false
+                    },
+                )
+            },
+            dismissButton = {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    style = VeloxTheme.typography.labelLarge,
+                    color = VeloxColors.OnSurfaceVariant,
+                    modifier = Modifier
+                        .clip(VeloxShapes.sm)
+                        .clickable { showResetRecommendationsDialog = false }
                         .padding(VeloxSpacing.md),
                 )
             },

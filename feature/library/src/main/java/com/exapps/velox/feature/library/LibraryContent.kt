@@ -17,6 +17,15 @@ sealed interface LibraryContent {
     data class Folders(val items: List<Folder>) : LibraryContent
     data class Genres(val items: List<Genre>) : LibraryContent
 
+    /**
+     * Phase 3 / Wave 3 / Round 3 — Milestone 7. The
+     * "Recommended" row at the top of the Library tab. Loaded
+     * alongside the chosen tab; the renderer decides how to lay
+     * it out (a horizontal scroll above the active tab's
+     * LazyColumn).
+     */
+    data class Recommended(val items: List<MediaItem>) : LibraryContent
+
     val isEmpty: Boolean get() = when (this) {
         is Tracks -> items.isEmpty()
         is Videos -> items.isEmpty()
@@ -24,5 +33,6 @@ sealed interface LibraryContent {
         is Artists -> items.isEmpty()
         is Folders -> items.isEmpty()
         is Genres -> items.isEmpty()
+        is Recommended -> items.isEmpty()
     }
 }

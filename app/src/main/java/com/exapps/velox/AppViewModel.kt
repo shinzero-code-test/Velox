@@ -5,12 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.data.preferences.UserSettings
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.data.preferences.OnboardingPreferences
+import com.exapps.velox.core.domain.theme.ThemeRegistry
+import com.exapps.velox.core.ui.theme.VeloxAccentOptions
+import com.exapps.velox.core.ui.theme.VeloxThemeSpec
+import com.exapps.velox.core.ui.theme.resolveThemeSpec
 import com.exapps.velox.navigation.VeloxRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,7 +24,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val onboardingPreferences: OnboardingPreferences,
-    userSettingsPreferences: UserSettingsPreferences,
+    private val userSettingsPreferences: UserSettingsPreferences,
+    private val themeRegistry: ThemeRegistry,
 ) : ViewModel() {
 
     private val _startDestination = MutableStateFlow<VeloxRoute?>(null)
@@ -32,6 +38,30 @@ class AppViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = UserSettings(),
+    )
+
+    /**
+     * Phase 3 / Milestone 2 — Theme engine. The resolved [VeloxThemeSpec]
+     * combines the active theme (from [ThemeRegistry]) with the live
+     * accent override and the AMOLED toggle (both from [settings]).
+     * MainActivity collects this and feeds it to [VeloxTheme].
+     */
+    val themeSpec: StateFlow<VeloxThemeSpec> = combine(
+        themeRegistry.active,
+        userSettingsPreferences.settings,
+    ) { theme, userSettings ->
+        val accent = VeloxAccentOptions.getOrElse(userSettings.accentIndex) {
+            VeloxAccentOptions.first()
+        }
+        resolveThemeSpec(theme = theme, accent = accent, amoled = userSettings.amoled)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = resolveThemeSpec(
+            theme = com.exapps.velox.core.data.preferences.ThemeRegistryAdapter.DefaultDarkGlass,
+            accent = VeloxAccentOptions.first(),
+            amoled = false,
+        ),
     )
 
     /** Phase 1 M4 "File association": set after an externally-opened file starts

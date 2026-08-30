@@ -3,6 +3,7 @@ package com.exapps.velox
 import android.app.Application
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.data.preferences.VeloxLocaleManager
+import com.exapps.velox.core.domain.theme.ThemeRegistry
 import java.io.File
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.runBlocking
@@ -13,6 +14,7 @@ class VeloxApplication : Application() {
 
     @Inject lateinit var localeManager: VeloxLocaleManager
     @Inject lateinit var userSettings: UserSettingsPreferences
+    @Inject lateinit var themeRegistry: ThemeRegistry
 
     companion object {
         const val LAST_CRASH_FILE = "last_crash.txt"
@@ -51,6 +53,10 @@ class VeloxApplication : Application() {
         runBlocking {
             localeManager.load()
             userSettings.primeCache()
+            // Phase 3 / Milestone 2: prime the active-theme cache so the
+            // very first composition of MainActivity sees a resolved
+            // VeloxThemeSpec instead of a fallback.
+            themeRegistry.primeCache()
         }
         VeloxLocaleManager.instance = localeManager
     }

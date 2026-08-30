@@ -166,6 +166,16 @@ interface MediaItemDao {
 
     @Query("SELECT COUNT(*) FROM media_items")
     suspend fun count(): Int
+
+    /**
+     * Phase 3 / Wave 3 / Round 3 — Milestone 7: discovery injection.
+     * Returns the id of the row at the given offset, or null if
+     * out of range. The `randomId()` helper just shuffles an
+     * offset and asks for it. Cheap enough for the recommender's
+     * 10% discovery picks.
+     */
+    @Query("SELECT id FROM media_items ORDER BY id LIMIT 1 OFFSET :offset")
+    suspend fun idAtOffset(offset: Int): Long?
 }
 
 /** Aggregate row for the Folders tab — folder path + count, joined in SQL. */

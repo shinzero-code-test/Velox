@@ -26,4 +26,6 @@
     <string name="network_plaintext_credentials_notice">Credentials are stored locally in plain text. Use a dedicated account with limited permissions.</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5b — Network two-pane hint. -->
+    <string name="network_two_pane_hint">Pick a server to browse its files here.</string>
 </resources>

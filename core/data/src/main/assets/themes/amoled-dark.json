@@ -1,0 +1,23 @@
+{
+  "id": "velox-amoled-dark",
+  "schemaVersion": 1,
+  "name": {
+    "default": "AMOLED Dark",
+    "ar": "الأسود AMOLED",
+    "en": "AMOLED Dark"
+  },
+  "tokens": {
+    "background": "#000000",
+    "onBackground": "#F2F4F7",
+    "surface": "#070707",
+    "onSurface": "#E8EAED",
+    "onSurfaceVariant": "#9AA0A6",
+    "error": "#FF6B6B",
+    "glassAlpha": 0.06,
+    "glassElevatedAlpha": 0.09,
+    "outlineAlpha": 0.08,
+    "outlineStrongAlpha": 0.14,
+    "radiusScale": 1.0,
+    "amoled": true
+  }
+}

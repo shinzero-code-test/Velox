@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.exapps.velox.core.domain.player.EqualizerPreset
+import com.exapps.velox.core.domain.player.EqualizerSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -17,17 +18,14 @@ import javax.inject.Singleton
  * curve is stored (not device band levels) so settings survive across devices with
  * different band counts; EqualizerViewModel maps both directions via nearest
  * frequency, the same way presets do.
+ *
+ * Phase 3 / L6 (deferred-backlog): the [EqualizerSettings] data class moved to
+ * `:core:domain` so the player engine can depend on the port
+ * [com.exapps.velox.core.domain.player.EqualizerPreferencesStore] without
+ * re-introducing a `:core:data` edge. This class still owns the DataStore
+ * representation; the port adapter (in `EqualizerPreferencesStoreAdapter`)
+ * bridges to and from the domain shape.
  */
-data class EqualizerSettings(
-    val enabled: Boolean = false,
-    /** Named preset these levels came from; null once the user drags a band (custom). */
-    val presetId: String? = null,
-    /** Canonical gains in millibel for the 10 frequencies in [EqualizerPreset.NORMAL]. */
-    val bandGainsMillibel: List<Int> = List(EqualizerPreset.NORMAL.frequenciesHz.size) { 0 },
-    val bassBoostStrength: Int = 0,
-    val virtualizerStrength: Int = 0,
-)
-
 @Singleton
 class EqualizerPreferences @Inject constructor(
     private val dataStore: DataStore<Preferences>,

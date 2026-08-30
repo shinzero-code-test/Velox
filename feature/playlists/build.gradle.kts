@@ -38,6 +38,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
+    // Phase 3 / Round 1 — Playlists two-pane. WindowSizeClass is
+    // exposed on the public surface, so consumers (the :app shell)
+    // need to see the type.
+    implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

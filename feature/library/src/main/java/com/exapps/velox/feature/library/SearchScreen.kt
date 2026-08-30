@@ -54,6 +54,10 @@ fun SearchScreen(
     // the "no results" empty state during the debounce window so the
     // prompt doesn't flash.
     val hasQueried by viewModel.hasQueried.collectAsStateWithLifecycle()
+    // Phase 3 / Wave 3 / Round 3.5 — "Because you listened to X"
+    // surface. Non-null when the search has exactly one result and
+    // the engine has at least one neighbour for it.
+    val becauseYouListened by viewModel.becauseYouListened.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = VeloxSpacing.lg)) {
         Text(
@@ -110,6 +114,23 @@ fun SearchScreen(
                 contentPadding = PaddingValues(vertical = VeloxSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
             ) {
+                // Phase 3 / Wave 3 / Round 3.5 — "Because you
+                // listened to X" surface, only when the engine has
+                // at least one neighbour for the search's only
+                // result. Sits at the top of the result list with a
+                // small header.
+                becauseYouListened?.let { rec ->
+                    if (rec.items.isNotEmpty()) {
+                        item(key = "becauseYouListened") {
+                            Text(
+                                text = stringResource(R.string.search_because_you_listened),
+                                style = VeloxTheme.typography.labelLarge,
+                                color = VeloxColors.OnSurfaceVariant,
+                                modifier = Modifier.padding(bottom = VeloxSpacing.xs),
+                            )
+                        }
+                    }
+                }
                 itemsIndexed(results, key = { index, item -> "${item.id}-$index" }) { _, item ->
                     ClickableGlassCard(
                         onClick = { viewModel.onResultClick(item); onResultClick(item) },
@@ -125,6 +146,37 @@ fun SearchScreen(
                                 )
                             }
                             if (item.mediaType == MediaType.VIDEO) {
+                                Icon(
+                                    Icons.Filled.PlayCircle,
+                                    contentDescription = stringResource(R.string.cd_video_result),
+                                    tint = accentColor(),
+                                )
+                            }
+                        }
+                    }
+                }
+                // The recommendation rows follow the same result rows.
+                becauseYouListened?.let { rec ->
+                    itemsIndexed(rec.items, key = { index, item -> "by-${item.id}-$index" }) { _, item ->
+                        ClickableGlassCard(
+                            onClick = { viewModel.onRecommendationClick(item) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item.title,
+                                        style = VeloxTheme.typography.titleMedium,
+                                        color = VeloxColors.OnSurface,
+                                        maxLines = 1,
+                                    )
+                                    Text(
+                                        text = item.artistName ?: "",
+                                        style = VeloxTheme.typography.bodyMedium,
+                                        color = VeloxColors.OnSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
                                 Icon(
                                     Icons.Filled.PlayCircle,
                                     contentDescription = stringResource(R.string.cd_video_result),

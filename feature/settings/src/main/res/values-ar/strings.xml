@@ -12,9 +12,21 @@
     <string name="settings_theme_dark_glass">الزجاجي الداكن (افتراضي)</string>
     <string name="settings_theme_amoled">أسود AMOLED</string>
     <string name="settings_accent_color">لون التمييز</string>
+    <string name="settings_theme_picker">السمة</string>
+    <string name="settings_theme_picker_hint">السمات المضمّنة والمستوردة</string>
+    <string name="settings_theme_import">استيراد سمة…</string>
+    <string name="settings_theme_import_failed">تعذّر استيراد السمة. قد يكون الملف تالفًا أو غير مدعوم.</string>
+    <string name="settings_plugins_title">الإضافات</string>
+    <string name="settings_plugins_protocols">البروتوكولات: %1$s</string>
+    <string name="settings_plugins_install_hint_title">إضافات الطرف الثالث</string>
+    <string name="settings_plugins_install_hint_body">لإضافة مصدر وسائط جديد، ثبّت APK موقّعًا بنفس المفتاح ويحتوي على إذن com.exapps.velox.permission.PLUGIN_HOST ويُسجّل خدمة بالفعل com.exapps.velox.MEDIA_SOURCE_PROVIDER. راجع ملف README للاطلاع على قالب البيان.</string>
 
     <string name="settings_resume_playback">تذكّر موضع التشغيل</string>
     <string name="settings_auto_pip">صورة داخل صورة تلقائية</string>
+    <string name="settings_intelligent_silence">تخطي الصمت الذكي</string>
+    <string name="settings_intelligent_silence_hint">اكتشاف المقدمات الصامتة عند أول تشغيل والتقدم تلقائيًا بعدها</string>
+    <string name="settings_auto_chapter_generation">توليد الفصول تلقائيًا</string>
+    <string name="settings_auto_chapter_generation_hint">اكتشاف حدود الفصول عند أول تشغيل. تظهر في ورقة العلامات بعلامة «تلقائي».</string>
     <string name="settings_auto_pip_hint">تصغير تشغيل الفيديو عند مغادرة التطبيق</string>
     <string name="settings_seek_interval">مدة التقديم بالضغط المزدوج</string>
 
@@ -33,6 +45,12 @@
     <string name="settings_clear_history_hint">يعيد تعيين «استُمع إليها مؤخرًا» و«الأكثر تشغيلًا»</string>
     <string name="settings_clear_history_confirm_title">مسح سجل الاستماع؟</string>
     <string name="settings_clear_history_confirm_body">سيبدأ «استُمع إليها مؤخرًا» و«الأكثر تشغيلًا» من جديد. مكتبتك وقوائم تشغيلك لن يتأثروا.</string>
+    <string name="settings_reset_recommendations">إعادة تعيين بيانات الاقتراحات</string>
+    <string name="settings_reset_recommendations_hint">يحذف المصفوفة من الذاكرة. ستُعاد بناء الاقتراحات من سجل استماعك في المرة التالية.</string>
+    <string name="settings_reset_recommendations_confirm_title">إعادة تعيين بيانات الاقتراحات؟</string>
+    <string name="settings_reset_recommendations_confirm_body">سيُعاد بناء صف «مقترح لك» من الصفر عند الفتح التالي. لن يُحذف سجل استماعك.</string>
+    <string name="settings_reset_action">إعادة التعيين</string>
+    <string name="settings_about_recommendations_privacy">تُحسب الاقتراحات على هذا الجهاز من سجل استماعك. لا يُرسل أيّ من بيانات الاستماع إلى خارج الجهاز.</string>
     <string name="settings_clear_action">مسح</string>
     <string name="settings_history_cleared">تم مسح سجل الاستماع.</string>
 

@@ -2,36 +2,11 @@ package com.exapps.velox.feature.playlists
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,34 +15,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import com.exapps.velox.core.common.util.formatDuration
 import com.exapps.velox.core.domain.model.MediaItem
-import com.exapps.velox.core.ui.components.ClickableGlassCard
 import com.exapps.velox.core.ui.components.VeloxFullScreenLoading
-import com.exapps.velox.core.ui.components.VeloxGlassIconButton
-import com.exapps.velox.core.ui.components.VeloxPrimaryButton
-import com.exapps.velox.core.ui.components.VeloxSecondaryButton
-import com.exapps.velox.core.ui.theme.VeloxColors
-import com.exapps.velox.core.ui.theme.VeloxShapes
 import com.exapps.velox.core.ui.theme.VeloxSpacing
-import com.exapps.velox.core.ui.theme.VeloxTheme
-import com.exapps.velox.core.ui.theme.accentColor
 
-/** SCREEN_PLAYLISTS.md §6 — header with totals, Play All / Shuffle, track rows with
- * remove, and the add-tracks picker for (empty or not) user playlists. */
+/**
+ * SCREEN_PLAYLISTS.md §6 — header with totals, Play All / Shuffle,
+ * track rows with remove, and the add-tracks picker for (empty or
+ * not) user playlists.
+ *
+ * Phase 3 / Round 1: this is now a thin route shell. The body is
+ * delegated to [PlaylistDetailContent] (the same composable the
+ * Playlists two-pane uses for the in-place detail pane).
+ */
 @Composable
 fun PlaylistDetailScreen(
     playlistId: Long,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onMediaItemClick: (com.exapps.velox.core.domain.model.MediaItem) -> Unit = {},
+    onMediaItemClick: (MediaItem) -> Unit = {},
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
@@ -75,9 +44,6 @@ fun PlaylistDetailScreen(
     val exportMessage by viewModel.exportMessage.collectAsStateWithLifecycle()
     var showAddTracksSheet by remember { mutableStateOf(false) }
 
-    // M4 (features review): exportM3u previously swallowed its result; the
-    // snackbar below surfaces success/failure via the opaque markers in
-    // [PlaylistDetailViewModel.exportMessage].
     val exportSnackbar = remember { SnackbarHostState() }
     val exportSuccess = stringResource(R.string.playlists_export_done)
     val exportFailure = stringResource(R.string.playlists_export_failed)
@@ -99,280 +65,51 @@ fun PlaylistDetailScreen(
         uri?.let { viewModel.onExportM3u(it.toString()) }
     }
 
-    val current = detail
-    if (current == null) {
-        Box(modifier = modifier.fillMaxSize()) {
-            VeloxFullScreenLoading()
-            SnackbarHost(
-                hostState = exportSnackbar,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(VeloxSpacing.lg),
-            )
-        }
-        return
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header (§6): back, name, export
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = VeloxSpacing.md, vertical = VeloxSpacing.sm),
-        ) {
-            VeloxGlassIconButton(
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.cd_back),
-                onClick = onBack,
-            )
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = current.playlist.name.ifEmpty { stringResource(R.string.playlist_fallback_name) },
-                    style = VeloxTheme.typography.headlineMedium,
-                    color = VeloxColors.OnBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.playlist_header_subtitle,
-                        current.playlist.trackCount,
-                        formatDuration(current.playlist.totalDurationMs),
-                    ),
-                    style = VeloxTheme.typography.bodyMedium,
-                    color = VeloxColors.OnSurfaceVariant,
-                )
-            }
-            if (!viewModel.isSystemPlaylist) {
-                VeloxGlassIconButton(
-                    icon = Icons.Filled.FileUpload,
-                    contentDescription = stringResource(R.string.playlists_export_m3u),
-                    onClick = { exportLauncher.launch(current.playlist.name.ifEmpty { "playlist" }) },
-                )
-            }
-        }
-
-        // H1 (features review): hide play/shuffle when empty — they used to
-        // navigate to a dead Now Playing with nothing playing.
-        if (current.tracks.isNotEmpty()) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.sm),
-            ) {
-                VeloxPrimaryButton(
-                    text = stringResource(R.string.playlist_play_all),
-                    onClick = {
-                        viewModel.onPlayAll(shuffle = false)
-                        current.tracks.firstOrNull()?.let(onMediaItemClick)
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                VeloxSecondaryButton(
-                    text = stringResource(R.string.playlist_shuffle),
-                    onClick = {
-                        viewModel.onPlayAll(shuffle = true)
-                        current.tracks.randomOrNull()?.let(onMediaItemClick)
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        if (current.tracks.isEmpty()) {
-            // §7 empty states: user playlists get "add songs", system ones explain themselves.
-            Box(modifier = Modifier.fillMaxSize().padding(VeloxSpacing.xxl), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.LibraryMusic, contentDescription = null, tint = VeloxColors.OnSurfaceVariant, modifier = Modifier.size(48.dp))
-                    Spacer(Modifier.height(VeloxSpacing.md))
-                    Text(
-                        text = stringResource(
-                            if (viewModel.isSystemPlaylist) R.string.playlist_system_empty_body
-                            else R.string.playlist_empty_body,
-                        ),
-                        style = VeloxTheme.typography.bodyMedium,
-                        color = VeloxColors.OnSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
-                verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xxs),
-            ) {
-                itemsIndexed(current.tracks, key = { index, item -> "${item.id}-$index" }) { _, track ->
-                    PlaylistTrackRow(
-                        track = track,
-                        onClick = {
-                            viewModel.onTrackClick(track)
-                            onMediaItemClick(track)
-                        },
-                        onRemove = if (viewModel.isSystemPlaylist) null else ({ viewModel.onRemoveTrack(track.id) }),
-                    )
-                }
-                if (!viewModel.isSystemPlaylist) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.playlist_add_tracks),
-                            style = VeloxTheme.typography.labelLarge,
-                            color = accentColor(),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(VeloxShapes.md)
-                                .clickable { showAddTracksSheet = true }
-                                .padding(VeloxSpacing.md),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    if (showAddTracksSheet) {
-        AddTracksSheet(
-            allTracks = libraryTracks,
-            onAdd = { ids ->
-                viewModel.onAddTracks(ids)
-                showAddTracksSheet = false
+        PlaylistDetailContent(
+            detail = detail,
+            isSystemPlaylist = viewModel.isSystemPlaylist,
+            onBack = onBack,
+            onPlayAll = { viewModel.onPlayAll(shuffle = false) },
+            onShuffle = { viewModel.onPlayAll(shuffle = true) },
+            onTrackClick = { track ->
+                viewModel.onTrackClick(track)
+                onMediaItemClick(track)
             },
-            onDismiss = { showAddTracksSheet = false },
+            onRemoveTrack = { track -> viewModel.onRemoveTrack(track.id) },
+            onAddTracksRequested = { showAddTracksSheet = true },
+            onExportRequested = {
+                val name = detail?.playlist?.name?.ifEmpty { "playlist" } ?: "playlist"
+                exportLauncher.launch(name)
+            },
         )
-    }
 
-    // M4: snackbar host for M3U export outcomes.
-    SnackbarHost(
-        hostState = exportSnackbar,
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .padding(VeloxSpacing.lg),
-    )
-    }
-}
-
-@Composable
-private fun PlaylistTrackRow(
-    track: MediaItem,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onRemove: (() -> Unit)? = null,
-) {
-    ClickableGlassCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md)) {
-            AsyncImage(
-                model = track.artworkUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(VeloxShapes.sm),
-            )
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = track.title,
-                    style = VeloxTheme.typography.titleMedium,
-                    color = VeloxColors.OnSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = track.artistName ?: "",
-                    style = VeloxTheme.typography.bodyMedium,
-                    color = VeloxColors.OnSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                text = formatDuration(track.durationMs),
-                style = VeloxTheme.typography.labelMedium,
-                color = VeloxColors.OnSurfaceVariant,
-            )
-            if (onRemove != null) {
-                VeloxGlassIconButton(
-                    icon = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.playlist_remove_track),
-                    onClick = onRemove,
-                    size = 36.dp,
-                    iconSize = 18.dp,
-                )
+        // Loading shim: while `detail` is null, fall back to the full-screen
+        // loading indicator the route had before. The content composable
+        // also shows a spinner inside its column, but the route's larger
+        // surface reads better with this overlay.
+        if (detail == null) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                VeloxFullScreenLoading()
             }
         }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddTracksSheet(
-    allTracks: List<MediaItem>,
-    onAdd: (List<Long>) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val selected = remember { mutableStateOf(setOf<Long>()) }
+        if (showAddTracksSheet) {
+            AddTracksSheet(
+                allTracks = libraryTracks,
+                onAdd = { ids ->
+                    viewModel.onAddTracks(ids)
+                    showAddTracksSheet = false
+                },
+                onDismiss = { showAddTracksSheet = false },
+            )
+        }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = VeloxColors.currentSurface) {
-        // AddTracksSheet (features review): the 420dp fixed height cropped
-        // the picker on landscape phones and looked tiny on tablets. Cap
-        // at 80% of viewport so the sheet fills the available space
-        // without covering the system bars.
-        Column(
+        SnackbarHost(
+            hostState = exportSnackbar,
             modifier = Modifier
-                .padding(horizontal = VeloxSpacing.lg)
-                .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.8f)
-                .fillMaxWidth(),
-        ) {
-            Text(
-                text = stringResource(R.string.playlist_add_tracks),
-                style = VeloxTheme.typography.headlineMedium,
-                color = VeloxColors.OnBackground,
-                modifier = Modifier.padding(bottom = VeloxSpacing.sm),
-            )
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                itemsIndexed(allTracks, key = { index, item -> "${item.id}-$index" }) { _, track ->
-                    val isSelected = track.id in selected.value
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(VeloxSpacing.md),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(VeloxShapes.md)
-                            .clickable {
-                                selected.value = if (isSelected) {
-                                    selected.value - track.id
-                                } else {
-                                    selected.value + track.id
-                                }
-                            }
-                            .padding(VeloxSpacing.sm),
-                    ) {
-                        Text(
-                            text = track.title,
-                            style = VeloxTheme.typography.titleMedium,
-                            color = if (isSelected) accentColor() else VeloxColors.OnSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Icon(
-                            imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.Circle,
-                            contentDescription = null,
-                            tint = if (isSelected) accentColor() else VeloxColors.OnSurfaceVariant.copy(alpha = 0.3f),
-                        )
-                    }
-                }
-            }
-            if (selected.value.isNotEmpty()) {
-                VeloxPrimaryButton(
-                    text = stringResource(R.string.playlist_add_selected, selected.value.size),
-                    onClick = { onAdd(selected.value.toList()) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = VeloxSpacing.md),
-                )
-            }
-            Spacer(Modifier.height(VeloxSpacing.lg))
-        }
+                .align(Alignment.BottomCenter)
+                .padding(VeloxSpacing.lg),
+        )
     }
 }

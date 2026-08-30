@@ -15,6 +15,15 @@ interface PlayHistoryDao {
     @Query("SELECT * FROM play_history ORDER BY playedAtEpochSeconds DESC")
     fun observeAll(): Flow<List<PlayHistoryEntity>>
 
+    /**
+     * Phase 3 / Wave 3 / Round 3 — Milestone 7: the recommender
+     * needs a one-shot snapshot of the entire history to build
+     * its co-occurrence matrix. `observeAll().first()` works but
+     * it's clearer to have an explicit suspend function.
+     */
+    @Query("SELECT * FROM play_history ORDER BY playedAtEpochSeconds DESC")
+    suspend fun snapshotAll(): List<PlayHistoryEntity>
+
     @Query("SELECT COUNT(*) FROM play_history WHERE mediaItemId = :mediaItemId")
     suspend fun countForItem(mediaItemId: Long): Int
 

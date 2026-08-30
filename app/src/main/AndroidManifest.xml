@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        Phase 3 / Wave 3 / Round 3.5e — package visibility. The
+        host's plugin discovery (PackageManagerPluginDiscovery)
+        needs to enumerate installed APKs that declare the
+        `com.exapps.velox.MEDIA_SOURCE_PROVIDER` action. Android
+        11+ requires an explicit `<queries>` element for the
+        host to see other packages via `PackageManager`. Without
+        this, the discovery walk returns an empty list and the
+        Settings → About → Plugins screen would show "no
+        third-party plugins installed" even when one is.
+    -->
+    <queries>
+        <intent>
+            <action android:name="com.exapps.velox.MEDIA_SOURCE_PROVIDER" />
+        </intent>
+    </queries>
+
     <!-- Scoped media permissions (API 33+); READ_EXTERNAL_STORAGE below covers API 26-32. -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
@@ -13,6 +30,24 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
+        Phase 3 / Wave 3 / Round 3.5e — APK-form plugin signature.
+        Same-signature APKs (i.e. the same developer key) can
+        declare this permission in their own manifest and gain
+        the ability to register a `MediaSourceProvider` with the
+        host. The host's own first-party plugins do not need to
+        hold it; they ship in the same APK as the host and go
+        through Hilt multibinding.
+
+        Signature-level protection means a third-party plugin APK
+        *must* be signed with the same key as the host. A
+        vanilla third-party APK from the Play Store will be
+        rejected by the discovery walk.
+    -->
+    <permission
+        android:name="com.exapps.velox.permission.PLUGIN_HOST"
+        android:protectionLevel="signature" />
 
     <application
         android:name=".VeloxApplication"

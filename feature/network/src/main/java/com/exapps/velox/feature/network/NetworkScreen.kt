@@ -1,11 +1,14 @@
 package com.exapps.velox.feature.network
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -101,6 +105,11 @@ fun NetworkScreen(
         BackHandler(enabled = true) { viewModel.goUp() }
     }
 
+    val windowSizeClass = androidx.compose.material3.windowsizeclass
+        .calculateWindowSizeClass(LocalContext.current.findActivity())
+    val isCompactWidth = windowSizeClass.widthSizeClass ==
+        androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Compact
+
     androidx.compose.foundation.layout.Box(modifier = modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -113,7 +122,7 @@ fun NetworkScreen(
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.network_back),
                 onClick = {
-                    if (isBrowsingState) viewModel.goUp() else onBack()
+                    if (isBrowsingState && isCompactWidth) viewModel.goUp() else onBack()
                 },
             )
             Column {
@@ -130,27 +139,69 @@ fun NetworkScreen(
             }
         }
 
-        when {
-            // --- directory browser ---
-            isBrowsingState -> BrowserContent(
-                state = browse,
-                onOpenDirectory = viewModel::openDirectory,
-                onPlayEntry = viewModel::play,
-                onUp = viewModel::goUp,
-                onRetry = viewModel::retry,
-            )
+        if (isCompactWidth) {
+            when {
+                // --- directory browser (compact) ---
+                isBrowsingState -> BrowserContent(
+                    state = browse,
+                    onOpenDirectory = viewModel::openDirectory,
+                    onPlayEntry = viewModel::play,
+                    onUp = viewModel::goUp,
+                    onRetry = viewModel::retry,
+                )
 
-            // --- server list + streams ---
-            else -> ServersContent(
-                servers = servers,
-                recents = recents,
-                onPlayStream = viewModel::playStream,
-                onOpenServer = viewModel::openServer,
-                onEdit = { editTarget = it; showAddDialog = true },
-                onDelete = viewModel::deleteServer,
-                onTest = viewModel::testServer,
-                onAdd = { editTarget = null; showAddDialog = true },
-            )
+                // --- server list + streams (compact) ---
+                else -> ServersContent(
+                    servers = servers,
+                    recents = recents,
+                    onPlayStream = viewModel::playStream,
+                    onOpenServer = viewModel::openServer,
+                    onEdit = { editTarget = it; showAddDialog = true },
+                    onDelete = viewModel::deleteServer,
+                    onTest = viewModel::testServer,
+                    onAdd = { editTarget = null; showAddDialog = true },
+                )
+            }
+        } else {
+            // --- Phase 3 / Wave 3 / Round 3.5b: two-pane variant
+            // (medium / expanded). Server list on the left,
+            // directory browser on the right. When no server is
+            // selected the right pane shows a hint. ---
+            Row(modifier = Modifier.fillMaxSize()) {
+                ServersContent(
+                    servers = servers,
+                    recents = recents,
+                    onPlayStream = viewModel::playStream,
+                    onOpenServer = viewModel::openServer,
+                    onEdit = { editTarget = it; showAddDialog = true },
+                    onDelete = viewModel::deleteServer,
+                    onTest = viewModel::testServer,
+                    onAdd = { editTarget = null; showAddDialog = true },
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .padding(end = VeloxSpacing.sm),
+                )
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                )
+                Box(modifier = Modifier.fillMaxHeight().weight(1.4f)) {
+                    if (isBrowsingState) {
+                        BrowserContent(
+                            state = browse,
+                            onOpenDirectory = viewModel::openDirectory,
+                            onPlayEntry = viewModel::play,
+                            onUp = viewModel::goUp,
+                            onRetry = viewModel::retry,
+                        )
+                    } else {
+                        EmptyBrowserHint()
+                    }
+                }
+            }
         }
     }
 
@@ -173,6 +224,41 @@ fun NetworkScreen(
     }
 }
 
+/**
+ * Phase 3 / Wave 3 / Round 3.5b — placeholder shown in the
+ * browser pane when no server has been selected yet. Just a
+ * single line of text; the design call here is "the server
+ * list is the entry point, no need for an empty illustration".
+ */
+@Composable
+private fun EmptyBrowserHint() {
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(VeloxSpacing.xl),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.network_two_pane_hint),
+            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+            color = VeloxColors.OnSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Phase 3 / Wave 3 / Round 3.5b — `LocalContext` is frequently a
+ * `ContextThemeWrapper` (or deeper) rather than the
+ * `ComponentActivity` itself. `calculateWindowSizeClass` needs the
+ * activity, so we walk the context chain. Same helper that
+ * `VeloxNavHost` uses for the language-recreate `recreate()` call.
+ */
+private tailrec fun android.content.Context.findActivity(): androidx.activity.ComponentActivity? = when (this) {
+    is androidx.activity.ComponentActivity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 @Composable
 private fun ServersContent(
     servers: List<com.exapps.velox.core.network.model.NetworkServer>,
@@ -183,9 +269,10 @@ private fun ServersContent(
     onDelete: (Long) -> Unit,
     onTest: (com.exapps.velox.core.network.model.NetworkServer, (Boolean) -> Unit) -> Unit,
     onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(VeloxSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs),
     ) {

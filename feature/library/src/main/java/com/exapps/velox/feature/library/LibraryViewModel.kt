@@ -6,12 +6,15 @@ import com.exapps.velox.core.common.util.ScreenState
 import com.exapps.velox.core.domain.model.LibraryGroup
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.SortOrder
+import com.exapps.velox.core.domain.recommendation.Recommendation
+import com.exapps.velox.core.domain.recommendation.RecommendationEngine
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 import com.exapps.velox.core.domain.usecase.PlayMediaUseCase
 import com.exapps.velox.core.domain.usecase.ScanLibraryUseCase
 import com.exapps.velox.core.domain.usecase.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +35,12 @@ class LibraryViewModel @Inject constructor(
     private val playMedia: PlayMediaUseCase,
     private val scanLibrary: ScanLibraryUseCase,
     private val toggleFavorite: ToggleFavoriteUseCase,
+    // Phase 3 / Wave 3 / Round 3 — Milestone 7. The "Recommended"
+    // row is the engine's `forYou()` flow projected to a
+    // LibraryContent.Recommended. We collect it as a
+    // StateFlow and `combine` it with the active tab's
+    // content below.
+    private val recommendationEngine: RecommendationEngine,
 ) : ViewModel() {
 
     private val _selectedTab = MutableStateFlow(LibraryGroup.TRACKS)
@@ -61,6 +70,20 @@ class LibraryViewModel @Inject constructor(
         }
         .catch { emit(ScreenState.Error(it.message)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScreenState.Loading)
+
+    /**
+     * Phase 3 / Wave 3 / Round 3 — Milestone 7. The "Recommended"
+     * row above the active tab. The flow is hot via
+     * [SharingStarted.Eagerly] so the Library's first frame
+     * already has the latest recommendations (or an empty list
+     * while the engine is warming up).
+     */
+    val recommended: StateFlow<Recommendation.ForYou> = recommendationEngine.forYou()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = Recommendation.ForYou(emptyList()),
+        )
 
     private fun observeContentFor(tab: LibraryGroup, sortOrder: SortOrder) = when (tab) {
         LibraryGroup.TRACKS -> repository.observeTracks(sortOrder).map { LibraryContent.Tracks(it).asScreenState() }
@@ -129,5 +152,45 @@ class LibraryViewModel @Inject constructor(
 
     fun onToggleFavorite(track: MediaItem) {
         viewModelScope.launch { toggleFavorite(track) }
+    }
+
+    /**
+     * Phase 3 / Milestone 3 completion — Better tablet layouts. The
+     * in-place list-detail pane in [LibraryScreen] needs a
+     * `Flow<List<MediaItem>>` for the user's currently-selected
+     * collection, without spinning up a new Hilt ViewModel for each
+     * selection. We delegate to the repository directly; the flow is
+     * cold and the parent screen collects it via `collectAsState`.
+     *
+     * The track click + favourite-toggle callbacks are routed through
+     * the existing [onTrackClick] / [onToggleFavorite] methods so the
+     * play semantics (queue = the whole collection) and the favourite
+     * write path are unchanged.
+     */
+    fun tracksFor(key: CollectionKey): Flow<List<MediaItem>> =
+        repository.observeCollection(key)
+
+    /**
+     * Same as the single-pane [onTrackClick], but resolves the
+     * collection from the supplied [CollectionKey] instead of
+     * requiring the caller to pass the queue. The current
+     * implementation just falls through to [onTrackClick] with the
+     * snapshot of the flow that the VM is already collecting; if the
+     * flow hasn't emitted yet, it falls back to a single-track queue
+     * (a track can play itself; the next emit will update the queue
+     * for the *next* play, not the one in progress).
+     */
+    fun onCollectionTrackClick(key: CollectionKey, track: MediaItem) {
+        viewModelScope.launch {
+            // Take the first emission of the collection's tracks; the
+            // play semantics (queue = whole collection) are the same
+            // as CollectionDetailViewModel.onTrackClick in the
+            // single-pane path.
+            val queue = tracksFor(key).map { ScreenState.Content(it) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, ScreenState.Loading)
+                .value
+                .let { (it as? ScreenState.Content)?.data.orEmpty() }
+            playMedia(track, queue)
+        }
     }
 }

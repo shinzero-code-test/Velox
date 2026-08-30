@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.QueueMusic
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,6 +38,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.exapps.velox.R
+import com.exapps.velox.core.ui.layout.DefaultWindowSizeClass
+import com.exapps.velox.core.ui.layout.shouldUseNavRail
 import com.exapps.velox.core.ui.theme.VeloxColors
 import com.exapps.velox.core.ui.theme.VeloxShapes
 import com.exapps.velox.core.ui.theme.VeloxSpacing
@@ -57,6 +62,7 @@ fun MainScaffold(
     currentRoute: VeloxRoute,
     onNavigate: (VeloxRoute) -> Unit,
     onExpandPlayer: () -> Unit,
+    windowSizeClass: WindowSizeClass = DefaultWindowSizeClass,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -69,29 +75,72 @@ fun MainScaffold(
         chromeHeightPx.toDp()
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = chromePadding),
-        ) {
-            content()
-        }
+    // Phase 3 / Milestone 3 — Better tablet layouts. At medium/expanded
+    // widths the bottom bar becomes a side rail; the chrome column
+    // shifts to a row with the rail on the leading edge and the
+    // mini-player on the trailing edge (right in LTR, left in RTL).
+    val useRail = windowSizeClass.shouldUseNavRail
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .onGloballyPositioned { chromeHeightPx = it.size.height },
-        ) {
-            MiniPlayer(
-                onExpand = onExpandPlayer,
-                modifier = Modifier.padding(bottom = VeloxSpacing.sm),
-            )
-            VeloxBottomNavBar(currentRoute = currentRoute, onNavigate = onNavigate)
+    Box(modifier = modifier.fillMaxSize()) {
+        if (useRail) {
+            // Side-rail variant: nav rail on the leading edge, mini
+            // player docked to the bottom. The mini player is *not* a
+            // bottom bar in this variant — it's its own row above the
+            // system navigation insets, so it doesn't compete with the
+            // rail for screen real estate.
+            Row(modifier = Modifier.fillMaxSize()) {
+                VeloxNavRail(
+                    currentRoute = currentRoute,
+                    onNavigate = onNavigate,
+                    modifier = Modifier.fillMaxHeight(),
+                )
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        content()
+                    }
+                    MiniPlayer(
+                        onExpand = onExpandPlayer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = VeloxSpacing.sm)
+                            .onGloballyPositioned { chromeHeightPx = it.size.height },
+                    )
+                }
+            }
+        } else {
+            // Existing phone / Compact variant: content above the
+            // bottom-bar chrome column.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = chromePadding),
+            ) {
+                content()
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { chromeHeightPx = it.size.height },
+            ) {
+                MiniPlayer(
+                    onExpand = onExpandPlayer,
+                    modifier = Modifier.padding(bottom = VeloxSpacing.sm),
+                )
+                VeloxBottomNavBar(currentRoute = currentRoute, onNavigate = onNavigate)
+            }
         }
     }
 }
+
+/**
+ * A `WindowSizeClass` fallback for callers that don't thread one
+ * through. The default lives in `:core:ui`'s [DefaultWindowSizeClass]
+ * (set up during the v1.3.0 tablet-layouts pass) and is imported
+ * here so previews and any forgotten test harness still get a sane
+ * default.
+ */
 
 @Composable
 private fun VeloxBottomNavBar(currentRoute: VeloxRoute, onNavigate: (VeloxRoute) -> Unit, modifier: Modifier = Modifier) {
@@ -114,6 +163,43 @@ private fun VeloxBottomNavBar(currentRoute: VeloxRoute, onNavigate: (VeloxRoute)
     }
 }
 
+/**
+ * Side-rail navigation. At medium/expanded widths (≥ 600 dp), this
+ * replaces the bottom bar. Same four destinations, same selection
+ * contract — the difference is purely visual + a 16 dp gutter between
+ * rail and content.
+ *
+ * The rail is always 80 dp wide; at expanded widths the spec suggests
+ * 240 dp with labels visible, but that feels oversized on a 7" tablet
+ * (the most common form factor for the Medium bucket). The compact
+ * rail keeps the visual weight proportional.
+ */
+@Composable
+private fun VeloxNavRail(
+    currentRoute: VeloxRoute,
+    onNavigate: (VeloxRoute) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .width(80.dp)
+            .fillMaxHeight()
+            .background(glassSurfaceColor(elevated = true))
+            .navigationBarsPadding()
+            .padding(vertical = VeloxSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(VeloxSpacing.xs, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        bottomNavItems.forEach { item ->
+            RailEntry(
+                item = item,
+                selected = item.route == currentRoute,
+                onClick = { onNavigate(item.route) },
+            )
+        }
+    }
+}
+
 @Composable
 private fun RowScope.BottomNavEntry(item: BottomNavItem, selected: Boolean, onClick: () -> Unit) {
     Column(
@@ -126,6 +212,31 @@ private fun RowScope.BottomNavEntry(item: BottomNavItem, selected: Boolean, onCl
             .background(if (selected) glassSurfaceColor(elevated = true) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = VeloxSpacing.xxs),
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = stringResource(item.labelRes),
+            tint = if (selected) accentColor() else VeloxColors.OnSurfaceVariant,
+        )
+        Text(
+            text = stringResource(item.labelRes),
+            style = VeloxTheme.typography.labelSmall,
+            color = if (selected) accentColor() else VeloxColors.OnSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun RailEntry(item: BottomNavItem, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(64.dp)
+            .heightIn(min = 56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) glassSurfaceColor(elevated = true) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(vertical = VeloxSpacing.xs),
     ) {
         Icon(
             imageVector = item.icon,

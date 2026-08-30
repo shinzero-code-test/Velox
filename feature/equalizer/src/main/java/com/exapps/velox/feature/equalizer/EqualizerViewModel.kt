@@ -3,9 +3,9 @@ package com.exapps.velox.feature.equalizer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.data.preferences.EqualizerPreferences
-import com.exapps.velox.core.data.preferences.EqualizerSettings
 import com.exapps.velox.core.domain.player.AudioEffectsController
 import com.exapps.velox.core.domain.player.EqualizerPreset
+import com.exapps.velox.core.domain.player.EqualizerSettings
 import com.exapps.velox.core.domain.player.EqualizerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted

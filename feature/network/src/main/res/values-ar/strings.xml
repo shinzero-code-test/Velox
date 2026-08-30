@@ -26,4 +26,5 @@
     <string name="network_plaintext_credentials_notice">تُخزَّن بيانات الاعتماد محليًا كنص عادي. استخدم حسابًا مخصصًا بصلاحيات محدودة.</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_save">حفظ</string>
+    <string name="network_two_pane_hint">اختر خادمًا لتصفح ملفاته هنا.</string>
 </resources>

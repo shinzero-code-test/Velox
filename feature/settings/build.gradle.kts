@@ -45,6 +45,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    // Phase 3 / Milestone 2: SAF launcher for theme import.
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.hilt.android)

@@ -4,11 +4,11 @@ import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
 import android.media.audiofx.Virtualizer
 import com.exapps.velox.core.common.di.ApplicationScope
-import com.exapps.velox.core.data.preferences.EqualizerPreferences
-import com.exapps.velox.core.data.preferences.EqualizerSettings
 import com.exapps.velox.core.domain.player.AudioEffectsController
 import com.exapps.velox.core.domain.player.EqualizerBand
+import com.exapps.velox.core.domain.player.EqualizerPreferencesStore
 import com.exapps.velox.core.domain.player.EqualizerPreset
+import com.exapps.velox.core.domain.player.EqualizerSettings
 import com.exapps.velox.core.domain.player.EqualizerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +29,7 @@ import kotlin.math.abs
  *
  * Device band counts vary (5 is common); Velox presets and persistence are defined
  * on the canonical 10 frequencies and mapped by nearest frequency at the edges of
- * the app — see [EqualizerPreset.gainsFor] and EqualizerPreferences.
+ * the app — see [EqualizerPreset.gainsFor] and EqualizerPreferencesStore.
  *
  * Every platform call is wrapped in runCatching: audiofx is a vendor HAL surface
  * and throws unchecked on devices without EQ support, which should degrade to
@@ -44,7 +44,7 @@ import kotlin.math.abs
  */
 @Singleton
 class AndroidAudioEffectsController @Inject constructor(
-    private val preferences: EqualizerPreferences,
+    private val preferences: EqualizerPreferencesStore,
     @ApplicationScope private val scope: CoroutineScope,
 ) : AudioEffectsController {
 
@@ -179,7 +179,7 @@ class AndroidAudioEffectsController @Inject constructor(
             persistSnapshot(snapshot)
             return
         }
-        saved = preferences.settings.first()
+        saved = preferences.current()
         synchronized(lock) {
             if (generation != seenGeneration) return
             enabled = saved.enabled

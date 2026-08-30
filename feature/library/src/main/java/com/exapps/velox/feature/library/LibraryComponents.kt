@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -106,19 +107,89 @@ fun LibraryContentView(
     content: LibraryContent,
     onTrackClick: (MediaItem, List<MediaItem>) -> Unit,
     onToggleFavorite: (MediaItem) -> Unit,
-    onAlbumClick: (Album) -> Unit,
-    onArtistClick: (Artist) -> Unit,
-    onFolderClick: (Folder) -> Unit,
-    onGenreClick: (Genre) -> Unit,
+    onCollectionSelected: (CollectionKey) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (content) {
         is LibraryContent.Tracks -> TrackList(content.items, onTrackClick, onToggleFavorite, modifier)
         is LibraryContent.Videos -> TrackList(content.items, onTrackClick, onToggleFavorite, modifier)
-        is LibraryContent.Albums -> AlbumGrid(content.items, onAlbumClick, modifier)
-        is LibraryContent.Artists -> ArtistList(content.items, onArtistClick, modifier)
-        is LibraryContent.Folders -> FolderList(content.items, onFolderClick, modifier)
-        is LibraryContent.Genres -> GenreList(content.items, onGenreClick, modifier)
+        is LibraryContent.Albums -> AlbumGrid(content.items, onCollectionSelected, modifier)
+        is LibraryContent.Artists -> ArtistList(content.items, onCollectionSelected, modifier)
+        is LibraryContent.Folders -> FolderList(content.items, onCollectionSelected, modifier)
+        is LibraryContent.Genres -> GenreList(content.items, onCollectionSelected, modifier)
+        is LibraryContent.Recommended -> Unit // The Recommended row is
+        // rendered above the active tab by the screen, not here.
+    }
+}
+
+/**
+ * Phase 3 / Wave 3 / Round 3 — Milestone 7. The "Recommended"
+ * horizontal row that sits above the Library tab content. Empty
+ * when the engine has no recommendations yet (cold start or the
+ * play history is too thin). The caller controls whether to
+ * render the row at all — passing an empty list to a hidden
+ * section is the same UI.
+ */
+@Composable
+fun RecommendedRow(
+    items: List<MediaItem>,
+    onTrackClick: (MediaItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (items.isEmpty()) return
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = VeloxSpacing.lg)) {
+        Text(
+            text = androidx.compose.ui.res.stringResource(R.string.library_recommended_title),
+            style = VeloxTheme.typography.titleMedium,
+            color = VeloxColors.OnBackground,
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            modifier = Modifier.fillMaxWidth().padding(top = VeloxSpacing.sm),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(VeloxSpacing.sm),
+        ) {
+            androidx.compose.foundation.lazy.items(
+                items = items,
+                key = { it.id },
+            ) { track ->
+                RecommendedTrackCard(track = track, onClick = { onTrackClick(track) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedTrackCard(
+    track: MediaItem,
+    onClick: () -> Unit,
+) {
+    ClickableGlassCard(onClick = onClick, modifier = Modifier.width(160.dp)) {
+        Column(
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(VeloxSpacing.xxs),
+        ) {
+            coil3.compose.AsyncImage(
+                model = track.artworkUri,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(VeloxShapes.md)
+                    .background(androidx.compose.ui.graphics.Color.Transparent),
+            )
+            Text(
+                text = track.title,
+                style = VeloxTheme.typography.titleSmall,
+                color = VeloxColors.OnSurface,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                text = track.artistName ?: "",
+                style = VeloxTheme.typography.bodySmall,
+                color = VeloxColors.OnSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -205,7 +276,7 @@ private fun TrackRow(
 }
 
 @Composable
-private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifier: Modifier = Modifier) {
+private fun AlbumGrid(albums: List<Album>, onCollectionSelected: (CollectionKey) -> Unit, modifier: Modifier = Modifier) {
     LazyVerticalGrid(
         // Phase 2 large screens: 2 columns on phones, up to 4 on expanded widths.
         columns = GridCells.Adaptive(minSize = 160.dp),
@@ -231,7 +302,10 @@ private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifi
             )
             Column(
                 modifier = Modifier
-                    .clickable(onClickLabel = openLabel, onClick = { onAlbumClick(album) })
+                    .clickable(
+                        onClickLabel = openLabel,
+                        onClick = { onCollectionSelected(CollectionKey.AlbumKey.from(album)) },
+                    )
                     .semantics(mergeDescendants = true) {
                         role = androidx.compose.ui.semantics.Role.Button
                     },
@@ -268,7 +342,7 @@ private fun AlbumGrid(albums: List<Album>, onAlbumClick: (Album) -> Unit, modifi
 }
 
 @Composable
-private fun ArtistList(artists: List<Artist>, onArtistClick: (Artist) -> Unit, modifier: Modifier = Modifier) {
+private fun ArtistList(artists: List<Artist>, onCollectionSelected: (CollectionKey) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
@@ -278,7 +352,7 @@ private fun ArtistList(artists: List<Artist>, onArtistClick: (Artist) -> Unit, m
             // A11y: see note on AlbumCell.
             val openLabel = androidx.compose.ui.res.stringResource(R.string.cd_open_artist, artist.name)
             ClickableGlassCard(
-                onClick = { onArtistClick(artist) },
+                onClick = { onCollectionSelected(CollectionKey.ArtistKey.from(artist)) },
                 onClickLabel = openLabel,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -295,7 +369,7 @@ private fun ArtistList(artists: List<Artist>, onArtistClick: (Artist) -> Unit, m
 }
 
 @Composable
-private fun FolderList(folders: List<Folder>, onFolderClick: (Folder) -> Unit, modifier: Modifier = Modifier) {
+private fun FolderList(folders: List<Folder>, onCollectionSelected: (CollectionKey) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
@@ -304,7 +378,7 @@ private fun FolderList(folders: List<Folder>, onFolderClick: (Folder) -> Unit, m
         itemsIndexed(folders, key = { index, item -> "${item.path}-$index" }) { _, folder ->
             val openLabel = androidx.compose.ui.res.stringResource(R.string.cd_open_folder, folder.displayName)
             ClickableGlassCard(
-                onClick = { onFolderClick(folder) },
+                onClick = { onCollectionSelected(CollectionKey.FolderKey.from(folder)) },
                 onClickLabel = openLabel,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -319,7 +393,7 @@ private fun FolderList(folders: List<Folder>, onFolderClick: (Folder) -> Unit, m
 
 
 @Composable
-private fun GenreList(genres: List<Genre>, onGenreClick: (Genre) -> Unit, modifier: Modifier = Modifier) {
+private fun GenreList(genres: List<Genre>, onCollectionSelected: (CollectionKey) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = VeloxSpacing.lg, vertical = VeloxSpacing.xs),
@@ -328,7 +402,7 @@ private fun GenreList(genres: List<Genre>, onGenreClick: (Genre) -> Unit, modifi
         itemsIndexed(genres, key = { index, item -> "${item.name}-$index" }) { _, genre ->
             val openLabel = androidx.compose.ui.res.stringResource(R.string.cd_open_genre, genre.name)
             ClickableGlassCard(
-                onClick = { onGenreClick(genre) },
+                onClick = { onCollectionSelected(CollectionKey.GenreKey.from(genre)) },
                 onClickLabel = openLabel,
                 modifier = Modifier.fillMaxWidth(),
             ) {

@@ -45,6 +45,11 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    // Phase 3 / Milestone 4 — Plugin architecture. The first-party
+    // `HttpUrlProvider` wraps OkHttp so the registry has a real
+    // provider exercising the SPI in the MVP. Round 1.5 swaps
+    // this for a non-trivial plugin (IPTV M3U parser, etc.).
+    implementation(libs.okhttp)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -4,10 +4,14 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.velox.core.data.preferences.AppLanguage
+import com.exapps.velox.core.data.preferences.ThemePreferences
 import com.exapps.velox.core.data.preferences.UserSettings
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
 import com.exapps.velox.core.data.preferences.VeloxLocaleManager
+import com.exapps.velox.core.domain.recommendation.RecommendationEngine
 import com.exapps.velox.core.domain.repository.MediaLibraryRepository
+import com.exapps.velox.core.domain.theme.ThemeDefinition
+import com.exapps.velox.core.domain.theme.ThemeRegistry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +30,12 @@ class SettingsViewModel @Inject constructor(
     private val localeManager: VeloxLocaleManager,
     private val backupManager: com.exapps.velox.core.data.backup.BackupManager,
     private val libraryRepository: MediaLibraryRepository,
+    private val themeRegistry: ThemeRegistry,
+    private val themePreferences: ThemePreferences,
+    // Phase 3 / Wave 3 / Round 3 — Milestone 7. Used by
+    // [resetRecommendations] to drop the in-memory co-occurrence
+    // matrix; the next read re-builds it from play history.
+    private val recommendationEngine: RecommendationEngine,
 ) : ViewModel() {
 
     val settings: StateFlow<UserSettings> = preferences.settings.stateIn(
@@ -33,6 +43,17 @@ class SettingsViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = UserSettings(),
     )
+
+    /**
+     * Phase 3 / Milestone 2 — Theme engine. The list of themes the user
+     * can pick from (bundled + imported). The list is re-fetched on
+     * subscription and after [importTheme] succeeds; a manual refresh
+     * via [refreshThemes] is also available for the settings UI.
+     */
+    private val _availableThemes = MutableStateFlow<List<ThemeDefinition>>(emptyList())
+    val availableThemes: StateFlow<List<ThemeDefinition>> = _availableThemes.asStateFlow()
+
+    val activeTheme: StateFlow<ThemeDefinition> = themeRegistry.active
 
     /**
      * Phase 1.1 crash hardening: last crash summary (null = none on record).
@@ -50,6 +71,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val text = withContext(kotlinx.coroutines.Dispatchers.IO) { readCrashSummary() }
             _lastCrashSummary.value = text
+        }
+        // Phase 3 / Milestone 2: load the available themes (bundled +
+        // imported) on first composition. The list is short — at most
+        // a dozen or so JSON files — so the IO cost is negligible and
+        // we don't bother with a debounce.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _availableThemes.value = themeRegistry.available()
         }
     }
 
@@ -80,6 +108,31 @@ class SettingsViewModel @Inject constructor(
 
     fun setAmoled(amoled: Boolean) = viewModelScope.launch { preferences.setAmoled(amoled) }
     fun setAccentIndex(index: Int) = viewModelScope.launch { preferences.setAccentIndex(index) }
+
+    // Phase 3 / Milestone 2 — Theme engine.
+    fun selectTheme(themeId: String) = viewModelScope.launch {
+        themeRegistry.setActive(themeId)
+    }
+
+    fun refreshAvailableThemes() = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        _availableThemes.value = themeRegistry.available()
+    }
+
+    /**
+     * Import a theme file via SAF. Returns the new theme id on success
+     * (the caller can navigate to it), or `null` on parse failure
+     * (the caller surfaces a localized error). IO is on
+     * `Dispatchers.IO`; the registry call also runs on the calling
+     * coroutine but is non-blocking (just DataStore + file copy).
+     */
+    suspend fun importTheme(uri: android.net.Uri): String? {
+        return runCatching {
+            themePreferences.importFromUri(uri)
+            val themes = themeRegistry.available()
+            _availableThemes.value = themes
+            themes.firstOrNull { it.id != null }?.id
+        }.getOrNull()
+    }
     fun setLanguage(language: AppLanguage) {
         // Update the in-memory locale BEFORE persisting so the recreate() triggered by
         // onLanguageChanged attaches the new locale synchronously (SCREEN_SETTINGS.md
@@ -93,6 +146,12 @@ class SettingsViewModel @Inject constructor(
     fun setSeekIncrementSeconds(seconds: Int) = viewModelScope.launch { preferences.setSeekIncrementSeconds(seconds) }
     fun setAutoPip(enabled: Boolean) = viewModelScope.launch { preferences.setAutoPipOnLeave(enabled) }
     fun setResumePlayback(enabled: Boolean) = viewModelScope.launch { preferences.setResumePlayback(enabled) }
+    fun setIntelligentSilenceEnabled(enabled: Boolean) = viewModelScope.launch {
+        preferences.setIntelligentSilenceEnabled(enabled)
+    }
+    fun setAutoChapterGenerationEnabled(enabled: Boolean) = viewModelScope.launch {
+        preferences.setAutoChapterGenerationEnabled(enabled)
+    }
     fun setSubtitleScalePercent(percent: Int) = viewModelScope.launch { preferences.setSubtitleScalePercent(percent) }
     fun setSubtitlePositionBottom(bottom: Boolean) = viewModelScope.launch { preferences.setSubtitlePositionBottom(bottom) }
 
@@ -139,9 +198,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
     fun setAutoLoadExternalSubtitles(enabled: Boolean) = viewModelScope.launch { preferences.setAutoLoadExternalSubtitles(enabled) }
+    fun resetRecommendations() = viewModelScope.launch { recommendationEngine.invalidate() }
 
     fun clearPlayHistory() = viewModelScope.launch {
         libraryRepository.clearPlayHistory()
+        // Phase 3 / Wave 3 / Round 3 — clearing the history also
+        // invalidates the recommendation matrix.
+        recommendationEngine.invalidate()
         // L13 (features review): a one-shot event (true → consume) so the
         // screen can show a confirmation snackbar without having to track
         // "previously-cleared" state. The screen calls [ackHistoryCleared]

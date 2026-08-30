@@ -14,10 +14,28 @@
     <string name="settings_theme_dark_glass">Dark Glass (default)</string>
     <string name="settings_theme_amoled">AMOLED black</string>
     <string name="settings_accent_color">Accent color</string>
+    <!-- Phase 3 / Milestone 2 — Theme engine. The picker shows bundled
+         + imported themes; this is the row title. -->
+    <string name="settings_theme_picker">Theme</string>
+    <string name="settings_theme_picker_hint">Bundled and imported themes</string>
+    <string name="settings_theme_import">Import theme…</string>
+    <string name="settings_theme_import_failed">Could not import theme. File may be malformed or unsupported.</string>
+    <!-- Phase 3 / Milestone 4 — Plugin architecture. Settings → About → Plugins. -->
+    <string name="settings_plugins_title">Plugins</string>
+    <string name="settings_plugins_protocols">Protocols: %1$s</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5e — third-party plugin contract hint. -->
+    <string name="settings_plugins_install_hint_title">Third-party plugins</string>
+    <string name="settings_plugins_install_hint_body">To add a new media source, install a same-signature APK that holds the com.exapps.velox.permission.PLUGIN_HOST permission and declares a service with the com.exapps.velox.MEDIA_SOURCE_PROVIDER action. See the README for the manifest template.</string>
 
     <!-- Playback (§4) -->
     <string name="settings_resume_playback">Remember playback position</string>
     <string name="settings_auto_pip">Auto picture-in-picture</string>
+    <!-- Phase 3 / Wave 3 / Round 2 — smart silence / intro skip. -->
+    <string name="settings_intelligent_silence">Smart silence skip</string>
+    <string name="settings_intelligent_silence_hint">Detect silent intros on the first listen and seek past them automatically</string>
+    <!-- Phase 3 / Wave 3 / Round 3.5c — auto chapter generation. -->
+    <string name="settings_auto_chapter_generation">Auto chapter generation</string>
+    <string name="settings_auto_chapter_generation_hint">Detect chapter boundaries on the first listen. Surfaces in the Markers sheet with an “auto” badge.</string>
     <string name="settings_auto_pip_hint">Minimize video playback when you leave the app</string>
     <string name="settings_seek_interval">Double-tap seek interval</string>
 
@@ -39,6 +57,13 @@
     <string name="settings_clear_history_hint">Resets Recently Played and Most Played</string>
     <string name="settings_clear_history_confirm_title">Clear playback history?</string>
     <string name="settings_clear_history_confirm_body">Recently Played and Most Played will start over. Your library and playlists are not affected.</string>
+    <!-- Phase 3 / Wave 3 / Round 3 — Milestone 7. -->
+    <string name="settings_reset_recommendations">Reset recommendation data</string>
+    <string name="settings_reset_recommendations_hint">Drops the in-memory matrix. Recommendations re-build from your play history the next time the row is shown.</string>
+    <string name="settings_reset_recommendations_confirm_title">Reset recommendation data?</string>
+    <string name="settings_reset_recommendations_confirm_body">The "Recommended" row will rebuild from scratch on the next open. Your play history is not deleted.</string>
+    <string name="settings_reset_action">Reset</string>
+    <string name="settings_about_recommendations_privacy">Recommendations are computed on this device from your play history. No listening data is sent off-device.</string>
     <string name="settings_clear_action">Clear</string>
     <string name="settings_history_cleared">Playback history cleared.</string>
 

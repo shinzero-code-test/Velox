@@ -40,6 +40,20 @@ data class UserSettings(
     val subtitleScalePercent: Int = 100,
     val subtitlePositionBottom: Boolean = true,
     val autoLoadExternalSubtitles: Boolean = true,
+    // --- Phase 3 / Wave 3 / Round 2 ---
+    /** Smart silence / intro detection. When on, the player
+     *  schedules a one-shot RMS analysis on the first listen of
+     *  each track and seeks past the detected intro on the
+     *  second listen. Default ON. */
+    val intelligentSilenceEnabled: Boolean = true,
+    // Phase 3 / Wave 3 / Round 3.5c — auto chapter generation.
+    // Default OFF: chapter detection is speculative and can be
+    // noisy on mixed-content libraries. The user can opt in via
+    // Settings → Playback → Auto chapter generation; when on,
+    // the Markers sheet surfaces auto-generated chapters with an
+    // "auto" badge so they can be distinguished from sidecar /
+    // embedded chapters.
+    val autoChapterGenerationEnabled: Boolean = false,
     // --- Phase 2 ---
     val decoderPreference: DecoderPreference = DecoderPreference.AUTO,
     /** Long-press 2x "speed scrub" on the video surface. */
@@ -80,6 +94,8 @@ class UserSettingsPreferences @Inject constructor(
             subtitleScalePercent = prefs[SUBTITLE_SCALE_KEY] ?: 100,
             subtitlePositionBottom = prefs[SUBTITLE_BOTTOM_KEY] ?: true,
             autoLoadExternalSubtitles = prefs[SUBTITLE_AUTOLOAD_KEY] ?: true,
+            intelligentSilenceEnabled = prefs[INTELLIGENT_SILENCE_KEY] ?: true,
+            autoChapterGenerationEnabled = prefs[AUTO_CHAPTER_KEY] ?: false,
             decoderPreference = prefs[DECODER_PREF_KEY]
                 ?.let { runCatching { DecoderPreference.valueOf(it) }.getOrNull() } ?: DecoderPreference.AUTO,
             gestureLongPressSpeedBoost = prefs[GESTURE_SPEED_BOOST_KEY] ?: true,
@@ -117,6 +133,9 @@ class UserSettingsPreferences @Inject constructor(
     suspend fun setSubtitlePositionBottom(bottom: Boolean) = dataStore.edit { it[SUBTITLE_BOTTOM_KEY] = bottom }
     suspend fun setAutoLoadExternalSubtitles(enabled: Boolean) = dataStore.edit { it[SUBTITLE_AUTOLOAD_KEY] = enabled }
 
+    suspend fun setIntelligentSilenceEnabled(enabled: Boolean) = dataStore.edit { it[INTELLIGENT_SILENCE_KEY] = enabled }
+    suspend fun setAutoChapterGenerationEnabled(enabled: Boolean) = dataStore.edit { it[AUTO_CHAPTER_KEY] = enabled }
+
     // Phase 2
     suspend fun setDecoderPreference(pref: DecoderPreference) = dataStore.edit { it[DECODER_PREF_KEY] = pref.name }
     suspend fun setGestureLongPressSpeedBoost(enabled: Boolean) =
@@ -140,6 +159,8 @@ class UserSettingsPreferences @Inject constructor(
         subtitleScalePercent: Int,
         subtitlePositionBottom: Boolean,
         autoLoadExternalSubtitles: Boolean,
+        intelligentSilenceEnabled: Boolean,
+        autoChapterGenerationEnabled: Boolean = false,
         decoderPreference: DecoderPreference,
         gestureLongPressSpeedBoost: Boolean,
         gestureHorizontalSeekDrag: Boolean,
@@ -154,6 +175,8 @@ class UserSettingsPreferences @Inject constructor(
         prefs[SUBTITLE_SCALE_KEY] = subtitleScalePercent
         prefs[SUBTITLE_BOTTOM_KEY] = subtitlePositionBottom
         prefs[SUBTITLE_AUTOLOAD_KEY] = autoLoadExternalSubtitles
+        prefs[INTELLIGENT_SILENCE_KEY] = intelligentSilenceEnabled
+        prefs[AUTO_CHAPTER_KEY] = autoChapterGenerationEnabled
         prefs[DECODER_PREF_KEY] = decoderPreference.name
         prefs[GESTURE_SPEED_BOOST_KEY] = gestureLongPressSpeedBoost
         prefs[GESTURE_H_SEEK_KEY] = gestureHorizontalSeekDrag
@@ -175,5 +198,9 @@ class UserSettingsPreferences @Inject constructor(
         val GESTURE_SPEED_BOOST_KEY = booleanPreferencesKey("gesture_speed_boost")
         val GESTURE_H_SEEK_KEY = booleanPreferencesKey("gesture_h_seek_drag")
         val GESTURE_V_DRAG_KEY = stringPreferencesKey("gesture_v_drag_mapping")
+        // Phase 3 / Wave 3 / Round 2.
+        val INTELLIGENT_SILENCE_KEY = booleanPreferencesKey("intelligent_silence_enabled")
+        // Phase 3 / Wave 3 / Round 3.5c.
+        val AUTO_CHAPTER_KEY = booleanPreferencesKey("auto_chapter_generation_enabled")
     }
 }

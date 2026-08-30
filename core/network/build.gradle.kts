@@ -22,6 +22,10 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    // Phase 3 / Wave 3 / Round 3.5b — the network clients are
+    // adapted as `MediaSourceProvider`s (the plugin SPI). The
+    // port lives in :core:domain; this module depends on it.
+    implementation(project(":core:domain"))
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

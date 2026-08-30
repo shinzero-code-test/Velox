@@ -62,4 +62,9 @@ sealed interface VeloxRoute {
     /** Phase 2: playback statistics & history. */
     @Serializable
     data object Statistics : VeloxRoute
+
+    /** Phase 3 / Milestone 4: plugin registry surface, reachable
+     *  from Settings → About. */
+    @Serializable
+    data object Plugins : VeloxRoute
 }

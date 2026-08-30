@@ -7,7 +7,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
-import com.exapps.velox.core.data.preferences.UserSettingsPreferences
+import com.exapps.velox.core.domain.player.DecoderPreferenceStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,7 +45,7 @@ class VeloxExoPlayerFactory @Inject constructor(
     @ApplicationContext private val context: Context,
     private val audioEffects: AndroidAudioEffectsController,
     private val dataSourceFactory: VeloxDataSourceFactory,
-    private val userSettings: UserSettingsPreferences,
+    private val decoderPreferences: DecoderPreferenceStore,
 ) {
     fun create(): ExoPlayer {
         val audioAttributes = AudioAttributes.Builder()
@@ -71,11 +71,14 @@ class VeloxExoPlayerFactory @Inject constructor(
         // H5 (player-stack review): the previous `runBlocking { userSettings.settings.first() }`
         // blocked the main thread on a DataStore disk read every time the service
         // recreated (every cold start, every low-memory restart). We now read the
-        // cache that [UserSettingsPreferences.primeCache] warmed at app start.
+        // cache that [DecoderPreferenceStore.primeCache] warmed at app start.
         // If priming didn't run yet (very first call before Application.onCreate
         // completes, which is rare) the cache still returns the safe default.
-        val decoderPreference = userSettings.decoderPreferenceCached()
-        val preferSoftware = decoderPreference == com.exapps.velox.core.data.preferences.DecoderPreference.SOFTWARE
+        //
+        // Phase 3 / L6 (deferred-backlog): the engine now reads the decoder
+        // preference through the [DecoderPreferenceStore] domain port instead
+        // of importing `UserSettingsPreferences` from `:core:data`.
+        val preferSoftware = decoderPreferences.preferSoftwareCached()
 
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)

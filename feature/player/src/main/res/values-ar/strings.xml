@@ -55,6 +55,12 @@
     <string name="markers_title">العلامات والفصول</string>
     <string name="markers_chapters">الفصول</string>
     <string name="markers_bookmarks">علاماتك</string>
+    <string name="cd_skip_intro">تخطي المقدمة</string>
+    <string name="queue_up_next_title">مقترح لك بعد ذلك</string>
+    <string name="cd_queue_add">إضافة إلى قائمة الانتظار</string>
+    <string name="cd_queue_play_next">تشغيل التالي</string>
+    <string name="chapter_auto_badge">تلقائي</string>
+    <string name="markers_clear_auto_chapters">مسح جميع الفصول المكتشفة تلقائيًا</string>
     <string name="markers_add">إضافة عند الموضع</string>
     <string name="cd_favorite_toggle">تبديل المفضلة</string>
     <string name="cd_delete_marker">حذف العلامة</string>

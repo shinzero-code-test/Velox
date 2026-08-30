@@ -33,6 +33,7 @@
     <string name="playlist_add_selected">إضافة %1$d مقطعًا</string>
     <string name="playlist_remove_track">إزالة من قائمة التشغيل</string>
     <string name="playlist_fallback_name">قائمة تشغيل</string>
+    <string name="playlists_two_pane_hint">اختر قائمة تشغيل من القائمة لعرض مقاطعها هنا.</string>
     <string name="playlists_import_done">تم استيراد M3U.</string>
     <string name="playlists_import_failed">فشل استيراد M3U. قد يكون الملف تالفًا أو فارغًا.</string>
     <string name="playlists_export_done">تم تصدير M3U.</string>

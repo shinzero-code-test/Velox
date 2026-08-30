@@ -776,3 +776,888 @@ out-of-scope architectural changes.
   no redundant `implementation` lines remain.
 
 versionCode 16.
+
+---
+
+## v1.1.0 — Phase 3 / Wave 1 (engine ↔ data decoupling)
+
+The first deliverable from the Phase 3 plan: close the single remaining
+architectural debt in the player stack (`tmp/review/deferred-backlog.md`
+L6). The `:player:engine` module no longer imports `:core:data` directly;
+EQ and decoder preferences now flow through two domain ports.
+
+### What landed
+
+- **New ports in `:core:domain`** (pure-Kotlin, no Android deps):
+  - `DecoderPreferenceStore` — exposes the user's decoder preference
+    as a boolean (`preferSoftware`) + a hot `StateFlow<Boolean>`. Has
+    a synchronous `preferSoftwareCached()` accessor that backs the
+    H5 fast-path the playback service uses on its main thread.
+  - `EqualizerPreferencesStore` — exposes the canonical
+    `EqualizerSettings` shape as a hot `StateFlow`, with a suspending
+    `current()` one-shot read and a suspending `save()`.
+- **`EqualizerSettings` moved** from `core.data.preferences` to
+  `core.domain.player`. The storage class is unchanged; only the
+  package moved. The `:core:data` `EqualizerPreferences` now imports
+  it from the new location. The equalizer feature's ViewModel got its
+  import line updated in the same pass.
+- **Adapters in `:core:data`** that implement the ports over the
+  existing DataStore-backed classes (no storage shape changes):
+  - `UserSettingsPreferencesStoreAdapter` — translates the internal
+    `DecoderPreference` enum to the boolean the engine wants, and
+    re-implements the `primeCache` fast-path. Eagerly
+    `stateIn`s the preference on the application scope so the first
+    reader sees the primed value.
+  - `EqualizerPreferencesStoreAdapter` — wraps
+    `EqualizerPreferences.settings` flow in a hot `StateFlow` so the
+    audio effects controller can read the most recent value at any
+    time (not just while a flow collector is alive).
+- **Hilt `@Binds`** in `DataModule.kt` (the existing
+  `RepositoryModule` abstract class) wire the adapters behind the
+  port interfaces. Both bindings are `@Singleton`.
+- **`:player:engine` depends on `:core:domain` only.** The
+  `implementation(project(":core:data"))` line is gone from
+  `player/engine/build.gradle.kts`. A grep across the engine's
+  Kotlin sources confirms zero `com.exapps.velox.core.data.*` imports
+  remain.
+- **New unit test** at
+  `player/engine/src/test/.../AndroidAudioEffectsControllerPortTest.kt`
+  exercises the port round-trip without standing up a real DataStore
+  — the third trigger condition from the original L6 entry
+  ("A test suite needs to mock the preference store without standing
+  up the full DataStore dependency graph").
+
+### What did *not* change
+
+- No behaviour change for users. The same settings, the same
+  persistence, the same audio-session attach timing.
+- `:player:service` still depends on `:core:data` directly. Its
+  `MediaControllerPlayerController` reads `userSettings.resumePlayback`
+  inline, which is a *service-layer* concern (deciding whether to
+  resume the last position) and was not what L6 was about. The
+  service is allowed to know about app storage; the engine is not.
+  This is documented in `tmp/review/deferred-backlog.md` under the
+  new "Priority Z — Architectural purity" section.
+- No new dependencies. The port interfaces use only `kotlinx.coroutines`
+  (already on the classpath) and `:core:domain` was already
+  pure-Kotlin.
+
+### Why this is the right next move
+
+The Phase 3 plan's milestones 4 (plugin architecture) and 2 (theme
+engine) both touch the engine seam. Doing this refactor first means
+those milestones can land without re-deriving the engine's storage
+contract each time. It's also the smallest change in the plan (~200
+lines of new code + a single build.gradle edit) and ships
+behaviour-identical.
+
+### Updated docs
+
+- `tmp/review/deferred-backlog.md` — L6 entry now reads
+  **FIXED in v1.1.0** with the trigger condition that materialised
+  (test mocking).
+- `velox-docs/` — no spec change. This was an internal
+  re-architecture; the public surface (player behaviour, settings UI)
+  is unchanged.
+
+versionCode 17.
+
+---
+
+## v1.3.0 — Phase 3 / Wave 2 (theme engine + tablet layouts)
+
+Two milestones from the Phase 3 plan landed together because they
+share the design-system surface (`:core:ui`). The dependency on
+`material3.adaptive` added here is reused by future Milestone 4 work
+(plugins) when it touches the chrome.
+
+### Milestone 2 — Theme engine / community themes
+
+The design tokens are no longer compile-time constants. Themes are
+data — a `ThemeDefinition` (JSON) — and a `ThemeRegistry` (domain
+port) holds the active selection.
+
+- **New in `:core:domain`** (pure-Kotlin):
+  - `ThemeDefinition`, `LocalizedText`, `ThemeTokens` — the serialisable
+    theme manifest. `SCHEMA_VERSION = 1`; mismatched versions fall
+    back to the bundled default (no crash, no in-place migration yet).
+  - `ThemeRegistry` — the active-theme port (`active: StateFlow`,
+    `available()`, `setActive(id)`, `primeCache()`).
+  - `kotlinx-serialization` added as a domain dependency (the schema
+    is owned by the domain layer; data and UI both serialise through
+    the same definition).
+- **New in `:core:data`**:
+  - `assets/themes/dark-glass.json` and `assets/themes/amoled-dark.json`
+    — the two bundled themes, with ar + en names.
+  - `ThemePreferences` — DataStore-backed active-theme persistence,
+    bundled-asset enumeration, and `importFromUri()` for SAF-imported
+    `.veloxtheme.json` files. User imports land in
+    `filesDir/themes/{themeId}.json`; malformed files throw with a
+    clear message.
+  - `ThemeRegistryAdapter` — the default `ThemeRegistry` impl, with
+    a hard-coded `DefaultDarkGlass` constant for the
+    empty-assets-install edge case.
+  - New Hilt `@Binds` for `ThemeRegistry` in `DataModule.kt`.
+- **New in `:core:ui`**:
+  - `ThemeSpec.kt` — `VeloxThemeSpec` (`@Immutable`) + `resolveThemeSpec()`
+    (the function that combines a `ThemeDefinition` with the accent
+    override and the AMOLED toggle). Malformed `#RRGGBB` strings fall
+    back to the bundled default per token — a broken theme never
+    crashes the app.
+  - `Theme.kt` — the new `VeloxTheme(spec = ...)` overload is the
+    preferred entry point; the legacy two-arg overload stays for
+    non-Compose surfaces (the Glance widget uses its own
+    `GlanceTheme`).
+  - `glassSurfaceColor` / `glassOutlineColor` are now `@Composable`
+    helpers that read the active spec (themes can override
+    `glassAlpha`, etc.). Direct-alpha forms (`glassSurfaceColorAt`,
+    `glassOutlineColorAt`) exist for callers that already have a
+    `Float`.
+  - `kotlinx-serialization` + `:core:domain` added as deps.
+- **`AppViewModel` and `MainActivity`** now read a combined
+  `themeSpec: StateFlow<VeloxThemeSpec>` (theme + accent + amoled)
+  and pass it to `VeloxTheme(spec = themeSpec)`. The legacy
+  two-property call site is gone.
+- **`SettingsViewModel`** exposes `availableThemes` and `activeTheme`
+  flows and gains `selectTheme(id)`, `refreshAvailableThemes()`, and
+  `importTheme(uri)`. `SettingsScreen` renders a new theme picker
+  section above the existing AMOLED/Accent rows, with a SAF "Import
+  theme…" button and a localised error snackbar.
+- **Strings parity:** new IDs `settings_theme_picker`,
+  `settings_theme_picker_hint`, `settings_theme_import`,
+  `settings_theme_import_failed` added in en + ar.
+- **Tests:** `core/ui/src/test/.../ThemeSpecTest.kt` covers the
+  resolver, the AMOLED override, malformed colors, `LocalizedText`
+  locale fallbacks, and the `parseColorOr` hex parser.
+
+### Milestone 3 — Better tablet layouts (partial — chrome only)
+
+The plan called for two-/three-pane list-detail screens at
+medium/expanded widths. This pass ships the chrome switch
+(bottom-bar → side-rail) and the `WindowSizeClass` plumbing; the
+per-screen list-detail refactor is the next pass and is intentionally
+out of scope here.
+
+- **`WindowSizeClassExt.kt`** in `:core:ui` — extension properties
+  (`isCompact`, `isMedium`, `isExpanded`, `shouldUseNavRail`) that
+  match the Material 3 defaults (600 / 840 dp cutoffs).
+- **`MainScaffold`** is now width-aware. At Compact width it keeps
+  the existing bottom bar; at Medium / Expanded it switches to a
+  side rail with the mini player docked to the bottom. The rail is
+  80 dp wide, glass-tinted, and renders the same four destinations
+  as the bottom bar.
+- **`MainActivity`** calls `calculateWindowSizeClass(this)` once and
+  forwards the result to `VeloxNavHost` → `MainScaffold`.
+- **`material3.adaptive` added** to the version catalog and the
+  `:core:ui` build file.
+- **No data-layer / service-layer changes** — the player stack
+  doesn't care about the chrome.
+
+### What did *not* change
+
+- **Phone behaviour is byte-identical** to v1.1.0. The bottom bar
+  and chrome measurement logic are untouched on the Compact path.
+- **No list-detail refactor** for Library / Playlists / Search.
+  That's the next pass; shipping a partial two-pane per screen is
+  more work than the chrome switch and would touch every detail
+  route. The rail switch alone gets the most obvious win (the
+  chrome reads correctly on tablets).
+- **Now Playing still uses the 720dp cap** from v1.0.0 (single-screen
+  cap, not a global breakpoint). Switching it to a true two-pane
+  Now-Playing-on-the-right layout is a Milestone 4 / 5 follow-up.
+
+### Why this is the right next move
+
+The plan's Milestone 4 (plugins) and 5 (intelligence) both depend
+on a stable `:core:ui` contract. Doing the theme engine first means
+plugins can carry their own bundled themes; doing the rail switch
+first means the plugin-injected media-source pickers can also be
+rail-friendly when they land.
+
+versionCode 19.
+
+---
+
+## v1.4.0 — Phase 3 / Milestone 3 completion (per-screen list-detail)
+
+The v1.3.0 chrome switch shipped only the bottom-bar → side-rail
+transition. This release adds the per-screen two-pane list-detail
+that Milestone 3 always called for.
+
+### What landed
+
+- **`CollectionKey` and its Saver** (`:feature:library`): a sealed
+  type carrying `(kind, id, title)` for the four collection flavours
+  the Library supports (Album / Artist / Folder / Genre). A
+  `CollectionKeySaver` round-trips it through `rememberSaveable` so
+  the two-pane selection survives a foldable hinge or rotation.
+- **`CollectionDetailContent`** (`:feature:library`): the body of
+  the existing `CollectionDetailScreen` extracted into a stateless
+  composable that takes a `StateFlow<ScreenState<List<MediaItem>>>`
+  and two callbacks. Both the route (`CollectionDetailScreen`) and
+  the new in-place pane call this; the route keeps its own VM, the
+  pane re-uses the parent's.
+- **`LibraryViewModel.tracksFor(key)`** + **`onCollectionTrackClick(key, track)`**:
+  the parent screen now resolves a `CollectionKey` to a cold
+  `Flow<List<MediaItem>>` via the existing repository
+  (`observeAlbumTracks` / `observeArtistTracks` /
+  `observeFolderContents` / `observeGenreTracks`) without
+  constructing a per-pane Hilt VM. Track clicks in the pane
+  resolve the queue from the same flow.
+- **`LibraryScreen` is now width-aware**:
+  - Compact (phones): unchanged single-pane. Album/Artist/Folder/Genre
+    clicks translate back to the existing `onAlbumClick` etc. nav
+    callbacks, so the route-driven `CollectionDetailScreen` still
+    works.
+  - Medium / Expanded (≥ 600 dp): a new `LibraryTwoPane` lays out the
+    grouping list on the leading half and the selected collection's
+    tracks on the trailing half, separated by a 1-px glass
+    outline divider. The selection is `rememberSaveable`d; switching
+    tabs hides the detail pane if the previous selection's type no
+    longer matches (e.g. an AlbumKey in the Artists tab).
+- **`DefaultWindowSizeClass` moved to `:core:ui.layout`**: was
+  duplicated between `MainScaffold` and the feature screens; now a
+  single internal `val` lives next to the `isCompact` / `isMedium`
+  helpers.
+- **`material3-adaptive` added to `:feature:library`** so consumers
+  of the public `LibraryScreen(windowSizeClass: ...)` parameter can
+  see the type.
+- **Strings parity:** new ID `library_two_pane_hint` added in en + ar.
+- **Tests:** `CollectionKeyTest` covers the four `from(...)` factory
+  methods and the `CollectionKeySaver` round-trip (including a
+  folder path that contains slashes — the saver splits on `|`, not
+  on the path separator).
+
+### What did *not* change
+
+- **Phone behaviour is byte-identical** to v1.3.0. The Compact path
+  uses the same code path as the v1.3.0 single-pane (literally the
+  same composable extracted to `LibrarySinglePane`).
+- **The Now Playing 720dp cap** is still in effect. Splitting
+  Now Playing into a two-pane layout (artwork on one side, controls
+  on the other at medium/expanded widths) is a follow-up — the
+  existing 720dp cap is a single-screen cap, not a global
+  breakpoint, so splitting it is its own design decision.
+- **Playlists two-pane** is deferred. The PlaylistDetailScreen
+  has its own dialogs, FAB, and a tracks-bottom-sheet; refactoring
+  it to a stateless content composable is more work than Library
+  and belongs in its own pass.
+- **Network browser two-pane** is deferred. The plan said "the
+  existing back-stack becomes the 'directory' pane", which is a
+  larger refactor (the current back-stack is the nav graph, not a
+  pane).
+
+### Why this is the right next move
+
+The Library is the only screen where the user spends most of their
+time (the Library tab is the home tab; Playlists/Search/Network are
+auxiliary). Two-pane there is the highest-value tablet win. The
+Playlists and Network two-panes can land later in the same shape
+once their detail screens are extracted into a stateless content
+composable.
+
+### Updated docs
+
+- `tmp/review/deferred-backlog.md` — no new entries; the L6 fix
+  (Wave 1) and the chrome switch (Wave 2) are unchanged.
+- `velox-docs/` — no spec change; the two-pane is a layout
+  detail, not a behavioural one.
+
+versionCode 20.
+
+---
+
+## v1.5.0 — Phase 3 / Wave 3 / Round 1 (Playlists two-pane + Plugins)
+
+Three independent slices from the Wave 3 plan landed in this
+release.
+
+### Milestone 3 follow-up — Playlists two-pane
+
+- **`PlaylistDetailContent`** (`:feature:playlists`): the body of
+  the existing `PlaylistDetailScreen` extracted as a stateless
+  composable. Takes a `PlaylistDetail?` (so the loading state is
+  visible) and a small set of callbacks. Both the route screen
+  and the new in-place pane re-use it.
+- **`PlaylistsViewModel`** grew a small set of methods for the
+  in-place pane (`playlistDetailFor`, `onPlaylistPlayAll`,
+  `onPlaylistTrackClick`, `onPlaylistRemoveTrack`,
+  `onPlaylistAddTracks`, `isSystemPlaylist`). These are thin
+  wrappers around the existing repository; the route's own
+  `PlaylistDetailViewModel` is unchanged.
+- **`PlaylistsScreen`** is now width-aware. Compact uses the
+  existing single-pane (taps navigate to `PlaylistDetail`).
+  Medium/Expanded uses a `Row` with the playlist list on the
+  leading pane and the selected playlist's tracks on the
+  trailing pane, separated by a 1-px glass outline divider
+  (mirroring the Library two-pane from v1.4.0). Selection is
+  `rememberSaveable`d.
+- **Strings parity:** `playlists_two_pane_hint` (en + ar).
+- **What did *not* change:** the playlist "add tracks" bottom
+  sheet and the M3U export sheet remain route-only flows. The
+  pane has the same export-less / add-tracks-less surface as the
+  route's "compact" variant; round 1.5 can add those if needed.
+
+### Milestone 3 follow-up — Network browser two-pane
+
+**Deferred.** The current `NetworkScreen` uses the navigation
+back-stack for sub-directory navigation, which is structural. A
+two-pane rewrite would re-architect the directory drill-down as
+local state (a stack of `NetworkEntry` keys) inside the screen
+and put the server list + the current directory side-by-side.
+That refactor is its own PR — calling it out here so it's tracked
+and not silently lost. Round 1.5 will pick it up.
+
+### Milestone 4 — Plugin architecture
+
+The new `MediaSourceProvider` SPI lands end-to-end. Built-in
+SMB / FTP / WebDAV continue to use the existing
+`NetworkClientRegistry` path; first-party and future APK-form
+plugins use the new SPI.
+
+- **New in `:core:domain` (`plugin` package):**
+  - `MediaSourceProvider` — `id`, `displayName`,
+    `supportedProtocols`, `listDirectory(url)`, `openStream(url, offset)`.
+  - `MediaEntry` — directory vs file, MIME, size,
+    last-modified.
+  - `MediaStream` — `offset`, `totalSize`, `read(): InputStream`,
+    `close()`.
+  - `LocalizedPluginName` — `defaultName` + `ar`/`en` (mirrors the
+    theme engine's `LocalizedText`).
+  - `PluginRegistry` — `providerForScheme(scheme)` (the hot
+    router path) and `available()` (the Settings surface).
+- **New in `:core:data` (`plugin` package + `di`):**
+  - `PluginRegistryAdapter` — the default `PluginRegistry`
+    implementation; takes a `Set<MediaSourceProvider>` via Hilt
+    multibinding and builds a `scheme → provider` map lazily.
+  - `HttpUrlProvider` — the first-party plugin. Exists primarily
+    to exercise the SPI in the MVP; it wraps OkHttp so any
+    `http(s)://` URL goes through the plugin path. The existing
+    default `DefaultDataSource.Factory` chain also handles those
+    URLs, so this is a no-op for playback but a real provider
+    for the registry.
+  - `HttpUrlProviderModule` (Hilt) — `@Binds @IntoSet` so the
+    provider lands in the multibound set.
+  - `PluginModule` (Hilt) — binds `PluginRegistry` →
+    `PluginRegistryAdapter`.
+  - `okhttp` added to `:core:data` deps.
+- **Engine routing extended:** `VeloxDataSourceFactory` injects
+  the `PluginRegistry`. The `RoutingDataSource` now picks a
+  `PluginStreamDataSource` for any scheme a plugin claims,
+  alongside the existing SMB/FTP/WebDAV branch and the
+  default-chain fallback. The plugin data source hands the
+  `openStream` call through `runBlocking` on the loader thread
+  (ExoPlayer's loader is purpose-built for blocking IO).
+- **Settings → About → Plugins** — new `PluginsScreen` reachable
+  from a new row in the About section. Lists every registered
+  provider with id, localised display name, and supported
+  protocols. Read-only in v1.5.0 (no enable/disable toggle).
+- **New route:** `VeloxRoute.Plugins` + a `composable<>` block
+  in `VeloxNavHost`.
+- **Strings parity:** `settings_plugins_title`,
+  `settings_plugins_protocols` (en + ar).
+- **Tests:** `PluginRegistryAdapterTest` covers scheme lookup
+  (case-insensitive, unknown → null), first-match-wins,
+  `available()` ordering, and the `HttpUrlProvider` contract
+  (advertises http/https; refuses `listDirectory`).
+
+### What did *not* change
+
+- **Built-in SMB/FTP/WebDAV** still goes through the existing
+  `NetworkClientRegistry` and the credential-aware
+  `NetworkStreamDataSource`. Wrapping those clients in
+  `MediaSourceProvider` adapters is a Round 1.5 task.
+- **APK-form plugin discovery** (Phase 3b in the plan) is
+  deferred. The Hilt multibinding accepts a new provider via
+  one `@Provides` line; an APK-intent-filter + signature-
+  permission model lands in a later pass once a real third-party
+  consumer is on the horizon.
+- **The plugin data source uses `runBlocking`** to bridge the
+  `suspend openStream` to ExoPlayer's blocking `open`. This is
+  acceptable on the loader thread, but a future round can move
+  the bridge into a coroutine that returns a `ListenableFuture`
+  for true non-blocking IO.
+
+### Why this is the right next move
+
+The plugin SPI is the only Wave 3 milestone that creates a
+new module surface (`MediaSourceProvider`) that the rest of Wave
+3 will reach for. Milestones 5 and 6's audio-analysis module
+will use the same Hilt wiring pattern; Milestone 7's recommender
+will publish through a similar port. Land the SPI first, then
+the rest of the wave can build on it without re-deriving the
+shape.
+
+### Updated docs
+
+- `tmp/review/deferred-backlog.md` — no new entries; the
+  plugin architecture is in addition to, not instead of, the
+  existing deferred items.
+- `velox-docs/adr/` — `0001-plugin-architecture.md` is planned
+  for Round 1.5 alongside the credential-aware plugin adapters.
+
+versionCode 21.
+
+---
+
+## v1.6.0 — Phase 3 / Wave 3 / Round 2 (silence / intro + auto chapters)
+
+Milestones 5 and 6 from the Phase 3 plan landed together. They
+share the new `:core:audio-analysis` module and the
+silence/chapter Room tables; the silence detector drives the
+auto-skip on play, the chapter detector writes rows that the
+existing Markers sheet surfaces.
+
+### New module — `:core:audio-analysis`
+
+A pure-Kotlin (with one Android-`MediaCodec` decoder) module
+that the player stack consumes through a Hilt-bound port. The
+module has no Compose, no Media3 — it ships:
+- `SilenceDetector` — RMS-based silence detection. 100 ms
+  windows, -50 dBFS threshold, 2 s minimum run. Pure Kotlin,
+  fully unit-tested.
+- `ChapterDetector` — same pipeline at 50 ms resolution;
+  adjacent-window RMS deltas ≥ 6 dB become chapter boundaries.
+  Pure Kotlin, no tests yet (the chapter-detection quality
+  bar is "user-visible noise" rather than contract-correctness).
+- `AndroidPcmDecoder` — wraps `MediaExtractor` + `MediaCodec`
+  to read a file's audio track to 16-bit signed little-endian
+  PCM at 22 050 Hz mono. Cheap decimation, not a windowed-sinc
+  resampler (good enough for envelope detection).
+- `DefaultTrackAnalyzer` / `DefaultTrackAnalysisService` —
+  facade that combines the two detectors and persists the
+  results to Room. Binds `TrackAnalyzer` + `TrackAnalysisService`
+  in `AudioAnalysisModule` (Hilt).
+- Hilt wiring depends on `core:common` (for the application
+  scope qualifier) and the existing `core:data` Room database.
+
+### New tables — Room migration 3 → 4
+
+- **`track_intro_outro`** — `(mediaItemId, kind)` primary key.
+  `kind` is `0=INTRO, 1=OUTRO`. Cascade delete on the parent
+  track. ~20k rows for a 10k library.
+- **`track_chapters`** — `(mediaItemId, index)` primary key.
+  Cascade delete. `autoGenerated` column distinguishes
+  detector output from future sidecar / embedded import.
+
+### Domain port
+
+- `TrackAnalyzer` (in `:core:domain`) — the analyse call.
+- `TrackAnalysisService` (in `:core:domain`) — the
+  read-side: hot `Flow<List<IntroOutro>>` per mediaItemId,
+  suspend `getIntroOutro(id, kind)`, fire-and-forget
+  `scheduleFirstListenAnalysis(id, uri)`.
+- `IntroOutro` / `Chapter` / `IntroOutroKind` value types.
+
+### Player-stack integration
+
+- `MediaControllerPlayerController` injects
+  `TrackAnalysisService`. On every `play()`:
+  1. If the current item is `MediaType.AUDIO` and the user
+     has `intelligentSilenceEnabled` set in
+     `UserSettings` (default ON), the controller calls
+     `analysisService.scheduleFirstListenAnalysis(id, uri)`.
+  2. After `play()`, it calls `applyIntroSkip(currentItem)`
+     which looks up the saved intro row and, if the user is
+     still near t=0 and the toggle is on, seeks to
+     `intro.endMs`.
+- A new `intelligentSilenceEnabled` field on `UserSettings`
+  (with a setter, a `SettingsPayload` field for backup, and a
+  `Settings` → `Playback` switch row) gates both the schedule
+  and the auto-skip. The manual "skip intro" button on Now
+  Playing is **not** gated — it's a deliberate override.
+
+### Now Playing integration
+
+- A new "↪ skip intro" button (icon: `Icons.Filled.FastForward`,
+  content description `cd_skip_intro`) appears on the transport
+  row when the current track has a saved intro row. Tapping
+  seeks to `intro.endMs`.
+- The Markers sheet's chapter list merges sidecar
+  `.chapters.txt` (existing) and auto-generated chapters (new).
+  Both are rendered through the same `ChaptersLoader.Chapter`
+  shape; auto chapters show as "Chapter N".
+
+### What did *not* change
+
+- **No live PCM decode during initial scan.** Detection runs
+  on the first play of a track, not during the library scan.
+  This keeps scan time unchanged and means a never-played track
+  has no analysis row.
+- **The "Settings → Playback → Auto chapter generation" toggle
+  is not added** — auto chapters are written speculatively. The
+  v1.6.0 user-visible surface is "I see auto-chapter rows in
+  the Markers sheet; I can delete them one at a time". A bulk
+  delete + master toggle is round 2.5.
+- **PCM decode downsamples** (cheap decimation) rather than
+  windowed-sinc resampling. Good enough for the envelope-based
+  detectors; a real resampler is a future round if a heavy
+  chapter detector ever needs better signal fidelity.
+- **`runBlocking` is not used** in the decoder path; the
+  analysis runs on `Dispatchers.Default` inside the service
+  via a coroutine launched on the application scope. The
+  loader thread isn't touched.
+
+### Tests
+
+- `SilenceDetectorTest` — 4 contract tests:
+  - Empty PCM → no intros.
+  - All-loud PCM → no intros.
+  - The canonical 2s-audio-then-4s-silence case produces an
+    INTRO at ~2000–2200 ms (start) and ~5800–6200 ms (end),
+    with ±200 ms tolerance for windowing jitter.
+  - 1.5s of silence is below the 2s `minRunMs` threshold → no
+    intro.
+  - A silence run that starts past the 30s candidate window is
+    rejected.
+
+### Why this is the right next move
+
+The silence/chapter pipeline is the first Wave 3 work that
+creates a new background data flow (PCM-decode + analysis)
+that needs a Hilt application-scoped coroutine to outlive any
+one Activity. Landing it as its own module + Room migration
+keeps the change focused, testable, and reversible — the
+master toggle is round 2.5; the per-track skip button is the
+escape hatch users have right now.
+
+versionCode 22.
+
+---
+
+## v1.7.0 — Phase 3 / Wave 3 / Round 3 (on-device recommendations)
+
+Milestone 7 from the Phase 3 plan landed as a small, auditable
+collaborative filter. Pure addition — no new modules, no
+schema migration, no engine changes.
+
+### What's in v1.7.0
+
+- **"Recommended for you" row** at the top of the Library tab
+  (single-pane and two-pane). Renders only when the engine has
+  at least one recommendation; the cold-start install with no
+  play history shows the existing tab content without a banner.
+- **Settings → Storage → "Reset recommendation data"** drops
+  the in-memory co-occurrence matrix. The next emission of
+  the recommendation flows rebuilds from play history. Play
+  history itself is **not** deleted (the existing "Clear playback
+  history" handles that).
+- **Settings → About → privacy disclosure** explicitly notes
+  that the recommendations engine runs on-device only.
+- **`MediaLibraryRepositoryImpl.recordPlayed`** and
+  **`clearPlayHistory`** notify the engine on every change so
+  the next call to `forYou` / `upNext` / `becauseYouListened`
+  re-emits.
+
+### What did *not* change (deferred to round 3.5)
+
+- **Now Playing → "Up next for you"** section in the queue
+  sheet. The engine exposes `upNext()` as a hot flow; the
+  queue sheet just needs to render it below the existing queue
+  list, deduped against the current queue. UX-wise the user
+  wants "don't play tracks I already have queued" + a clear
+  visual separation. This is a screen-design call, not an
+  engine call — round 3.5 picks it up.
+- **Search → "Because you listened to X"**. The engine
+  exposes `becauseYouListened(seedTrackId)`; the search screen
+  needs a heuristic to detect when a query is "the title of a
+  known track" and look up the seed. Same story — design
+  call, round 3.5.
+- **Per-day / per-week recompute** instead of on every play.
+  For a 5k-row history the build is ~50ms; for a 50k-row
+  history it's ~100ms. The plan's risk note about a 200ms
+  threshold isn't hit on real libraries. A debounce is a
+  future polish; eager invalidation is correct for round 1.
+
+### Architecture
+
+The engine lives in `:core:data` (it reads from Room) and is
+exposed via a domain port in `:core:domain`
+(`RecommendationEngine`). The port is bound by Hilt in
+`DataModule` — same pattern as `ThemeRegistry` and the audio
+analysis ports.
+
+**Two pieces of state, both held in memory:**
+
+1. **Co-occurrence matrix** — a sparse `Map<Pair<Long, Long>, Int>`
+   keyed on the smaller-id-first track pair. Each play session
+   (≤ 30 min between consecutive plays) contributes +1 to every
+   pair within it. Bidirectional top-50 neighbours per track.
+2. **Time-of-day × energy matrix** — a 4×4 matrix
+   (`morning/afternoon/evening/night × energetic/mellow`)
+   derived from the most recent 30 days of plays, normalised to
+   sum to 1 per row. The energy heuristic is a round-1 stand-in
+   (short track OR rock/electronic/hip-hop/metal/pop = energetic;
+   everything else = mellow); a real classifier can replace it.
+
+**Ranking** for `forYou()` is:
+```
+score(track) = Σ_heavy (cooccurrence(heavy, track) * weight)
+            × (0.5 + timeOfDay.affinity(nowBucket, energy(track)))
+```
+plus a 10% "discovery injection" of random tracks the user
+hasn't played recently. The 10% keeps the row diverse so a
+user who only ever plays Arabic tracks still sees
+recommendations from the rest of their library.
+
+### Privacy
+
+The plan's "data egress" risk is the biggest one for this
+milestone. The mitigation: **the engine reads from
+`MediaItemDao` and `PlayHistoryDao`; it never opens a
+network socket.** The Settings → About disclosure makes that
+explicit ("Recommendations are computed on this device from
+your play history. No listening data is sent off-device.").
+A future round that adds cloud-side recommendations (out of
+scope for the Phase 3 plan) will need to add a per-provider
+toggle to honour the user's choice.
+
+### Tests
+
+- **`RecommendationEngineImplTest`** covers the contract
+  that's hardest to spot-check by hand:
+  - Session boundary: two plays 10 min apart are in the same
+    session; two plays 90 min apart are in different sessions.
+  - Single-play and empty-history edge cases.
+  - Cold start: `forYou` is empty when there's no play
+    history (the engine never throws).
+
+### Why this is the right next move
+
+The Library row is the highest-leverage surface for the
+recommender — it's the home tab, the user is most likely to
+discover a track they didn't know they had. The Now Playing
+and Search surfaces round 3.5 picks up are valuable but
+smaller; the engine contract is in place, the UI is the
+remaining work.
+
+versionCode 23.
+
+---
+
+## v1.8.0 — Phase 3 / Wave 3 / Round 3.5 (clear-the-deck for Wave 4)
+
+Five deferred items from the Phase 3 plan landed in this
+release. The headline is the two recommender UI surfaces
+(Now Playing "Up next" + Search "Because you listened to X") and
+the SMB/FTP/WebDAV-as-`MediaSourceProvider` adapters; the
+Network two-pane, the auto-chapter Settings toggle, and the
+APK-form plugin discovery foundation round out the release.
+
+### Milestone 7 follow-up — Now Playing "Up next for you"
+
+- `NowPlayingViewModel.upNext: StateFlow<Recommendation.UpNext>` —
+  combines the engine's `upNext()` with the current queue's id
+  set, dedup'ing any track that's already queued.
+- A new `UpNextSection` composable in the queue sheet renders
+  up to 5 rows above the current queue. Each row has:
+  - **Play next** (inserts at `currentIndex + 1` — the immediate
+    successor)
+  - **Add to queue** (appends at the end)
+- The section is hidden when the engine returns an empty list
+  (cold start, or the user has no play history).
+
+### Milestone 7 follow-up — Search "Because you listened to X"
+
+- `SearchViewModel.becauseYouListened: StateFlow<Recommendation.BecauseYouListened?>` —
+  emits non-null only when the search has exactly one result
+  AND the engine has at least one neighbour for that track.
+- The search screen renders the recommendations below the
+  single-result row with a small header. Tapping a
+  recommendation row plays it as a one-track queue.
+- Cold start and broad queries (>1 result) hide the section
+  naturally — the engine doesn't return anything to surface.
+
+### Milestone 4 follow-up — SMB/FTP/WebDAV as `MediaSourceProvider`
+
+- Three new providers in `:core:network/plugin/`:
+  - `SmbMediaSourceProvider` — wraps the existing `SmbClient`.
+  - `FtpMediaSourceProvider` — wraps the existing `FtpClientHolder`.
+  - `WebDavMediaSourceProvider` — wraps the existing `WebDavClient`.
+- Each resolves the credential context via
+  `NetworkLibraryRepository.findServerCached(url)` — same path
+  the legacy `RoutingDataSource` uses, so behaviour matches the
+  pre-plugin browsing/streaming surface exactly.
+- Hilt-bound via `BuiltInNetworkProvidersModule` (`@IntoSet`),
+  so the Settings → About → Plugins list now shows all four
+  first-party providers (HTTP / SMB / FTP / WebDAV) instead of
+  just the HTTP one.
+- `:core:network` now depends on `:core:domain` (for the
+  `MediaSourceProvider` port).
+
+### Milestone 3 follow-up — Network browser two-pane
+
+- `NetworkScreen` is now width-aware. At medium/expanded
+  widths the server list sits on the leading pane and the
+  directory browser on the trailing pane (separated by a 1-px
+  glass outline). At compact width the existing single-pane
+  behaviour is unchanged.
+- The system back gesture: at compact width, back while
+  browsing goes up one directory (the existing behaviour); at
+  medium/expanded width, back always exits the screen because
+  the panes are persistent.
+- The `findActivity()` helper un-wraps the `ContextThemeWrapper`
+  chain to get the `ComponentActivity` for
+  `calculateWindowSizeClass` — same pattern `VeloxNavHost` uses.
+- New string `network_two_pane_hint` (en + ar).
+
+### Milestone 6 follow-up — Auto chapter Settings toggle + badge
+
+- New `UserSettings.autoChapterGenerationEnabled` (default
+  OFF). The Settings → Playback switch toggles it; the
+  `BackupManager.SettingsPayload` carries the field for backup.
+- `TrackAnalysisService.scheduleChapterOnlyAnalysis` —
+  chapter-only path that skips the silence detector. Used by
+  the player controller when only auto-chapter is on.
+- The player controller reads both toggles at `play()` time
+  and dispatches to the right call:
+  - both on → `scheduleFirstListenAnalysis`
+  - silence only → `scheduleFirstListenAnalysis` (existing)
+  - chapters only → `scheduleChapterOnlyAnalysis`
+  - both off → no analysis
+- `ChaptersLoader.Chapter` now carries an `autoGenerated: Boolean`
+  field; the Markers sheet renders an "auto" badge (en + ar)
+  on auto-detected chapters. Sidecar `.chapters.txt` parses
+  default to `false`.
+
+### Milestone 4 follow-up — APK-form plugin discovery foundation
+
+- New `PluginDiscovery` port in `:core:domain` — `discover():
+  List<MediaSourceProvider>`. The interface lives in
+  `:core:domain` so a real implementation (PackageManager +
+  signature permission + DexClassLoader) can drop in without
+  changing the registry or engine.
+- `EmptyPluginDiscovery` in `:core:data` returns an empty list
+  for v1.8.0. The host doesn't load any third-party APK today;
+  the discovery returns no plugins, the Settings → About →
+  Plugins list shows only the four first-party providers, and
+  the round-1.5 APK loading lands when a real third-party
+  consumer is on the horizon.
+- `PluginRegistryAdapter` merges first-party (Hilt-bound) +
+  third-party (discovery) providers, with first-party winning
+  on id collision.
+
+### Tests
+
+- New `PluginRegistryAdapterTest` covers the merge + dedup
+  contract: first-party wins on duplicate id; empty discovery
+  returns the first-party list unchanged; `providerForScheme`
+  is the hot first-party lookup (discovery doesn't appear in
+  the hot path).
+
+### What did *not* change
+
+- **APK loading is still empty.** v1.8.0 ships the *interface*
+  for `PluginDiscovery`; loading the actual APK classpath
+  (PackageManager walk + signature permission + DexClassLoader)
+  is a Round 1.5 / v2.x surface. The signature permission would
+  need a new `<permission>` declaration, a manifest update, and
+  DexClassLoader with proper ClassLoader isolation. None of
+  that ships in v1.8.0.
+- **Chapter deletion is still per-row.** The Markers sheet
+  supports tapping a chapter to seek but doesn't have a
+  "delete all auto chapters" affordance. That was a deferred
+  item too; round 4 picks it up.
+- **PCM decode downsampling is still cheap decimation.** A real
+  resampler (windowed-sinc) is a future round; the envelope
+  detector is satisfied with the cheap approach.
+
+versionCode 25.
+
+---
+
+## v1.9.0 — Phase 3 / Wave 3 / Round 3.5e (the two remaining items)
+
+The two deferred items from v1.8.0 — APK-form plugin loading
+and chapter bulk-delete — both landed. This closes Phase 3.
+
+### Milestone 4 follow-up — APK-form plugin loading
+
+A real `PackageManagerPluginDiscovery` replaces the empty
+v1.8.0 stub. The contract:
+
+- **Host manifest** declares
+  - a signature-level permission
+    `com.exapps.velox.permission.PLUGIN_HOST` (only same-key
+    APKs can hold it);
+  - a `<queries>` element for the
+    `com.exapps.velox.MEDIA_SOURCE_PROVIDER` action so Android
+    11+'s package visibility doesn't hide the discovery.
+- **Plugin APK manifest** declares
+  - a `<service>` with the `MEDIA_SOURCE_PROVIDER` action;
+  - a `<meta-data>` of the same name whose `android:value`
+    names the FQCN of a `MediaSourceProvider` implementation;
+  - a `<uses-permission>` for the host's signature permission.
+- **Discovery walk**:
+  - `PackageManager.queryIntentServices(intent, GET_META_DATA)`
+  - for each match, `checkSignatures(host, plugin) ∈ {SIGNATURE_MATCH, SIGNATURE_FIRST_SAME_SIGNER}`
+    and `checkPermission(PLUGIN_HOST_PERMISSION, plugin) == PERMISSION_GRANTED`
+  - read the meta-data, instantiate via `PathClassLoader` rooted
+    at the plugin APK's source dir
+- The plugin runs **in the host process**. There is no
+  per-plugin sandbox in v1.9.0. A future round can add
+  per-process isolation via `android:process` + a remote
+  binder; that work is tracked as the next-layer polish
+  alongside the per-plugin enable/disable toggle.
+
+The Settings → About → Plugins screen now shows a "Third-party
+plugins" footer when the registry has only the four first-party
+providers. The footer is the developer-facing manifest template
+description; end users never see it.
+
+The new constant surface (`ACTION_MEDIA_SOURCE_PROVIDER`,
+`PLUGIN_HOST_PERMISSION`, `META_KEY`) is unit-tested in
+`PackageManagerPluginDiscoveryContractTest`. The full
+PackageManager walk needs an Android test harness; the contract
+test guards the names that ship in the host's manifest.
+
+### Milestone 6 follow-up — Chapter bulk-delete
+
+- New `TrackAnalysisDao.clearAllAutoChapters(): Int` deletes
+  every auto-generated chapter across all tracks. Sidecar /
+  embedded chapters are unaffected (they aren't stored in
+  this table).
+- New `TrackAnalysisService.clearAllAutoChapters()` port method
+  and `DefaultTrackAnalysisService` impl.
+- `NowPlayingViewModel.onClearAllAutoChapters()` exposes the
+  action.
+- The Markers sheet renders a "Clear all auto-detected
+  chapters" row (en + ar) below the chapters list, visible
+  only when at least one chapter in the current view is
+  auto-generated. Tapping the row deletes every auto chapter
+  in the database.
+
+### Architecture
+
+The full plugin contract is documented in
+`velox-docs/adr/0001-plugin-architecture.md`. The ADR covers
+the security model, the manifest template, the loader bridge,
+and the v2.x polish items (per-plugin process, per-plugin
+permission grant, per-plugin enable/disable toggle).
+
+### What did *not* change
+
+- **Per-plugin enable/disable.** A plugin loaded through the
+  registry is always active. A Settings toggle per plugin is
+  the next-layer polish.
+- **Per-plugin process isolation.** Plugins run in the host
+  process. Same-signature APKs are trusted to that level; a
+  third-party plugin from the Play Store wouldn't be loaded
+  because it can't hold the signature permission.
+- **Plugin manifest template in a real APK.** The v1.9.0 host
+  ships the loader + the registry + the manifest declarations
+  in the host. A reference plugin APK is not part of this
+  repo (a third-party plugin would live in its own repo). The
+  ADR has the manifest template; the user-facing footer in
+  Settings → About → Plugins points at the README.
+
+### Tests
+
+- `PackageManagerPluginDiscoveryContractTest` guards the
+  three-string contract (action, permission, meta-data key).
+  Fails if any of them drift from the documented value.
+- `PluginRegistryAdapterTest` (existing, v1.8.0) covers the
+  first-party + discovery merge with first-party winning on
+  id collision.
+
+versionCode 26.

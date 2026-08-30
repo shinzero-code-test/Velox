@@ -39,6 +39,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
+    // Phase 3 / Milestone 3 — Better tablet layouts. WindowSizeClass
+    // is exposed on the LibraryScreen public surface, so consumers
+    // (the :app shell) need to see the type too.
+    implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

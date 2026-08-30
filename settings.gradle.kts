@@ -32,6 +32,7 @@ include(":core:ui")
 include(":core:domain")
 include(":core:data")
 include(":core:network")
+include(":core:audio-analysis")
 
 // :feature:* — one module per user-facing feature area
 include(":feature:library")

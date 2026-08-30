@@ -1,0 +1,23 @@
+{
+  "id": "velox-dark-glass",
+  "schemaVersion": 1,
+  "name": {
+    "default": "Dark Glass",
+    "ar": "الزجاج الداكن",
+    "en": "Dark Glass"
+  },
+  "tokens": {
+    "background": "#0B0D10",
+    "onBackground": "#F2F4F7",
+    "surface": "#12151A",
+    "onSurface": "#E8EAED",
+    "onSurfaceVariant": "#9AA0A6",
+    "error": "#FF6B6B",
+    "glassAlpha": 0.06,
+    "glassElevatedAlpha": 0.09,
+    "outlineAlpha": 0.08,
+    "outlineStrongAlpha": 0.14,
+    "radiusScale": 1.0,
+    "amoled": false
+  }
+}

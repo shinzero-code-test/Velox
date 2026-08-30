@@ -10,6 +10,8 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.exapps.velox.core.data.preferences.UserSettingsPreferences
+import com.exapps.velox.core.domain.audio.IntroOutroKind
+import com.exapps.velox.core.domain.audio.TrackAnalysisService
 import com.exapps.velox.core.domain.model.MediaItem
 import com.exapps.velox.core.domain.model.MediaType
 import com.exapps.velox.core.domain.player.PlaybackState
@@ -58,6 +60,13 @@ class MediaControllerPlayerController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val userSettings: UserSettingsPreferences,
     private val positionStore: PlaybackPositionStore,
+    // Phase 3 / Wave 3 / Round 2 — silent-intro skip. The service
+    // exposes "schedule first-listen analysis" and "look up the
+    // saved intro row for this track". The player controller calls
+    // both: the first play triggers analysis in the background,
+    // every play consults the (possibly already-populated) intro
+    // row to decide whether to seek past the silence run.
+    private val analysisService: TrackAnalysisService,
 ) : PlayerController, Media3PlayerAccessor {
 
     /**
@@ -203,13 +212,95 @@ class MediaControllerPlayerController @Inject constructor(
             // A-B loops are per-item; a fresh queue always starts clean.
             _state.update { it.copy(loopStartMs = null, loopEndMs = null) }
 
+            val startItem = queue.getOrNull(startIndex.coerceIn(queue.indices))
+
+            // Phase 3 / Wave 3 / Round 2 — smart intro skip. The
+            // first time a track plays, kick off background analysis.
+            // For *every* play, consult the saved intro row (if any)
+            // and seek past the silence run. The analysis service is
+            // a no-op for already-analysed tracks (the REPLACE-on-
+            // conflict upsert makes a re-run a refresh, not a
+            // duplicate). When the saved intro row is null, the
+            // service still scheduled analysis on the previous
+            // listen — the *next* play will see the row and skip.
+            startItem?.let { item ->
+                if (item.mediaType == MediaType.AUDIO) {
+                    // Phase 3 / Wave 3 / Round 3.5c — chapter
+                    // generation has its own Settings toggle.
+                    // Default OFF; users opt in via Settings →
+                    // Playback → Auto chapter generation. The
+                    // toggle is read at call time (cached in the
+                    // first `userSettings.settings.first()`), so
+                    // toggling it during a session picks up on the
+                    // next play.
+                    val settings = runCatching {
+                        userSettings.settings.first()
+                    }.getOrNull()
+                    val silenceEnabled = settings?.intelligentSilenceEnabled ?: true
+                    val chaptersEnabled = settings?.autoChapterGenerationEnabled ?: false
+                    when {
+                        silenceEnabled && chaptersEnabled -> {
+                            // Both on: do the full analysis.
+                            analysisService.scheduleFirstListenAnalysis(
+                                mediaItemId = item.id,
+                                mediaUri = item.uri,
+                            )
+                        }
+                        silenceEnabled && !chaptersEnabled -> {
+                            // Smart silence only — same as before.
+                            analysisService.scheduleFirstListenAnalysis(
+                                mediaItemId = item.id,
+                                mediaUri = item.uri,
+                            )
+                        }
+                        !silenceEnabled && chaptersEnabled -> {
+                            // Chapters only — skip the silence
+                            // detector to save the PCM-decode cost.
+                            analysisService.scheduleChapterOnlyAnalysis(
+                                mediaItemId = item.id,
+                                mediaUri = item.uri,
+                            )
+                        }
+                        // both off: do nothing.
+                    }
+                }
+            }
+
             awaitController()?.apply {
                 setMediaItems(media3Items, startIndex.coerceIn(media3Items.indices), 0L)
                 prepare()
                 play()
                 applyResumePosition(startIndex, queue)
+                applyIntroSkip(startItem)
             }
         }
+    }
+
+    /**
+     * If [item] has a saved intro row, seek past it. The row's
+     * `endMs` is the position to resume from. We only do this
+     * when the saved resume position (from
+     * [applyResumePosition]) is 0 — a manual "Resume" the user
+     * picked last time should win over a newly-detected intro.
+     */
+    private suspend fun applyIntroSkip(item: MediaItem?) {
+        if (item == null || item.mediaType != MediaType.AUDIO) return
+        // Honour the Settings → Playback → Smart silence skip toggle.
+        // Default ON; a fresh install with the toggle off never
+        // auto-skips, even if the analysis row is present.
+        val silenceEnabled = runCatching {
+            userSettings.settings.first().intelligentSilenceEnabled
+        }.getOrDefault(true)
+        if (!silenceEnabled) return
+        val intro = analysisService.getIntroOutro(item.id, IntroOutroKind.INTRO) ?: return
+        if (intro.endMs <= 0L) return
+        // Only skip if the controller is still on the freshly-played
+        // item (i.e. the user hasn't already seeked). We use the
+        // current position; if the user moved past t=0, we don't
+        // second-guess them.
+        val currentPos = controller?.currentPosition ?: 0L
+        if (currentPos > 500L) return
+        controller?.seekTo(intro.endMs)
     }
 
     override fun playPause() {
