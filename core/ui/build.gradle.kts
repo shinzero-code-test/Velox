@@ -39,6 +39,10 @@ dependencies {
     // artifact is the official Material 3 entry point for
     // WindowSizeClass and the list-detail / feed patterns.
     implementation(libs.androidx.compose.material3.adaptive)
+    // `WindowSizeClass` is in `material3-window-size-class`,
+    // not in `adaptive`. Both are needed for the full adaptive
+    // surface.
+    implementation(libs.androidx.compose.material3.windowsizeclass)
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.animation)

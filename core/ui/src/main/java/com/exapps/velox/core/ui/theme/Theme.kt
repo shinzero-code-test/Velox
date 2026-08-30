@@ -72,6 +72,11 @@ fun VeloxTheme(
         theme = com.exapps.velox.core.domain.theme.ThemeDefinition(
             id = "__legacy__",
             name = com.exapps.velox.core.domain.theme.LocalizedText(default = "Legacy"),
+            // The legacy two-arg call site predates the theme
+            // engine. Pass an empty ThemeTokens so resolveThemeSpec
+            // falls back to every bundled default (background,
+            // surface, accents, alphas, radius scale).
+            tokens = com.exapps.velox.core.domain.theme.ThemeTokens(),
         ),
         accent = accent,
         amoled = amoled,

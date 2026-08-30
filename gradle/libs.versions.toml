@@ -81,6 +81,14 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 # artifact is the version-agnostic entry point (versions are
 # resolved through the Compose BOM above).
 androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive" }
+# Phase 3 / Milestone 3 — `WindowSizeClass` lives in the
+# `material3-window-size-class` artifact, not in `adaptive`. Both
+# are needed (the newer `adaptive` artifact provides the
+# `ListDetailPaneScaffold` / `NavigationSuiteScaffold` /
+# `currentWindowAdaptiveInfo` surface; the older
+# `material3-window-size-class` provides the legacy
+# `calculateWindowSizeClass` API). Velox uses the legacy API.
+androidx-compose-material3-windowsizeclass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation" }

@@ -39,6 +39,7 @@ dependencies {
     // Phase 3 / Wave 3 / Round 3.5b — calculateWindowSizeClass for
     // the two-pane breakpoint.
     implementation(libs.androidx.compose.material3.adaptive)
+    implementation(libs.androidx.compose.material3.windowsizeclass)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
