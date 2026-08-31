@@ -25,6 +25,10 @@ dependencies {
     // Hilt-bound adapter; nothing here depends on Android
     // framework classes that aren't available in unit tests.
     implementation(project(":core:domain"))
+    // The analysis service writes through `TrackAnalysisDao`
+    // (Room-generated). `:core:data` is the only place that
+    // owns the Room database; the DAO is exposed by it.
+    implementation(project(":core:data"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
