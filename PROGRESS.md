@@ -1897,4 +1897,25 @@ to `app/build.gradle.kts` (mirroring `feature/network/build.gradle.kts`).
 The version is resolved through the Compose BOM + `libs.versions.toml`
 (`androidx-compose-material3-windowsizeclass`).
 
+### 11. `:app` — experimental window-size-class + missing `DefaultWindowSizeClass` import
+
+Sixth layer — fixing the missing dependency in §10 unmasked two more
+compile errors in `:app`:
+
+- `MainActivity.kt:81` `calculateWindowSizeClass(this)` is
+  `ExperimentalMaterial3WindowSizeClassApi`. The call needs an opt-in;
+  without it the build treats the experimental marker as an error
+  (`-Werror` is on for `compileReleaseKotlin`).
+
+  **Fix:** `@kotlin.OptIn(ExperimentalMaterial3WindowSizeClassApi::class)`
+  on `MainActivity`.
+
+- `VeloxNavHost.kt:43` `Unresolved reference 'DefaultWindowSizeClass'` —
+  the fallback window size for previews (`WindowSizeClass = DefaultWindowSizeClass`)
+  lives in `:core:ui` (`core.ui.layout.DefaultWindowSizeClass`,
+  `WindowSizeClass.calculateFromSize(DpSize(0.dp,0.dp))` → Compact). `MainScaffold`
+  already imports it, but `VeloxNavHost` omitted the import.
+
+  **Fix:** `import com.exapps.velox.core.ui.layout.DefaultWindowSizeClass`.
+
 versionCode 27.

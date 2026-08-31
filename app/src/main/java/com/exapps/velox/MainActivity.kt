@@ -40,6 +40,7 @@ import javax.inject.Inject
  * resolving where the nav graph should start, and the two Activity-level platform
  * hooks Compose can't own: language recreation and auto-PiP on leave.
  */
+@kotlin.OptIn(androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 

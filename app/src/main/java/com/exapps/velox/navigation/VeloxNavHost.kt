@@ -2,6 +2,7 @@ package com.exapps.velox.navigation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import com.exapps.velox.core.ui.layout.DefaultWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
