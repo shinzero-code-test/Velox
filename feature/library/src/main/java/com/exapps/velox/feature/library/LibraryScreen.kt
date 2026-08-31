@@ -387,24 +387,25 @@ private fun LibraryTwoPane(
                             .background(glassOutlineColor()),
                     )
                     Box(modifier = Modifier.fillMaxHeight().weight(1.4f)) {
-                    val key = selectedKey
-                    if (key == null) {
-                        TwoPaneEmptyHint()
-                    } else {
-                        val typeMatches = when (key) {
-                            is CollectionKey.AlbumKey -> state.data is LibraryContent.Albums
-                            is CollectionKey.ArtistKey -> state.data is LibraryContent.Artists
-                            is CollectionKey.FolderKey -> state.data is LibraryContent.Folders
-                            is CollectionKey.GenreKey -> state.data is LibraryContent.Genres
-                        }
-                        if (typeMatches) {
-                            CollectionPaneContent(
-                                key = key,
-                                viewModel = viewModel,
-                                onMediaItemClick = onMediaItemClick,
-                            )
-                        } else {
+                        val key = selectedKey
+                        if (key == null) {
                             TwoPaneEmptyHint()
+                        } else {
+                            val typeMatches = when (key) {
+                                is CollectionKey.AlbumKey -> state.data is LibraryContent.Albums
+                                is CollectionKey.ArtistKey -> state.data is LibraryContent.Artists
+                                is CollectionKey.FolderKey -> state.data is LibraryContent.Folders
+                                is CollectionKey.GenreKey -> state.data is LibraryContent.Genres
+                            }
+                            if (typeMatches) {
+                                CollectionPaneContent(
+                                    key = key,
+                                    viewModel = viewModel,
+                                    onMediaItemClick = onMediaItemClick,
+                                )
+                            } else {
+                                TwoPaneEmptyHint()
+                            }
                         }
                     }
                 }

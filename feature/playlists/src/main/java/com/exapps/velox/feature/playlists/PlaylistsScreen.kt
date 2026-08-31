@@ -409,7 +409,7 @@ private fun PlaylistRow(
 @Composable
 private fun playlistDisplay(playlist: Playlist): Pair<androidx.compose.ui.graphics.vector.ImageVector, String> {
     return when (playlist.type) {
-        PlaylistType.FAVOURITES -> Icons.Filled.Favorite to stringResource(R.string.playlist_favorites)
+        PlaylistType.FAVORITES -> Icons.Filled.Favorite to stringResource(R.string.playlist_favorites)
         PlaylistType.RECENTLY_PLAYED -> Icons.Filled.History to stringResource(R.string.playlist_recently_played)
         PlaylistType.MOST_PLAYED -> Icons.Filled.TrendingUp to stringResource(R.string.playlist_most_played)
         PlaylistType.RECENTLY_ADDED -> Icons.Filled.LibraryMusic to stringResource(R.string.playlist_recently_added)
