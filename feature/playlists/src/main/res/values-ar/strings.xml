@@ -6,7 +6,6 @@
     <string name="playlist_recently_played">استُمع إليها مؤخرًا</string>
     <string name="playlist_most_played">الأكثر تشغيلًا</string>
     <string name="playlist_recently_added">أُضيفت مؤخرًا</string>
-    <string name="playlist_most_played">الأكثر تشغيلًا</string>
     <string name="playlists_empty_title">لا توجد قوائم تشغيل بعد</string>
     <string name="playlists_empty_body">أنشئ قائمة تشغيل لتبدأ في تجميع أغانيك المفضلة معًا.</string>
     <string name="playlists_error_title">تعذّر تحميل قوائم التشغيل</string>
