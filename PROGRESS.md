@@ -1867,4 +1867,34 @@ missing `background` import in the markers sheet:
 
   **Fix:** `import androidx.compose.foundation.background`.
 
+### 10. `:app` — missing `material3-window-size-class` dependency
+
+Fifth layer hidden behind previous three — `MainActivity` /
+`MainScaffold` / `VeloxNavHost` all use
+`androidx.compose.material3.windowsizeclass.*`
+(`calculateWindowSizeClass`, `WindowSizeClass`), but `:app`'s
+`build.gradle.kts` never declared the artifact. The feature module
+`:feature:network` did (it needs the same API for its two-pane), but
+`:app` resolves its own classpath separately, so
+
+```
+e: MainActivity.kt:27 Unresolved reference 'windowsizeclass'
+e: MainActivity.kt:81 Unresolved reference 'calculateWindowSizeClass'
+e: MainScaffold.kt:26 Unresolved reference 'windowsizeclass' …
+```
+
+all surfaced once the earlier `:feature:player` / `:core:audio-analysis`
+failures were cleared.
+
+**Fix:** add
+
+```kotlin
+implementation(libs.androidx.compose.material3.adaptive)
+implementation(libs.androidx.compose.material3.windowsizeclass)
+```
+
+to `app/build.gradle.kts` (mirroring `feature/network/build.gradle.kts`).
+The version is resolved through the Compose BOM + `libs.versions.toml`
+(`androidx-compose-material3-windowsizeclass`).
+
 versionCode 27.
