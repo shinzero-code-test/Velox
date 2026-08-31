@@ -2,7 +2,7 @@ package com.exapps.velox.core.audioanalysis.di
 
 import com.exapps.velox.core.audioanalysis.DefaultTrackAnalysisService
 import com.exapps.velox.core.audioanalysis.DefaultTrackAnalyzer
-import com.exapps.velox.core.audioanalysis.TrackAnalysisService
+import com.exapps.velox.core.domain.audio.TrackAnalysisService
 import com.exapps.velox.core.domain.audio.TrackAnalyzer
 import dagger.Binds
 import dagger.Module

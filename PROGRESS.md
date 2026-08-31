@@ -1790,4 +1790,41 @@ Two independent oversights in the new `:core:audio-analysis` module:
   **Fix:** add `implementation(project(":core:common"))` to
   `core/audio-analysis/build.gradle.kts`.
 
+### 7. `AudioAnalysisModule` — second import + `VeloxTypography.bodySmall` / `VerticalBandSlider`
+
+Second layer that was hidden behind the earlier `kspReleaseKotlin` failure
+(the first fix only corrected `TrackAnalyzer`; `TrackAnalysisService` was
+the same wrong package and KSP still failed on the next run):
+
+- `AudioAnalysisModule.kt:5` also imported
+  `com.exapps.velox.core.audioanalysis.TrackAnalysisService` — the
+  interface lives in `:core:domain`
+  (`com.exapps.velox.core.domain.audio.TrackAnalysisService`).
+
+  **Fix:** `import com.exapps.velox.core.domain.audio.TrackAnalysisService`.
+
+- `PluginsScreen.kt:93/124` + `SettingsScreen.kt:193/638` reference
+  `VeloxTheme.typography.bodySmall`, but `VeloxTypography` only defined
+  `bodyLarge` / `bodyMedium` + the three `label*` slots. Material3 has
+  `bodySmall` (12 sp) and the two screens were generated assuming it
+  exists — hence `Unresolved reference 'bodySmall'`.
+
+  **Fix:** add `bodySmall` to `VeloxTypography` (12 sp, Normal, 16 sp
+  lineHeight) and wire it in `rememberVeloxTypography()` +
+  `toMaterial3Typography()`. Keep the four call sites as-is.
+
+- `VerticalBandSlider.kt:108` calls `glassSurfaceColor(elevated = true)`
+  (a `@Composable`) inside `Canvas { }`'s `DrawScope` lambda, which is
+  not a composable context — `e: @Composable invocations can only
+  happen from the context of a @Composable function`.
+
+  The slot already hoists `accentColor()` above the `Canvas` for the
+  same reason. Hoist the glass color too:
+
+  ```kotlin
+  val accent = accentColor()
+  val trackColor = glassSurfaceColor(elevated = true)
+  // … drawRoundRect(color = trackColor)
+  ```
+
 versionCode 27.

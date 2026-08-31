@@ -52,6 +52,7 @@ data class VeloxTypography(
     val titleMedium: TextStyle,
     val bodyLarge: TextStyle,
     val bodyMedium: TextStyle,
+    val bodySmall: TextStyle,
     val labelLarge: TextStyle,
     val labelMedium: TextStyle,
     val labelSmall: TextStyle,
@@ -77,6 +78,8 @@ fun rememberVeloxTypography(): VeloxTypography = remember {
         bodyLarge = TextStyle(fontFamily = family, fontSize = 16.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
         // Secondary body
         bodyMedium = TextStyle(fontFamily = family, fontSize = 14.sp, fontWeight = FontWeight.Normal, lineHeight = 20.sp),
+        // Small body (hints, provider ids)
+        bodySmall = TextStyle(fontFamily = family, fontSize = 12.sp, fontWeight = FontWeight.Normal, lineHeight = 16.sp),
         // Buttons, chips
         labelLarge = TextStyle(fontFamily = family, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp),
         // Captions
@@ -97,6 +100,7 @@ fun VeloxTypography.toMaterial3Typography(): Typography = Typography(
     titleMedium = titleMedium,
     bodyLarge = bodyLarge,
     bodyMedium = bodyMedium,
+    bodySmall = bodySmall,
     labelLarge = labelLarge,
     labelMedium = labelMedium,
     labelSmall = labelSmall,

@@ -64,8 +64,10 @@ internal fun VerticalBandSlider(
         if (!isDragging) dragLevel = levelMillibel.toFloat()
     }
     // Composable-scoped so the Canvas draw lambda (a DrawScope, not a composable)
-    // can use the live accent.
+    // can use the live theme colors. Canvas's draw scope is not a composable
+    // context, so both colors are hoisted here.
     val accent = accentColor()
+    val trackColor = glassSurfaceColor(elevated = true)
 
     Box(
         modifier = modifier
@@ -105,7 +107,7 @@ internal fun VerticalBandSlider(
 
             // Full track
             drawRoundRect(
-                color = glassSurfaceColor(elevated = true),
+                color = trackColor,
                 topLeft = Offset((size.width - trackWidth) / 2f, 0f),
                 size = Size(trackWidth, size.height),
                 cornerRadius = CornerRadius(trackWidth / 2f),
