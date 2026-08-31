@@ -55,14 +55,14 @@ class SilenceDetector @Inject constructor() {
         val windowSizeMs = 100
         val windowSizeSamples = (sampleRate * windowSizeMs / 1000).coerceAtLeast(1)
         val silenceDbThreshold = -50.0
-        val minRunMs = 2_000
+        val minRunMs = 2_000L
         val introSearchEndMs = 60_000L
         val outroSearchStartMs = (trackDurationMs - 30_000L).coerceAtLeast(0L)
         val candidateWindowMs = 30_000L
 
         val windows: List<Window> = computeWindows(samples, windowSizeSamples, sampleRate)
         val silentIndices: Set<Int> = windows.indices
-            .filter { windows[it].db < silenceDbThreshold }
+            .filter { windows[it].rmsDb < silenceDbThreshold }
             .toSet()
 
         val intro = findSilenceRunStartingInRange(

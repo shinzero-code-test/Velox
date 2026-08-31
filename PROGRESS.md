@@ -1827,4 +1827,18 @@ the same wrong package and KSP still failed on the next run):
   // … drawRoundRect(color = trackColor)
   ```
 
+### 8. `SilenceDetector.kt:65/71/86` — stale field + `Int`/`Long` mismatch
+
+Third layer hidden behind the earlier `ksp`/compile failures:
+
+- `:65` `.db` unresolved — `Window` is now `data class Window(val rmsDb: Double)` (renamed from the early draft's `db` to match `ChapterDetector.Window.rmsDb`), but the filter still read `windows[it].db`.
+
+  **Fix:** `windows[it].rmsDb`.
+
+- `:71 / :86` `minRunMs = 2_000` is `Int`, but both
+  `findSilenceRunStartingInRange` and `findSilenceRunEndingInRange`
+  take `minRunMs: Long`. Hence `Argument type mismatch: actual type is 'Int', but 'Long' was expected` at both call sites.
+
+  **Fix:** `val minRunMs = 2_000L`.
+
 versionCode 27.
