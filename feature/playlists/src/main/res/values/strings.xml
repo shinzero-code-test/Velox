@@ -5,6 +5,7 @@
     <string name="playlist_favorites">Favorites</string>
     <string name="playlist_recently_played">Recently Played</string>
     <string name="playlist_most_played">Most Played</string>
+    <string name="playlist_recently_added">Recently Added</string>
     <string name="playlists_empty_title">No playlists yet</string>
     <string name="playlists_empty_body">Create a playlist to start grouping your favorite tracks together.</string>
     <string name="playlists_error_title">Couldn\'t load playlists</string>

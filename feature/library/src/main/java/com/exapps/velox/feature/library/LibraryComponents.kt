@@ -147,7 +147,7 @@ fun RecommendedRow(
             modifier = Modifier.fillMaxWidth().padding(top = VeloxSpacing.sm),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(VeloxSpacing.sm),
         ) {
-            androidx.compose.foundation.lazy.items(
+            items(
                 items = items,
                 key = { it.id },
             ) { track ->
@@ -177,14 +177,14 @@ private fun RecommendedTrackCard(
             )
             Text(
                 text = track.title,
-                style = VeloxTheme.typography.titleSmall,
+                style = VeloxTheme.typography.titleMedium,
                 color = VeloxColors.OnSurface,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
             Text(
                 text = track.artistName ?: "",
-                style = VeloxTheme.typography.bodySmall,
+                style = VeloxTheme.typography.bodyMedium,
                 color = VeloxColors.OnSurfaceVariant,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

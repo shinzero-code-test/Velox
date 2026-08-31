@@ -16,26 +16,26 @@ import com.exapps.velox.core.domain.repository.MediaLibraryRepository
 sealed class CollectionKey {
     abstract val title: String
 
-    data class AlbumKey(val albumId: Long, val title: String) : CollectionKey() {
+    data class AlbumKey(val albumId: Long, override val title: String) : CollectionKey() {
         companion object {
             fun from(album: Album): AlbumKey = AlbumKey(album.id, album.title)
         }
     }
 
-    data class ArtistKey(val artistId: Long, val title: String) : CollectionKey() {
+    data class ArtistKey(val artistId: Long, override val title: String) : CollectionKey() {
         companion object {
             fun from(artist: Artist): ArtistKey = ArtistKey(artist.id, artist.name)
         }
     }
 
-    data class FolderKey(val folderPath: String, val title: String) : CollectionKey() {
+    data class FolderKey(val folderPath: String, override val title: String) : CollectionKey() {
         companion object {
             fun from(folder: Folder): FolderKey =
                 FolderKey(folder.path, folder.displayName)
         }
     }
 
-    data class GenreKey(val genre: String, val title: String) : CollectionKey() {
+    data class GenreKey(val genre: String, override val title: String) : CollectionKey() {
         companion object {
             fun from(genre: Genre): GenreKey = GenreKey(genre.name, genre.name)
         }

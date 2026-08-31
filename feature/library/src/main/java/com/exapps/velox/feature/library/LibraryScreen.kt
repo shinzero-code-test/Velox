@@ -2,6 +2,7 @@ package com.exapps.velox.feature.library
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -646,3 +647,30 @@ private val CollectionKeySaver: Saver<CollectionKey?, String> = Saver(
         }
     },
 )
+
+/**
+ * Phase 0 / v1.0 — the runtime media permissions to request before
+ * the first scan. READ_MEDIA_AUDIO + READ_MEDIA_VIDEO on
+ * Android 13+; READ_EXTERNAL_STORAGE on earlier releases. POST_NOTIFICATIONS
+ * is requested alongside so re-prompts can also recover the
+ * playback notification (denial here must never block media access).
+ *
+ * READ_MEDIA_VISUAL_USER_SELECTED is the API 34+ "partial"
+ * photo/video access permission. We don't request it explicitly
+ * — Velox wants full library access (a media player that only
+ * sees a few user-selected videos would be useless). The system
+ * Settings shortcut on the permission-denied state covers that
+ * path.
+ */
+@Composable
+private fun rememberMediaPermissions(): Array<String> = remember {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        arrayOf(
+            Manifest.permission.READ_MEDIA_AUDIO,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
+    } else {
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+}
