@@ -105,7 +105,9 @@ fun NetworkScreen(
         BackHandler(enabled = true) { viewModel.goUp() }
     }
 
-    val windowSizeClass = androidx.compose.material3.windowsizeclass
+    val windowSizeClass = @androidx.annotation.OptIn(
+        androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class,
+    ) androidx.compose.material3.windowsizeclass
         .calculateWindowSizeClass(LocalContext.current.findActivity())
     val isCompactWidth = windowSizeClass.widthSizeClass ==
         androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Compact
