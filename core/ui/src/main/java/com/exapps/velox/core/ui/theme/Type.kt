@@ -46,10 +46,13 @@ val IbmPlexSansArabic: FontFamily = googleFontFamily("IBM Plex Sans Arabic")
 data class VeloxTypography(
     val displayLarge: TextStyle,
     val displayMedium: TextStyle,
+    val displaySmall: TextStyle,
     val headlineLarge: TextStyle,
     val headlineMedium: TextStyle,
+    val headlineSmall: TextStyle,
     val titleLarge: TextStyle,
     val titleMedium: TextStyle,
+    val titleSmall: TextStyle,
     val bodyLarge: TextStyle,
     val bodyMedium: TextStyle,
     val bodySmall: TextStyle,
@@ -66,14 +69,20 @@ fun rememberVeloxTypography(): VeloxTypography = remember {
         displayLarge = TextStyle(fontFamily = family, fontSize = 34.sp, fontWeight = FontWeight.Bold, lineHeight = 40.sp),
         // Section headers
         displayMedium = TextStyle(fontFamily = family, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp),
+        // Small display (compat)
+        displaySmall = TextStyle(fontFamily = family, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp),
         // Screen titles
         headlineLarge = TextStyle(fontFamily = family, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp),
         // Card titles
         headlineMedium = TextStyle(fontFamily = family, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp),
+        // Compact headlines
+        headlineSmall = TextStyle(fontFamily = family, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp),
         // List primary
         titleLarge = TextStyle(fontFamily = family, fontSize = 18.sp, fontWeight = FontWeight.Medium, lineHeight = 24.sp),
         // Secondary titles
         titleMedium = TextStyle(fontFamily = family, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 22.sp),
+        // Tertiary titles (queue, subtle rows)
+        titleSmall = TextStyle(fontFamily = family, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp),
         // Body text
         bodyLarge = TextStyle(fontFamily = family, fontSize = 16.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
         // Secondary body
@@ -94,10 +103,13 @@ fun rememberVeloxTypography(): VeloxTypography = remember {
 fun VeloxTypography.toMaterial3Typography(): Typography = Typography(
     displayLarge = displayLarge,
     displayMedium = displayMedium,
+    displaySmall = displaySmall,
     headlineLarge = headlineLarge,
     headlineMedium = headlineMedium,
+    headlineSmall = headlineSmall,
     titleLarge = titleLarge,
     titleMedium = titleMedium,
+    titleSmall = titleSmall,
     bodyLarge = bodyLarge,
     bodyMedium = bodyMedium,
     bodySmall = bodySmall,

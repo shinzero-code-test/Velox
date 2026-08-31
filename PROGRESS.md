@@ -1841,4 +1841,30 @@ Third layer hidden behind the earlier `ksp`/compile failures:
 
   **Fix:** `val minRunMs = 2_000L`.
 
+### 9. `VeloxTypography` completeness + `NowPlayingScreen` background import
+
+Fourth layer — the settings surface needed `bodySmall` (fixed in §7)
+but `NowPlayingScreen` also uses `titleSmall` (queue title) and the
+`VeloxTypography` only had 12 of the 15 Material slots. Plus a
+missing `background` import in the markers sheet:
+
+- `NowPlayingScreen.kt:605` `titleSmall` unresolved — `VeloxTypography`
+  lacked the slot. The Phase 3 ship added the usage without updating the
+  theme. `bodySmall` was the first fix; `titleSmall` needs the same,
+  plus the other two missing Material slots for completeness
+  (`displaySmall`, `headlineSmall`) so the `Typography` is no longer
+  sparse.
+
+  **Fix:** add `displaySmall` (24 sp Bold), `headlineSmall` (18 sp
+  SemiBold), `titleSmall` (14sp Medium) to `VeloxTypography`,
+  `rememberVeloxTypography()` and `toMaterial3Typography()`.
+
+- `NowPlayingScreen.kt:905` `Unresolved reference 'background'` —
+  `.background(Color)` is `androidx.compose.foundation.background`, not
+  imported. The file already imports `clickable`, `CircleShape` etc. but
+  omitted `background`, so the marker badge `Modifier.background(…)` did
+  not resolve.
+
+  **Fix:** `import androidx.compose.foundation.background`.
+
 versionCode 27.
