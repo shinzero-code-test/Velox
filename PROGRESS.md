@@ -1765,4 +1765,29 @@ val isCompactWidth = windowSizeClass?.widthSizeClass == WindowWidthSizeClass.Com
 `null` (no activity — preview or detached context) falls back to
 compact (single-pane), which is the safe default.
 
+### 6. `core:audio-analysis` — KSP `error.NonExistentClass` / missing `core:common`
+
+Two independent oversights in the new `:core:audio-analysis` module:
+
+- `AudioAnalysisModule.kt:6` imported
+  `com.exapps.velox.core.audioanalysis.TrackAnalyzer` (the same package)
+  instead of `com.exapps.velox.core.domain.audio.TrackAnalyzer`. The
+  class `DefaultTrackAnalyzer : TrackAnalyzer` correctly implements the
+  **domain** port, but the Hilt module bound the wrong type — KSP
+  reported `TrackAnalyzer could not be resolved`.
+
+  **Fix:** `import com.exapps.velox.core.domain.audio.TrackAnalyzer`.
+
+- `DefaultTrackAnalysisService.kt:31` injects
+  `@ApplicationScope CoroutineScope` — that qualifier lives in
+  `:core:common` (`core.common.di.ApplicationScope`), but
+  `:core:audio-analysis`'s `build.gradle.kts` only declared
+  `implementation(project(":core:domain"))` + `...(":core:data"))`.
+  Because `":core:data"` exposes `":core:common"` as `implementation`
+  (not `api`), the scope annotation was not on the classpath and KSP
+  emitted `error.NonExistentClass` for the whole constructor.
+
+  **Fix:** add `implementation(project(":core:common"))` to
+  `core/audio-analysis/build.gradle.kts`.
+
 versionCode 27.
