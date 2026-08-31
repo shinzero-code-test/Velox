@@ -1661,3 +1661,108 @@ permission grant, per-plugin enable/disable toggle).
   id collision.
 
 versionCode 26.
+
+## v1.9.1 — hotfix: CI build failures (post-v1.9.0 ship)
+
+`v1.9.0` shipped six files with compile errors that the local check could
+not catch (no committed wrapper, AGP 9 / `compileSdk 37` + `platforms;android-37`
+on the runner). Five separate error sites, all blocking `assembleRelease`:
+
+### 1. `ThemePreferences.kt:60 / :143` — `/*` inside KDoc closes the comment
+
+```kotlin
+/**
+ * User-imported themes from `filesDir/themes/*.veloxtheme.json`. Not
+ * cached …
+ * /
+```
+
+The `/*.veloxtheme.json` inside backticks contains the literal
+characters `/*`. Kotlin's lexer does **not** respect backticks for
+block-comment nesting — `/*` opens a nested comment that never closes.
+The file then reports `Missing '}'` at the next method and `Unclosed
+comment` at EOF, which cascades into "unresolved `ACTIVE_THEME_KEY` /
+`DEFAULT_THEME_ID` / `loadBundledFromAssets`" (the companion object
+after the unclosed comment is never parsed).
+
+**Fix:** rewrite the KDoc line so it never contains `/*` — say
+"`filesDir/themes/`" without the glob, and mention the `.json`
+extension on the next line.
+
+Cascaded into `ThemeRegistryAdapter.kt:58/59/65/71` — all four
+"unresolved `imported` / `it` / `setActive` / `current`" diagnostics
+were downstream of the same unclosed comment; the type of
+`preferences: ThemePreferences` was an error type because the class
+file could not be resolved.
+
+### 2. `PackageManagerPluginDiscovery.kt:91 / :99` — wrong PackageManager APIs
+
+- `pm.packageName` does not exist; the host package is
+  `context.packageName`. Now `pm.checkSignatures(context.packageName, packageName)`.
+- `PackageManager.SIGNATURE_FIRST_SAME_SIGNER` is not a constant in
+  the current SDK — only `SIGNATURE_MATCH` / `SIGNATURE_NEITHER_SIGNED`
+  / `SIGNATURE_UNKNOWN_PAGE` exist (the `SIGNATURE_FIRST_SAME_SIGNER`
+  alias was removed with the `PackageManager` signature API cleanup).
+  Gate now checks only `SIGNATURE_MATCH` — the strictest "same key"
+  gate. Any other result rejects the plugin.
+
+### 3. `EqualizerPreferences.kt:52` — smart-cast impossible across modules
+
+```kotlin
+if (settings.presetId == null) … else prefs[PRESET_KEY] = settings.presetId
+```
+
+`presetId` is declared in `:core:domain` (`EqualizerSettings` moved there
+in v1.1.0 so `:player:engine` can depend on it without a `:core:data`
+edge). Kotlin cannot smart-cast a `val` from another module because the
+getter could be overridden. Capture in a local first:
+
+```kotlin
+val presetId = settings.presetId
+if (presetId == null) … else prefs[PRESET_KEY] = presetId
+```
+
+### 4. `RecommendationEngineImpl.kt:130 / :187 / :213 / :393` — four sites
+
+- `:130` `withLock` extension unresolved — missing
+  `import kotlinx.coroutines.sync.withLock`. And `return` inside the
+  `withLock` lambda is a non-local return (illegal for a suspend
+  inline lambda); change to `return@withLock`.
+- `:187` `todMatrix.add(tod, energy, 1)` — `add` takes `Double`, `1`
+  is `Int`. Pass `1.0`.
+- `:213 / :238 / :258 / :265 / :278` `mediaItemDao.getById / count /
+  idAtOffset / getByIds` are `suspend` but were called from
+  non-suspend `rankForYou` / `rankUpNext` / `randomDiscoveryPicks` /
+  `lookup`. Make all four methods `suspend` — the call sites
+  (`rebuildTrigger.map { }`) are already inside a `suspend` transform,
+  so no caller change is needed.
+- `:393 / :396` `MediaItemEntity.toDomain()` passed `artistId` and
+  `mimeType`, neither exists on `MediaItemEntity` nor on the domain
+  `MediaItem`. Replace with the real columns `folderPath`, `fileName`,
+  `genre` which were missing from the mapping.
+
+### 5. `NetworkScreen.kt:108 / :111` — experimental window-size-class API
+
+```kotlin
+val wsc = @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+          calculateWindowSizeClass(LocalContext.current.findActivity())
+```
+
+`@OptIn` is not applicable to an expression target, the API is still
+experimental, and `findActivity()` returns `ComponentActivity?` (nullable)
+while `calculateWindowSizeClass` needs a non-null `Activity`.
+
+Move the opt-in to the composable function
+`@kotlin.OptIn(ExperimentalMaterial3WindowSizeClassApi::class)`, then
+
+```kotlin
+val activity = LocalContext.current.findActivity()
+val windowSizeClass = activity?.let { calculateWindowSizeClass(it) }
+val isCompactWidth = windowSizeClass?.widthSizeClass == WindowWidthSizeClass.Compact
+                     || windowSizeClass == null
+```
+
+`null` (no activity — preview or detached context) falls back to
+compact (single-pane), which is the safe default.
+
+versionCode 27.

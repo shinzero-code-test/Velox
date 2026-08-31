@@ -60,6 +60,7 @@ import com.exapps.velox.core.ui.theme.VeloxSpacing
  * server list, add/edit dialog, and the in-server directory browser. URL playback
  * (http/HLS/DASH/RTSP and our custom schemes) lives at the top.
  */
+@kotlin.OptIn(androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun NetworkScreen(
     onBack: () -> Unit,
@@ -105,12 +106,13 @@ fun NetworkScreen(
         BackHandler(enabled = true) { viewModel.goUp() }
     }
 
-    val windowSizeClass = @androidx.annotation.OptIn(
-        androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class,
-    ) androidx.compose.material3.windowsizeclass
-        .calculateWindowSizeClass(LocalContext.current.findActivity())
-    val isCompactWidth = windowSizeClass.widthSizeClass ==
+    val activity = LocalContext.current.findActivity()
+    val windowSizeClass = activity?.let {
+        androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(it)
+    }
+    val isCompactWidth = windowSizeClass?.widthSizeClass ==
         androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Compact
+        || windowSizeClass == null
 
     androidx.compose.foundation.layout.Box(modifier = modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {

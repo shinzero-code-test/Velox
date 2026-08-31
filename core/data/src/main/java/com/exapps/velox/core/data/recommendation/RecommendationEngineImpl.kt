@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -128,7 +129,7 @@ class RecommendationEngineImpl @Inject constructor(
         // caller blocks; the rest see the up-to-date state on
         // their `invalidated` check.
         rebuildMutex.withLock {
-            if (!invalidated) return
+            if (!invalidated) return@withLock
             rebuild()
             invalidated = false
         }
@@ -184,13 +185,13 @@ class RecommendationEngineImpl @Inject constructor(
             val item = mediaItemDao.getById(entry.mediaItemId) ?: continue
             val tod = timeOfDayBucket(entry.playedAtEpochSeconds)
             val energy = energyBucket(item)
-            todMatrix.add(tod, energy, 1)
+            todMatrix.add(tod, energy, 1.0)
         }
         todMatrix.normalise()
         timeOfDay = todMatrix
     }
 
-    private fun rankForYou(
+    private suspend fun rankForYou(
         seed: Long?,
         limit: Int,
         discoveryFraction: Float,
@@ -224,7 +225,7 @@ class RecommendationEngineImpl @Inject constructor(
         return lookup(top + discovery)
     }
 
-    private fun rankUpNext(limit: Int): List<MediaItem> {
+    private suspend fun rankUpNext(limit: Int): List<MediaItem> {
         val heavyList = heavyTracks.toList()
         if (heavyList.isEmpty()) return emptyList()
         val nowBucket = timeOfDayBucket(System.currentTimeMillis())
@@ -253,7 +254,7 @@ class RecommendationEngineImpl @Inject constructor(
         }.sortedByDescending { it.second }
     }
 
-    private fun randomDiscoveryPicks(count: Int, exclude: Set<Long>): List<Long> {
+    private suspend fun randomDiscoveryPicks(count: Int, exclude: Set<Long>): List<Long> {
         if (count <= 0) return emptyList()
         val total = mediaItemDao.count()
         if (total <= 0) return emptyList()
@@ -273,7 +274,7 @@ class RecommendationEngineImpl @Inject constructor(
         return out
     }
 
-    private fun lookup(ids: List<Long>): List<MediaItem> {
+    private suspend fun lookup(ids: List<Long>): List<MediaItem> {
         if (ids.isEmpty()) return emptyList()
         val byId = mediaItemDao.getByIds(ids).associateBy { it.id }
         return ids.mapNotNull { byId[it]?.toDomain() }
@@ -390,11 +391,12 @@ private fun MediaItemEntity.toDomain(): MediaItem = MediaItem(
     artistName = artistName,
     albumTitle = albumTitle,
     albumId = albumId,
-    artistId = artistId,
     durationMs = durationMs,
     sizeBytes = sizeBytes,
-    mimeType = mimeType,
     artworkUri = artworkUri,
+    folderPath = folderPath,
+    fileName = fileName,
+    genre = genre,
     dateAddedEpochSeconds = dateAddedEpochSeconds,
     playCount = playCount,
     lastPlayedEpochSeconds = lastPlayedEpochSeconds,

@@ -60,9 +60,10 @@ class ThemePreferences @Inject constructor(
     }
 
     /**
-     * User-imported themes from `filesDir/themes/*.veloxtheme.json`. Not
-     * cached — a re-scan is fast and reflects any SAF import that
-     * happened while the process was alive.
+     * User-imported themes from `filesDir/themes/`. Not cached — a re-scan
+     * is fast and reflects any SAF import that happened while the
+     * process was alive. Files in this directory are JSON and have a
+     * `.json` extension.
      */
     suspend fun imported(): List<ThemeDefinition> = loadImportedFromFilesDir()
 

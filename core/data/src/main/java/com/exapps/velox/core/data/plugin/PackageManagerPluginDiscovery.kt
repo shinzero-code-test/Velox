@@ -82,22 +82,20 @@ class PackageManagerPluginDiscovery @Inject constructor(
      * `com.exapps.velox.permission.PLUGIN_HOST` signature
      * permission. We do the same check the framework would do
      * before honouring the permission: compare the APK's
-     * signature(s) against the host's. A
-     * `checkSignatures` result of `SIGNATURE_MATCH` is required.
+     * signature(s) against the host's. A `checkSignatures`
+     * result of `SIGNATURE_MATCH` is required — that's the
+     * strictest "same signing key" gate the framework offers.
      */
     private fun hasPluginHostPermission(packageName: String): Boolean {
         val pm = context.packageManager
         val matches = runCatching {
-            pm.checkSignatures(pm.packageName, packageName)
+            pm.checkSignatures(context.packageName, packageName)
         }.getOrNull() ?: return false
-        // SIGNATURE_MATCH (2) and SIGNATURE_FIRST_SAME_SIGNER (1)
-        // both pass. SIGNATURE_MATCH is the strictest ("same
-        // signing key"); SIGNATURE_FIRST_SAME_SIGNER is the
-        // framework's "first installer's cert matches". We
-        // accept either as "the same developer signed both".
-        if (matches != PackageManager.SIGNATURE_MATCH &&
-            matches != PackageManager.SIGNATURE_FIRST_SAME_SIGNER
-        ) return false
+        // Only SIGNATURE_MATCH passes — that's "both packages
+        // were signed with the same key". Anything else
+        // (SIGNATURE_NEITHER_SIGNED, SIGNATURE_UNKNOWN, or a
+        // mismatched signature) rejects the plugin.
+        if (matches != PackageManager.SIGNATURE_MATCH) return false
         // The permission gate: the plugin must *request* the
         // permission in its own manifest. checkPermission returns
         // PERMISSION_GRANTED when the manifest declares it.

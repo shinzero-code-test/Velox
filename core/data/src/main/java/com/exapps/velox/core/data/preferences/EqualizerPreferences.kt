@@ -49,7 +49,12 @@ class EqualizerPreferences @Inject constructor(
     suspend fun save(settings: EqualizerSettings) {
         dataStore.edit { prefs ->
             prefs[ENABLED_KEY] = settings.enabled
-            if (settings.presetId == null) prefs.remove(PRESET_KEY) else prefs[PRESET_KEY] = settings.presetId
+            // Capture the presetId in a local — the property is
+            // declared in a different module (`:core:domain`) so the
+            // compiler can't smart-cast it across the null check
+            // without a local copy.
+            val presetId = settings.presetId
+            if (presetId == null) prefs.remove(PRESET_KEY) else prefs[PRESET_KEY] = presetId
             prefs[GAINS_KEY] = settings.bandGainsMillibel.joinToString(",")
             prefs[BASS_KEY] = settings.bassBoostStrength
             prefs[VIRTUALIZER_KEY] = settings.virtualizerStrength
