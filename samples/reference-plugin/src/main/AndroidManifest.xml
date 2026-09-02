@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.veloxrefplugin">
+
+    <uses-permission android:name="com.exapps.velox.permission.PLUGIN_HOST" />
+
+    <application>
+        <service
+            android:name=".ExamplePluginProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.exapps.velox.MEDIA_SOURCE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="com.exapps.velox.MEDIA_SOURCE_PROVIDER"
+                android:value="com.example.veloxrefplugin.ExamplePluginProvider" />
+        </service>
+    </application>
+</manifest>

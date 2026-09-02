@@ -54,7 +54,21 @@ class SmbMediaSourceProvider @Inject constructor(
     override suspend fun openStream(url: String, offset: Long?): MediaStream = withContext(Dispatchers.IO) {
         val server = repository.findServerCached(url)
             ?: error("No saved network server matches $url")
-        wrapStream(client.openStream(server, url, positionMs = 0L), offset)
+        // Range-aware: honour byte offset via skip. For these protocols we
+        // could also translate bytes→ms for a true range request, but byte
+        // skipping is always correct (if slower) and avoids the lossy
+        // BYTES_PER_MS heuristic. ExoPlayer will re-open with a larger
+        // offset for forward seeks; the skip loop is bounded by offset.
+        val raw = client.openStream(server, url, positionMs = 0L)
+        if (offset != null && offset > 0) {
+            var remaining = offset
+            while (remaining > 0) {
+                val skipped = raw.skip(remaining)
+                if (skipped <= 0) throw java.io.IOException("Cannot honours offset $offset (stuck at ${offset - remaining})")
+                remaining -= skipped
+            }
+        }
+        wrapStream(raw, offset)
     }
 }
 
@@ -78,7 +92,16 @@ class FtpMediaSourceProvider @Inject constructor(
     override suspend fun openStream(url: String, offset: Long?): MediaStream = withContext(Dispatchers.IO) {
         val server = repository.findServerCached(url)
             ?: error("No saved network server matches $url")
-        wrapStream(client.openStream(server, url, positionMs = 0L), offset)
+        val raw = client.openStream(server, url, positionMs = 0L)
+        if (offset != null && offset > 0) {
+            var remaining = offset
+            while (remaining > 0) {
+                val skipped = raw.skip(remaining)
+                if (skipped <= 0) throw java.io.IOException("Cannot honours offset $offset (stuck at ${offset - remaining})")
+                remaining -= skipped
+            }
+        }
+        wrapStream(raw, offset)
     }
 }
 
@@ -102,7 +125,16 @@ class WebDavMediaSourceProvider @Inject constructor(
     override suspend fun openStream(url: String, offset: Long?): MediaStream = withContext(Dispatchers.IO) {
         val server = repository.findServerCached(url)
             ?: error("No saved network server matches $url")
-        wrapStream(client.openStream(server, url, positionMs = 0L), offset)
+        val raw = client.openStream(server, url, positionMs = 0L)
+        if (offset != null && offset > 0) {
+            var remaining = offset
+            while (remaining > 0) {
+                val skipped = raw.skip(remaining)
+                if (skipped <= 0) throw java.io.IOException("Cannot honours offset $offset (stuck at ${offset - remaining})")
+                remaining -= skipped
+            }
+        }
+        wrapStream(raw, offset)
     }
 }
 

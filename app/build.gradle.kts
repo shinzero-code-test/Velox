@@ -14,8 +14,8 @@ android {
         applicationId = "com.exapps.velox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "1.9.1"
+        versionCode = 28
+        versionName = "1.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"    }
 

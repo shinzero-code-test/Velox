@@ -24,6 +24,8 @@ interface PluginRegistry {
      * provider registered for that scheme. Schemes are matched
      * case-insensitively and the lookup is `O(providers)`, which
      * is fine for the current handful of built-in providers.
+     * Disabled plugins (see [isEnabled]) are skipped — they never
+     * handle a scheme.
      */
     fun providerForScheme(scheme: String): MediaSourceProvider?
 
@@ -31,7 +33,18 @@ interface PluginRegistry {
      * Every registered provider, sorted by [MediaSourceProvider.id]
      * for stable Settings UI ordering. Includes first-party
      * Hilt-bound providers + any third-party APK providers
-     * returned by [PluginDiscovery.discover].
+     * returned by [PluginDiscovery.discover]. Disabled state is
+     * not filtered here — the UI shows every provider with its
+     * enabled toggle.
      */
     suspend fun available(): List<MediaSourceProvider>
+
+    /** Whether [id] is currently enabled (not in the disabled set). */
+    suspend fun isEnabled(id: String): Boolean
+
+    /** Persist enabled state for [id]. */
+    suspend fun setEnabled(id: String, enabled: Boolean)
+
+    /** Flow of disabled ids, for UI to collect. */
+    fun observeDisabledIds(): kotlinx.coroutines.flow.Flow<Set<String>>
 }

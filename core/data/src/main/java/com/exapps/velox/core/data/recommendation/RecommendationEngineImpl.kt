@@ -72,6 +72,10 @@ class RecommendationEngineImpl @Inject constructor(
     @Volatile
     private var invalidated = true
 
+    /** Last successful rebuild wall-clock ms. Used for per-day debounce. */
+    @Volatile
+    private var lastRebuildMs: Long = 0L
+
     /** Mutated every time the matrix is rebuilt. The flows below
      *  collect this and re-emit on every change. */
     private val rebuildTrigger = MutableStateFlow(0L)
@@ -115,12 +119,21 @@ class RecommendationEngineImpl @Inject constructor(
     }
 
     override suspend fun onPlayHistoryChanged() {
-        // Eager invalidation. For a 5k-row history this is < 50ms
-        // on a mid-range phone. A debounce (or a "only invalidate
-        // when ≥ N new plays since last compute") lives in a
-        // future round.
+        // Per-day debounce (v1.10): eager rebuild on every play is <50ms for 5k rows,
+        // but on large libraries with frequent plays it churns the co-occurrence matrix.
+        // Only invalidate if we haven't rebuilt in the last 24h; otherwise the existing
+        // matrix (with the new play counted in the next day's rebuild) is fresh enough.
+        // Clear-history and explicit invalidate still force immediate rebuild.
+        val now = System.currentTimeMillis()
+        if (lastRebuildMs != 0L && now - lastRebuildMs < 86_400_000L) {
+            // Still mark invalidated so the next day's first ensureBuilt() rebuilds,
+            // but don't poke rebuildTrigger (which would cause all collectors to re-emit
+            // an identical list). The debounce is on the trigger, not the flag.
+            invalidated = true
+            return
+        }
         invalidated = true
-        rebuildTrigger.value = System.currentTimeMillis()
+        rebuildTrigger.value = now
     }
 
     private suspend fun ensureBuilt() {
@@ -132,6 +145,7 @@ class RecommendationEngineImpl @Inject constructor(
             if (!invalidated) return@withLock
             rebuild()
             invalidated = false
+            lastRebuildMs = System.currentTimeMillis()
         }
     }
 

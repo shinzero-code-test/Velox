@@ -54,43 +54,58 @@ class HttpUrlProvider @Inject constructor() : MediaSourceProvider {
         )
     }
 
+    // Reuse a single OkHttpClient — connection pooling + dispatcher reuse.
+    // Creating a client per request leaked threads and broke HTTP/2 multiplexing.
+    private val okHttpClient by lazy { okhttp3.OkHttpClient() }
+
     override suspend fun openStream(url: String, offset: Long?): MediaStream {
         // Delegate to OkHttp so we get the same range/redirect
-        // handling ExoPlayer would have done natively. The
-        // DataSource layer in `:player:engine` only uses the
-        // returned `InputStream`, so any HTTP client that
-        // implements `InputStream` would do.
+        // handling ExoPlayer would have done natively. We stream
+        // via byteStream() instead of bytes() — the previous
+        // implementation loaded the entire file into RAM, which
+        // OOM-killed the process on any video > ~100 MB.
         val request = okhttp3.Request.Builder().url(url).apply {
             offset?.let { header("Range", "bytes=$it-") }
         }.build()
-        val call = okhttp3.OkHttpClient().newCall(request)
-        val response = call.execute()
+        val response = okHttpClient.newCall(request).execute()
         if (!response.isSuccessful) {
             response.close()
             throw java.io.IOException("HTTP ${response.code} for $url")
         }
-        val bytes = response.body?.bytes()
-            ?: throw java.io.IOException("Empty body for $url")
-        return ByteArrayMediaStream(
-            bytes = bytes,
+        val body = response.body ?: run {
+            response.close()
+            throw java.io.IOException("Empty body for $url")
+        }
+        // For range requests the server returns 206 with Content-Range
+        // "bytes start-end/total". Parse total for seeking UI; fall back
+        // to Content-Length + offset when header is absent.
+        val totalSize: Long? = response.header("Content-Range")?.let { cr ->
+            // e.g. "bytes 1024-2047/5000" → 5000
+            cr.substringAfterLast('/').toLongOrNull()
+        } ?: body.contentLength().takeIf { it != -1L }?.let { len ->
+            if (offset != null) len + offset else len
+        }
+        val stream = body.byteStream()
+        return StreamingMediaStream(
+            stream = stream,
+            response = response,
             offset = offset ?: 0L,
+            totalSize = totalSize,
         )
     }
 }
 
-private class ByteArrayMediaStream(
-    private val bytes: ByteArray,
+private class StreamingMediaStream(
+    private val stream: java.io.InputStream,
+    private val response: okhttp3.Response,
     override val offset: Long,
+    override val totalSize: Long?,
 ) : MediaStream {
-    override val totalSize: Long = bytes.size.toLong()
-
-    override fun read(): java.io.InputStream = java.io.ByteArrayInputStream(bytes)
+    override fun read(): java.io.InputStream = stream
 
     override fun close() {
-        // ByteArrayInputStream doesn't need closing; the array is
-        // GC'd when this wrapper is released. ExoPlayer's
-        // DataSource contract guarantees the host calls close()
-        // when the read is finished.
+        runCatching { stream.close() }
+        runCatching { response.close() }
     }
 }
 

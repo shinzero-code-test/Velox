@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,8 +33,10 @@ import com.exapps.velox.core.ui.theme.VeloxSpacing
 import com.exapps.velox.core.ui.theme.VeloxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,10 +47,10 @@ import javax.inject.Inject
  * protocols. Built-in providers (SMB/FTP/WebDAV) and first-party
  * plugins (HttpUrlProvider) all show up here.
  *
- * Round 1 of this surface is read-only — there's no enable/disable
- * toggle yet because the engine's router consults the registry
- * eagerly. Phase 3b in the plan adds a Settings toggle per plugin;
- * for v1.5.0 the list is a diagnostic / about-screen addition.
+ * v1.10 — Per-plugin enable/disable. Each row now has a Switch
+ * (persisted via PluginPreferences/DataStore) and the engine's
+ * [com.exapps.velox.player.engine.VeloxDataSourceFactory] consults
+ * the disabled set before routing a URI to a plugin.
  */
 @Composable
 fun PluginsScreen(
@@ -56,6 +59,7 @@ fun PluginsScreen(
     viewModel: PluginsViewModel = hiltViewModel(),
 ) {
     val providers by viewModel.providers.collectAsStateWithLifecycle()
+    val disabledIds by viewModel.disabledIds.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -81,25 +85,35 @@ fun PluginsScreen(
             verticalArrangement = Arrangement.spacedBy(VeloxSpacing.sm),
         ) {
             items(providers, key = { it.id }) { provider ->
+                val enabled = provider.id !in disabledIds
                 GlassCard {
-                    Column {
-                        Text(
-                            text = provider.displayName.forLocale(currentLocale()),
-                            style = VeloxTheme.typography.titleMedium,
-                            color = VeloxColors.OnSurface,
-                        )
-                        Text(
-                            text = provider.id,
-                            style = VeloxTheme.typography.bodySmall,
-                            color = VeloxColors.OnSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.settings_plugins_protocols,
-                                provider.supportedProtocols.joinToString(", "),
-                            ),
-                            style = VeloxTheme.typography.bodyMedium,
-                            color = VeloxColors.OnSurfaceVariant,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = provider.displayName.forLocale(currentLocale()),
+                                style = VeloxTheme.typography.titleMedium,
+                                color = VeloxColors.OnSurface,
+                            )
+                            Text(
+                                text = provider.id,
+                                style = VeloxTheme.typography.bodySmall,
+                                color = VeloxColors.OnSurfaceVariant,
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_plugins_protocols,
+                                    provider.supportedProtocols.joinToString(", "),
+                                ),
+                                style = VeloxTheme.typography.bodyMedium,
+                                color = VeloxColors.OnSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = enabled,
+                            onCheckedChange = { viewModel.setEnabled(provider.id, it) },
                         )
                     }
                 }
@@ -144,9 +158,16 @@ class PluginsViewModel @Inject constructor(
     private val _providers = MutableStateFlow<List<MediaSourceProvider>>(emptyList())
     val providers: StateFlow<List<MediaSourceProvider>> = _providers.asStateFlow()
 
+    val disabledIds: StateFlow<Set<String>> = registry.observeDisabledIds()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     init {
         viewModelScope.launch {
             _providers.value = registry.available()
         }
+    }
+
+    fun setEnabled(id: String, enabled: Boolean) {
+        viewModelScope.launch { registry.setEnabled(id, enabled) }
     }
 }

@@ -1919,3 +1919,145 @@ compile errors in `:app`:
   **Fix:** `import com.exapps.velox.core.ui.layout.DefaultWindowSizeClass`.
 
 versionCode 27.
+
+## v1.10.0 — deferred backlog + video crash hardening (Phase 3 complete)
+
+Closes the five "What did not change" items from v1.9.0 and fixes the
+reported video-playback crash. No new user-visible feature beyond the
+hardening; the deferred surface now behaves as documented.
+
+### 1. Video crash — `HttpUrlProvider` OOM + MIME sniff
+
+`HttpUrlProvider.openStream` was documented as "range-aware" but did
+
+```kotlin
+val bytes = response.body?.bytes() // loads entire file
+return ByteArrayMediaStream(bytes, offset)
+```
+
+For a 300 MB video this allocates a 300 MB `ByteArray` on the
+ExoPlayer loader thread → `OutOfMemoryError` → process kill (the
+reported "app crashes when trying to play a video" for any http/https
+video, which the router sends through the plugin path; local `content://`
+videos were unaffected, masking the bug in local-only testing).
+
+**Fix:** stream via `body.byteStream()` instead of `bytes()`. Reuse a
+singleton `OkHttpClient` (was `new OkHttpClient()` per request, leaking
+dispatchers). Parse `Content-Range` for `totalSize` when the request
+carried a `Range` header, otherwise use `Content-Length`. Return a
+`StreamingMediaStream` that forwards `byteStream` and closes both
+stream and response. Adds `totalSize` correctly for 200 vs 206.
+
+### 2. Video crash — `MediaItemMapper` MIME sniff for `content://` URIs
+
+`MediaStore` `content://media/external/video/media/123` URIs have no
+file extension, so `DefaultMediaSourceFactory` cannot sniff the container
+and throws `UnrecognizedInputFormatException` → `STATE_IDLE` with stale
+UI (perceived as freeze/crash). `fileName` (e.g. `clip.mp4`) is available
+on `VeloxMediaItem` but was ignored.
+
+**Fix:** `VeloxMediaItem.toMedia3MediaItem()` now guesses MIME from
+`fileName ?: uri` via a local `guessMimeType` (mirrors
+`NetworkClient.guessMimeType` without adding a `:core:network` edge) and
+calls `setMimeType()` when non-null. `content://` videos now resolve to
+`video/mp4` / `video/x-matroska` etc. before the extractor is chosen.
+
+### 3. Range-aware network providers — `positionMs=0L` hardcode
+
+`SmbMediaSourceProvider` / `FtpMediaSourceProvider` /
+`WebDavMediaSourceProvider` all did
+
+```kotlin
+client.openStream(server, url, positionMs = 0L) // ignores offset
+wrapStream(raw, offset) // offset only stored, bytes not skipped
+```
+
+`PluginStreamDataSource` trusted the provider to honour `offset`, so a
+seek to byte 100 MB returned bytes from 0 → garbled video / green blocks
+/ `Decoder initialization failed`. The legacy `NetworkStreamDataSource`
+did byte-skip but the plugin path did not.
+
+**Fix:** after opening at 0, each provider now honours `offset` by
+skipping exactly `offset` bytes via a `skip()` loop (throws
+`IOException` if stuck, which ExoPlayer surfaces as retryable). Keeps
+the lossy `positionMs` heuristic out of the hot path; a future
+optimization can translate `offset` → `positionMs` for true `Range`/`REST`
+on FTP/WebDAV, but correctness is now guaranteed.
+
+`VeloxDataSourceFactory.PluginStreamDataSource` now documents that it
+delegates range handling to the provider's `openStream(url, offset)` and
+does not re-skip; the legacy path's byte-skip loop remains unchanged.
+
+### 4. Per-plugin enable/disable
+
+§6 "still always-on once loaded. A future round." is now shipped.
+
+- New `PluginPreferences` (`core:data`, `DataStore<StringSet>` key
+  `plugin_disabled_ids`) with `disabledIds: Flow<Set<String>>`,
+  `isEnabled(id)`, `setEnabled(id, enabled)`.
+- `PluginRegistry` domain port gains `isEnabled`, `setEnabled`,
+  `observeDisabledIds`.
+- `PluginRegistryAdapter` caches `disabledCache: Set<String>` updated
+  from `PluginPreferences.disabledIds` via `ApplicationScope` and filters
+  `providerForScheme` (hot path, non-suspend) against the cache. `available()`
+  still returns every provider (UI shows disabled as toggle-off); `setEnabled`
+  updates both DataStore and in-memory cache optimistically.
+- `PluginsScreen` / `PluginsViewModel`: each row is now
+  `Row { Column(weight) + Switch(checked = id !in disabledIds) }`;
+  `onCheckedChange` calls `registry.setEnabled`.
+
+Disabling `velox-smb` makes `smb://` URIs fall through to the fallback
+`DefaultDataSource` (which fails fast with "unsupported scheme" rather
+than attempting SMB).
+
+### 5. Per-day recompute debounce for recommender
+
+`RecommendationEngineImpl.onPlayHistoryChanged` was eager: every
+`recordPlayed` invalidated the co-occurrence matrix and poked
+`rebuildTrigger`, causing collectors to re-emit even for a single new
+play on a 5k-row history (<50 ms but churn on rapid plays).
+
+**Fix:** `lastRebuildMs: Long` volatile, set in `ensureBuilt()` after
+successful `rebuild()`. `onPlayHistoryChanged` now checks
+`now - lastRebuildMs < 86_400_000` (24 h): if true, marks
+`invalidated = true` but does **not** poke `rebuildTrigger`, so
+existing collectors keep the current list until the next day's first
+`ensureBuilt()` triggers a true rebuild. Explicit `invalidate()` /
+`clearPlayHistory()` still force immediate rebuild.
+
+### 6. Reference plugin APK + process-isolation docs
+
+- New `samples/reference-plugin/` sample (not included in Velox's
+  `settings.gradle.kts`): `README.md`, `build.gradle.kts` template,
+  `src/main/AndroidManifest.xml`, and
+  `ExamplePluginProvider.kt` implementing `MediaSourceProvider` with
+  `myproto://` scheme, synthetic `listDirectory` and range-aware
+  `openStream` stub. Documents the manifest contract, signing
+  requirement, and no-arg constructor rule from ADR 0001.
+
+- Process isolation: ADR 0001 already states "No plugin sandbox in
+  v1.9.0 ... per-plugin process via `android:process` + remote binder
+  is future." This release keeps host-process loading via
+  `PathClassLoader` (same-signature gate is the security model) and
+  adds the sample's note that `android:process=":plugin_xxx"` is the
+  intended future isolation mechanism. `PackageManagerPluginDiscovery`
+  continues to instantiate via `PathClassLoader(host, apk.sourceDir)` —
+  no new permission or meta-data keys were added, per the "never add a
+  `uses-permission` without runtime request" guard.
+
+### Architecture notes
+
+- `core:domain` remains the only module `player:engine` depends on;
+  `MediaItemMapper`'s MIME guess duplicates `NetworkClient.guessMimeType`
+  intentionally to avoid a `:core:network` edge.
+- `PluginRegistryAdapter`'s `disabledCache` is the only in-memory
+  state that mirrors DataStore; it is `@Volatile` and updated both
+  from the flow and optimistically on `setEnabled` to avoid a race
+  where a toggle and immediate playback see stale state.
+- `HttpUrlProvider`'s `OkHttpClient` is now a `lazy` singleton; the
+  previous per-request client leaked `Dispatcher` threads.
+- No new `uses-permission` was added; the existing
+  `com.exapps.velox.permission.PLUGIN_HOST` signature permission
+  continues to gate APK-form plugins.
+
+versionCode 28.
