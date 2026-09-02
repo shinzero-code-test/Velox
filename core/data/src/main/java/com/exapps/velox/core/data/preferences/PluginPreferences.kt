@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,7 +46,7 @@ class PluginPreferences @Inject constructor(
     }
 
     suspend fun disabledIdsValue(): Set<String> =
-        kotlinx.coroutines.flow.first(dataStore.data.map { it[DISABLED_IDS_KEY] ?: emptySet() })
+        dataStore.data.map { it[DISABLED_IDS_KEY] ?: emptySet() }.first()
 
     private companion object {
         val DISABLED_IDS_KEY = stringSetPreferencesKey("plugin_disabled_ids")
